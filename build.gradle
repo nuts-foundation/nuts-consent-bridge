@@ -1,7 +1,7 @@
 /*
  * Nuts consent bridge
  * Copyright (C) 2019 Nuts community
- *  
+ *
  *  This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,6 +22,8 @@ buildscript {
         kotlinVersion = '1.2.71'
         corda = '4.0'
         cordaGradlePluginsVersion = '4.0.25'
+        springBootVersion = '2.1.3.RELEASE'
+        springBootGradlePluginVersion = '2.1.3.RELEASE'
     }
 
     dependencies {
@@ -29,6 +31,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
         classpath "net.corda.plugins:cordapp:$cordaGradlePluginsVersion"
         classpath "net.corda.plugins:cordformation:$cordaGradlePluginsVersion"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootGradlePluginVersion"
     }
 }
 
@@ -69,6 +72,9 @@ configurations {
 
 allprojects {
     apply plugin: 'jacoco'
+    apply plugin: 'kotlin-spring'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
 
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         kotlinOptions {
@@ -88,12 +94,13 @@ allprojects {
     }
 }
 
-apply plugin: 'net.corda.plugins.cordapp'
-apply plugin: 'net.corda.plugins.cordformation'
+//apply plugin: 'net.corda.plugins.cordapp'
+//apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
-    // Use the Kotlin JDK 8 standard library.
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+
+    implementation("org.springframework.boot:spring-boot-starter:${springBootVersion}")
 
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
 
@@ -107,6 +114,8 @@ dependencies {
     testImplementation("net.corda:corda-node-driver:$corda")
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
+
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 }
 
 check.dependsOn jacocoTestReport

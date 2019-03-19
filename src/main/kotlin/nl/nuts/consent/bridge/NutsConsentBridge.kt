@@ -21,12 +21,20 @@
  */
 package nl.nuts.consent.bridge
 
-import kotlin.test.Test
-import kotlin.test.assertNotNull
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Configuration
 
-class AppTest {
-    @Test fun testAppHasAGreeting() {
-        val classUnderTest = App()
-        assertNotNull(classUnderTest.greeting, "app should have a greeting")
-    }
+@Configuration
+@ConfigurationProperties("nuts.consent.rpc")
+data class CordaRPCProperties(var host: String = "localhost", var port:Int = 10009, var user:String = "user1", var password:String = "test")
+
+@SpringBootApplication
+@EnableConfigurationProperties(CordaRPCProperties::class)
+class NutsConsentBridge
+
+fun main(args: Array<String>) {
+    runApplication<NutsConsentBridge>(*args)
 }
