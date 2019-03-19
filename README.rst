@@ -1,0 +1,18 @@
+**************
+nuts-discovery
+**************
+
+App to bridge gap between the Corda kotlin world and Nuts polyglot service space
+
+.. image:: https://travis-ci.org/nuts-foundation/nuts-consent-bridge.svg?branch=master
+    :target: https://travis-ci.org/nuts-foundation/nuts-consent-bridge
+    :alt: Build Status
+
+.. image:: https://readthedocs.org/projects/nuts-consent-bridge/badge/?version=latest
+    :target: https://nuts-documentation.readthedocs.io/projects/nuts-consent-bridge/en/latest/?badge=latest
+    :alt: Documentation Status
+
+.. image:: https://codecov.io/gh/nuts-foundation/nuts-consent-bridge/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/nuts-foundation/nuts-consent-bridge
+
+.. inclusion-marker-for-contribution

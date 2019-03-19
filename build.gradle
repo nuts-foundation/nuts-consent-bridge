@@ -1,0 +1,112 @@
+/*
+ * Nuts consent bridge
+ * Copyright (C) 2019 Nuts community
+ *  
+ *  This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+
+buildscript {
+    ext {
+        kotlinVersion = '1.2.71'
+        corda = '4.0'
+        cordaGradlePluginsVersion = '4.0.25'
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
+        classpath "net.corda.plugins:cordapp:$cordaGradlePluginsVersion"
+        classpath "net.corda.plugins:cordformation:$cordaGradlePluginsVersion"
+    }
+}
+
+plugins {
+    // Apply the Kotlin JVM plugin to add support for Kotlin on the JVM.
+    id 'org.jetbrains.kotlin.jvm' version '1.2.71'
+}
+
+ext {
+    jacksonVersion = '2.9.8'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    maven {
+        url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/"
+    }
+}
+
+// exclude unneeded libs
+configurations {
+    implementation {
+        exclude group: 'net.corda', module: 'corda-shell'
+        exclude group: 'net.corda', module: 'corda-tools-cliutils'
+        exclude group: 'com.github.bft-smart', module: 'library'
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+
+    testImplementation {
+        exclude group: 'net.corda', module: 'corda-shell'
+        exclude group: 'net.corda', module: 'corda-tools-cliutils'
+        exclude group: 'com.github.bft-smart', module: 'library'
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+}
+
+allprojects {
+    apply plugin: 'jacoco'
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+        kotlinOptions {
+            languageVersion = "1.2"
+            apiVersion = "1.2"
+            jvmTarget = "1.8"
+            javaParameters = true   // Useful for reflection.
+        }
+    }
+
+    jacocoTestReport {
+        reports {
+            xml.enabled true
+            html.enabled false
+            csv.enabled false
+        }
+    }
+}
+
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'net.corda.plugins.cordformation'
+
+dependencies {
+    // Use the Kotlin JDK 8 standard library.
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
+
+    implementation("net.corda:corda-node-api:$corda") {
+        exclude group: 'org.hibernate'
+        exclude group: 'co.paralleluniverse'
+    }
+    implementation("net.corda:corda-node:$corda")
+
+    testImplementation("net.corda:corda-test-utils:$corda")
+    testImplementation("net.corda:corda-node-driver:$corda")
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
+}
+
+check.dependsOn jacocoTestReport
