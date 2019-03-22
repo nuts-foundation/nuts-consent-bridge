@@ -32,10 +32,12 @@ import net.corda.testing.node.internal.NodeBasedTest
 import nl.nuts.consent.bridge.CordaRPCProperties
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
+import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
@@ -95,5 +97,12 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
         // cleanup
         callback.close()
         connection!!.close()
+    }
+
+    @Test
+    fun `Incorrect credentials raises`() {
+        val address = node.node.configuration.rpcOptions.address
+        val callback = StateChangeListener<DummyState>(CordaRPCProperties(address.host, address.port, "not user", PASSWORD, 1))
+        assertFailsWith<ActiveMQSecurityException> { callback.start(DummyState::class.java) }
     }
 }
