@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Configuration
 
 @Configuration
 @ConfigurationProperties("nuts.consent.rpc")
-data class CordaRPCProperties(var host: String = "localhost", var port:Int = 10009, var user:String = "user1", var password:String = "test")
+data class CordaRPCProperties(var host: String = "localhost", var port:Int = 10009, var user:String = "user1", var password:String = "test", var retryIntervalSeconds:Int = 5)
 
 @SpringBootApplication
 @EnableConfigurationProperties(CordaRPCProperties::class)
