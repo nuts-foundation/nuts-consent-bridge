@@ -37,6 +37,7 @@ import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -77,32 +78,32 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
 
     @Test
     fun `onProduces is called for a new state`() {
-        var count = 0
+        var count = AtomicInteger(0)
         val address = node.node.configuration.rpcOptions.address
         val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
-        callback.onProduced { count++ }
+        callback.onProduced { count.incrementAndGet() }
         callback.start(DummyState::class.java)
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        assertEquals(1, count)
+        assertEquals(1, count.get())
 
         callback.close()
     }
 
     @Test
     fun `onProduces is called for each listener`() {
-        var count = 0
+        var count = AtomicInteger(0)
         val address = node.node.configuration.rpcOptions.address
         repeat(2) {
             val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
-            callback.onProduced { count++ }
+            callback.onProduced { count.incrementAndGet() }
             callback.start(DummyState::class.java)
         }
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        assertEquals(2, count)
+        assertEquals(2, count.get())
     }
 
     @Test
