@@ -28,7 +28,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
-import nl.nuts.consent.bridge.CordaRPCProperties
+import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -44,14 +44,14 @@ class StateChangeListener<S : ContractState> : AutoCloseable {
 
     val logger:Logger = LoggerFactory.getLogger(this::class.java)
 
-    private var cordaRPCProperties : CordaRPCProperties
+    private var consentBridgeRPCProperties : ConsentBridgeRPCProperties
     private var connection: CordaRPCConnection? = null
 
     private var producedCallbacks = mutableListOf<(StateAndRef<S>) -> Unit>()
     private var consumedCallbacks = mutableListOf<(StateAndRef<S>) -> Unit>()
 
-    constructor(cordaRPCProperties: CordaRPCProperties) {
-        this.cordaRPCProperties = cordaRPCProperties
+    constructor(cordaRPCRPCProperties: ConsentBridgeRPCProperties) {
+        this.consentBridgeRPCProperties = cordaRPCRPCProperties
     }
 
     /**
@@ -128,8 +128,8 @@ class StateChangeListener<S : ContractState> : AutoCloseable {
      * Connect to Corda node with a 5 second (default) delay between attempts
      */
     private fun connect() : CordaRPCConnection? {
-        val retryInterval = cordaRPCProperties.retryIntervalSeconds.seconds
-        val nodeAddress = NetworkHostAndPort(cordaRPCProperties.host, cordaRPCProperties.port)
+        val retryInterval = consentBridgeRPCProperties.retryIntervalSeconds.seconds
+        val nodeAddress = NetworkHostAndPort(consentBridgeRPCProperties.host, consentBridgeRPCProperties.port)
 
         do {
             val connection = try {
@@ -140,7 +140,7 @@ class StateChangeListener<S : ContractState> : AutoCloseable {
                             override val connectionMaxRetryInterval = retryInterval
                         }
                 )
-                val unvalidatedConnection = client.start(cordaRPCProperties.user, cordaRPCProperties.password)
+                val unvalidatedConnection = client.start(consentBridgeRPCProperties.user, consentBridgeRPCProperties.password)
 
                 // Check connection is truly operational before returning it.
                 val nodeInfo = unvalidatedConnection.proxy.nodeInfo()

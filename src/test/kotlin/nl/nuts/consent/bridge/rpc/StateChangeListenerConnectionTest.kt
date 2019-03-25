@@ -29,7 +29,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
-import nl.nuts.consent.bridge.CordaRPCProperties
+import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -73,7 +73,7 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
     fun `callbacks survive node stop and start`() {
         var count = 0
         val address = node.node.configuration.rpcOptions.address
-        val callback = StateChangeListener<DummyState>(CordaRPCProperties(address.host, address.port, USER, PASSWORD, 1))
+        val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1))
         callback.onProduced { count++ }
         callback.start(DummyState::class.java)
 
@@ -91,6 +91,8 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
         // start flow after restart of node
         connection!!.proxy.startFlow(DummyFlow::ProduceFlow).returnValue.get()
 
+        Thread.sleep(2000)
+
         // should still have been captured
         assertEquals(1, count)
 
@@ -102,7 +104,7 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
     @Test
     fun `Incorrect credentials raises`() {
         val address = node.node.configuration.rpcOptions.address
-        val callback = StateChangeListener<DummyState>(CordaRPCProperties(address.host, address.port, "not user", PASSWORD, 1))
+        val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, "not user", PASSWORD, 1))
         assertFailsWith<ActiveMQSecurityException> { callback.start(DummyState::class.java) }
     }
 }

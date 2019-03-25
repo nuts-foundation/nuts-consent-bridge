@@ -29,10 +29,21 @@ import org.springframework.context.annotation.Configuration
 
 @Configuration
 @ConfigurationProperties("nuts.consent.rpc")
-data class CordaRPCProperties(var host: String = "localhost", var port:Int = 10009, var user:String = "user1", var password:String = "test", var retryIntervalSeconds:Int = 5)
+data class ConsentBridgeRPCProperties(
+        var host: String = "localhost",
+        var port:Int = 10009,
+        var user:String = "user1",
+        var password:String = "test",
+        var retryIntervalSeconds:Int = 5)
+
+@Configuration
+@ConfigurationProperties("nuts.consent.zmq")
+data class ConsentBridgeZMQProperties(
+        var routerPort:Int = 5671,
+        var maxClients:Int = 4)
 
 @SpringBootApplication
-@EnableConfigurationProperties(CordaRPCProperties::class)
+@EnableConfigurationProperties(ConsentBridgeRPCProperties::class, ConsentBridgeZMQProperties::class)
 class NutsConsentBridge
 
 fun main(args: Array<String>) {

@@ -30,7 +30,7 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
-import nl.nuts.consent.bridge.CordaRPCProperties
+import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
@@ -78,13 +78,13 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
     fun `onProduces is called for a new state`() {
         var count = 0
         val address = node.node.configuration.rpcOptions.address
-        val callback = StateChangeListener<DummyState>(CordaRPCProperties(address.host, address.port, USER, PASSWORD))
+        val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
         callback.onProduced { count++ }
         callback.start(DummyState::class.java)
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         assertEquals(1, count)
 
@@ -96,14 +96,14 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         var count = 0
         val address = node.node.configuration.rpcOptions.address
         repeat(2) {
-            val callback = StateChangeListener<DummyState>(CordaRPCProperties(address.host, address.port, USER, PASSWORD))
+            val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
             callback.onProduced { count++ }
             callback.start(DummyState::class.java)
         }
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         assertEquals(2, count)
     }
@@ -112,7 +112,7 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
     fun `onProduces returns refAndState`() {
         val address = node.node.configuration.rpcOptions.address
 
-        val callback = StateChangeListener<DummyState>(CordaRPCProperties(address.host, address.port, USER, PASSWORD))
+        val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
         var producedState: StateAndRef<DummyState>? = null
         callback.onProduced { producedState = it }
         callback.start(DummyState::class.java)
@@ -120,7 +120,7 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         assertNotNull(producedState)
 
@@ -132,7 +132,7 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
     fun `onConsumes returns refAndState`() {
         val address = node.node.configuration.rpcOptions.address
 
-        val callback = StateChangeListener<DummyState>(CordaRPCProperties(address.host, address.port, USER, PASSWORD))
+        val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
         var producedState: StateAndRef<DummyState>? = null
         var consumedState: StateAndRef<DummyState>? = null
         callback.onProduced { producedState = it }
@@ -145,7 +145,7 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         // consume 1 state
         connection!!.proxy.startFlow(::ConsumeFlow, producedState!!).returnValue.get()
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         assertNotNull(consumedState)
 
