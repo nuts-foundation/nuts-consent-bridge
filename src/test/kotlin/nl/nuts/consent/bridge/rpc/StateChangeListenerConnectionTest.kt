@@ -21,6 +21,7 @@ package nl.nuts.consent.bridge.rpc
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
 import net.corda.node.internal.NodeWithInfo
@@ -36,8 +37,11 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 
 class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
@@ -71,10 +75,10 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
 
     @Test
     fun `callbacks survive node stop and start`() {
-        var count = 0
+        var producedState = AtomicReference<StateAndRef<DummyState>>()
         val address = node.node.configuration.rpcOptions.address
         val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1))
-        callback.onProduced { count++ }
+        callback.onProduced { producedState.set(it) }
         callback.start(DummyState::class.java)
 
         // restart node
@@ -91,8 +95,12 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
         // start flow after restart of node
         connection!!.proxy.startFlow(DummyFlow::ProduceFlow).returnValue.get()
 
+        StateChangeListenerTest.blockUntilSet {
+            producedState.get()
+        }
+
         // should still have been captured
-        assertEquals(1, count)
+        assertNotNull(producedState.get())
 
         // cleanup
         callback.close()
