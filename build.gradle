@@ -42,8 +42,9 @@ plugins {
 
 ext {
     jacksonVersion = '2.9.8'
-    slf4j_version = '1.7.25'
-    log4j_version = '2.9.1'
+    slf4jVersion = '1.7.25'
+    log4jVersion = '2.9.1'
+    zeromqVersion = '0.4.3'
 }
 
 repositories {
@@ -107,14 +108,14 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
 
     implementation("org.springframework.boot:spring-boot-starter:${springBootVersion}")
-
+    implementation "org.zeromq:jeromq:$zeromqVersion"
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
 
     cordaCompile("net.corda:corda-node-api:$corda")
     cordaCompile("net.corda:corda-node:$corda")
     implementation("org.apache.qpid:proton-j:0.27.3")
 
-    implementation "org.slf4j:jul-to-slf4j:$slf4j_version"
+    implementation "org.slf4j:jul-to-slf4j:$slf4jVersion"
 
     testImplementation("net.corda:corda-test-utils:$corda")
     testImplementation("net.corda:corda-node-driver:$corda")
@@ -123,6 +124,8 @@ dependencies {
 
     testImplementation group: 'org.apache.mina', name: 'mina-core', version: '2.1.0'
     testImplementation group: 'javax.json', name: 'javax.json-api', version: '1.1.4'
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
 
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 }
