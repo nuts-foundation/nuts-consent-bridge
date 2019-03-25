@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Generic class for registering callbacks for State changes in the Vault.
  * The idea is that one instance is used per client per State. If multiple instances are used for the same state, duplicate events will be published.
- * Each instance uses a single Corda RPC connection. These are limited, so connecting instances to threads might not be the wisest.
+ * Each instance uses a single Corda RPC connection. These are limited, so starting up instances from threads might not be the wisest.
  */
 class StateChangeListener<S : ContractState> : AutoCloseable {
 

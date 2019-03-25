@@ -83,6 +83,9 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         callback.start(DummyState::class.java)
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+
+        Thread.sleep(1000)
+
         assertEquals(1, count)
 
         callback.close()
@@ -99,6 +102,9 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         }
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+
+        Thread.sleep(1000)
+
         assertEquals(2, count)
     }
 
@@ -113,6 +119,8 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
 
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+
+        Thread.sleep(1000)
 
         assertNotNull(producedState)
 
@@ -136,6 +144,8 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
 
         // consume 1 state
         connection!!.proxy.startFlow(::ConsumeFlow, producedState!!).returnValue.get()
+
+        Thread.sleep(1000)
 
         assertNotNull(consumedState)
 
