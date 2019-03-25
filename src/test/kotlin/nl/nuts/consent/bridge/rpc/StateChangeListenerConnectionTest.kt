@@ -91,8 +91,6 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
         // start flow after restart of node
         connection!!.proxy.startFlow(DummyFlow::ProduceFlow).returnValue.get()
 
-        Thread.sleep(2000)
-
         // should still have been captured
         assertEquals(1, count)
 
