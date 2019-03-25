@@ -37,6 +37,7 @@ import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -127,17 +128,17 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         val address = node.node.configuration.rpcOptions.address
 
         val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
-        var producedState: StateAndRef<DummyState>? = null
-        var consumedState: StateAndRef<DummyState>? = null
-        callback.onProduced { producedState = it }
-        callback.onConsumed { consumedState = it }
+        var producedState = AtomicReference<StateAndRef<DummyState>>()
+        var consumedState = AtomicReference<StateAndRef<DummyState>>()
+        callback.onProduced { producedState.set(it) }
+        callback.onConsumed { consumedState.set(it) }
         callback.start(DummyState::class.java)
 
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
         // consume 1 state
-        connection!!.proxy.startFlow(::ConsumeFlow, producedState!!).returnValue.get()
+        connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
 
         assertNotNull(consumedState)
 
