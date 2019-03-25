@@ -110,14 +110,14 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         val address = node.node.configuration.rpcOptions.address
 
         val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD))
-        var producedState: StateAndRef<DummyState>? = null
-        callback.onProduced { producedState = it }
+        var producedState = AtomicReference<StateAndRef<DummyState>>()
+        callback.onProduced { producedState.set(it) }
         callback.start(DummyState::class.java)
 
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        assertNotNull(producedState)
+        assertNotNull(producedState.get())
 
         // cleanup
         callback.close()
@@ -137,10 +137,12 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
+        assertNotNull(producedState.get())
+
         // consume 1 state
         connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
 
-        assertNotNull(consumedState)
+        assertNotNull(consumedState.get())
 
         // cleanup
         callback.close()
