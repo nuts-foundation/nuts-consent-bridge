@@ -51,6 +51,18 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         val PASSWORD = "test"
         val USER = "user1"
         val rpcUser = User(USER, PASSWORD, permissions = setOf(all()))
+
+        fun blockUntilSet(check: () -> Any?) : Any? {
+            val begin = System.currentTimeMillis()
+            var x: Any? = null
+            while(true) {
+                Thread.sleep(10)
+                if (System.currentTimeMillis() - begin > 10000) break
+                x = check() ?: continue
+                break
+            }
+            return x
+        }
     }
 
     private lateinit var node: NodeWithInfo
@@ -118,6 +130,9 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
+        blockUntilSet {
+            producedState.get()
+        }
         assertNotNull(producedState.get())
 
         // cleanup
@@ -138,11 +153,17 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
+        blockUntilSet {
+            producedState.get()
+        }
         assertNotNull(producedState.get())
 
         // consume 1 state
         connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
 
+        blockUntilSet {
+            consumedState.get()
+        }
         assertNotNull(consumedState.get())
 
         // cleanup
