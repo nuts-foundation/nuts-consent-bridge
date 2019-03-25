@@ -96,7 +96,7 @@ allprojects {
 
 
 test {
-    jvmArgs "-javaagent:/Users/wout.slakhorst/nedap_healthcare/corda/lib/quasar.jar",
+    jvmArgs "-javaagent:lib/quasar.jar",
             "-Dco.paralleluniverse.fibers.verifyInstrumentation=true"
 }
 
