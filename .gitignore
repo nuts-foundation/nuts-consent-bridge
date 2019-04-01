@@ -29,5 +29,5 @@ tags
 # Ignore Gradle project-specific cache directory
 .gradle
 
-# Ignore Gradle build output directory
-build
+# Ignore RST buiild dir
+_build
