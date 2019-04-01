@@ -25,20 +25,16 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Service
-import org.zeromq.ZContext
-import org.zeromq.ZMQ
-import org.zeromq.ZMQException
-import org.zeromq.ZThread
-import zmq.ZError
-import java.nio.channels.ClosedChannelException
+import org.zeromq.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
 /**
  * Single service which binds a ZeroMQ Router to a port. Clients connect using a ZeroMQ REQ socket and send:
  *  - ZeroMQ topic used on the subscriber socket
- *  - Corda Consent State to subscribe to
  *  - Offset timestamp (epoch) as starting point for the subscription
+ *
+ *  This will start a subscription for ConsentRequestState changes
  */
 @Service
 class Router {
@@ -50,15 +46,18 @@ class Router {
     @Autowired
     lateinit var context: ZContext
 
+    @Autowired
+    lateinit var publisher: Publisher
+
     private lateinit var routerController: RouterController
     /**
      * Setup the ZeroMQ socket
      */
     @PostConstruct
     fun init() {
-        routerController =  RouterController(consentBridgeZMQProperties.routerPort, context)
+        routerController =  RouterController(consentBridgeZMQProperties.routerPort, context, publisher)
 
-        logger.debug("Starting router controller on ${consentBridgeZMQProperties.routerPort}")
+        logger.info("Starting router controller on ${consentBridgeZMQProperties.routerPort}")
 
         ZThread.start(routerController)
     }
@@ -69,26 +68,33 @@ class Router {
     @PreDestroy
     fun destroy() {
         routerController.stop()
+
+        context.destroy()
     }
 
     /**
-     * Main receive loop for Router
+     * Main receive loop for Router. It waits for request queues. Clients should send a topicId frame and an epoch frame
+     *
+     * 1 - topicId
+     * 2 - timestamp (epoch)
      */
-    private class RouterController(private val port: Int, private val context: ZContext) : ZThread.IDetachedRunnable {
+    private class RouterController(private val port: Int, private val context: ZContext, private val publisher: Publisher) : ZThread.IDetachedRunnable {
 
         private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
         private lateinit var socket: ZMQ.Socket
 
-        private var interruptLoop = false
+        private var shutdown = false
 
         override fun run(args: Array<out Any>?) {
-            socket = context.createSocket(ZMQ.ROUTER)
-            socket.bind("tcp://*:$port")
+            socket = context.createSocket(SocketType.ROUTER)
+            if(!socket.bind("tcp://*:$port")) {
+                throw IllegalStateException("RouterController cannot bind to $port")
+            }
 
             logger.info("RouterController bound to port: $port")
 
-            while (!interruptLoop) {
+            while (!shutdown) {
                 try {
                     // for non-blocking thread
                     Thread.sleep(10)
@@ -99,29 +105,33 @@ class Router {
                     // empty frame
                     socket.recv()
                     // data frame
-                    val data = socket.recvStr()
+                    val topicId = socket.recvStr()
+                    val epoch = socket.recvStr().toLong()
 
-                    logger.debug("RouterController received $data")
+                    logger.debug("RouterController received request for publishing to $topicId from $epoch")
+
+                    // create subscription and send to publisher
+                    publisher.addSubscription(Subscription(topicId, epoch))
 
                     // reply with ACK
                     socket.sendMore(identity)
                     socket.sendMore("")
                     socket.send("ACK")
                 } catch(e:Exception) {
-                    // message is not ready yet, do not block, for ZMQException
-//                    if (e.errorCode == ZError.EAGAIN) {
-//                        continue
-//                    }
                     logger.error("RouterController received exception: ${e.message}, destroying socket")
                     break
                 }
             }
 
+            logger.info("RouterController stopped")
+
             context.destroySocket(socket)
         }
 
         fun stop() {
-            interruptLoop = true
+            shutdown = true
+
+            logger.debug("Stopping routerController")
         }
     }
 }

@@ -44,9 +44,8 @@ import kotlin.test.assertNotNull
 
 /**
  * These tests are quite slow....
- * todo: migrate to IT
  */
-class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val PASSWORD = "test"
         val USER = "user1"
@@ -100,7 +99,7 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
 
         assertEquals(1, count.get())
 
-        callback.close()
+        callback.terminate()
     }
 
     @Test
@@ -136,7 +135,7 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         assertNotNull(producedState.get())
 
         // cleanup
-        callback.close()
+        callback.terminate()
     }
 
     @Test
@@ -159,7 +158,8 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         assertNotNull(producedState.get())
 
         // consume 1 state
-        connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
+        val signedTransaction = connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
+        assertNotNull(signedTransaction)
 
         blockUntilSet {
             consumedState.get()
@@ -167,6 +167,6 @@ class StateChangeListenerTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc
         assertNotNull(consumedState.get())
 
         // cleanup
-        callback.close()
+        callback.terminate()
     }
 }

@@ -20,10 +20,11 @@
 buildscript {
     ext {
         kotlinVersion = '1.2.71'
-        corda = '4.0'
+        cordaVersion = '4.0'
         cordaGradlePluginsVersion = '4.0.25'
         springBootVersion = '2.1.3.RELEASE'
         springBootGradlePluginVersion = '2.1.3.RELEASE'
+        nutsVersion = project.version
     }
 
     dependencies {
@@ -44,7 +45,7 @@ ext {
     jacksonVersion = '2.9.8'
     slf4jVersion = '1.7.25'
     log4jVersion = '2.9.1'
-    zeromqVersion = '0.4.3'
+    zeromqVersion = '0.5.0'
 }
 
 repositories {
@@ -102,7 +103,6 @@ test {
 }
 
 apply plugin: 'net.corda.plugins.cordapp'
-//apply plugin: 'net.corda.plugins.cordformation'
 
 dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
@@ -111,14 +111,17 @@ dependencies {
     implementation "org.zeromq:jeromq:$zeromqVersion"
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
 
-    cordaCompile("net.corda:corda-node-api:$corda")
-    cordaCompile("net.corda:corda-node:$corda")
+    cordaCompile("net.corda:corda-node-api:$cordaVersion")
+    cordaCompile("net.corda:corda-node:$cordaVersion")
+    cordaCompile("nl.nuts.consent:contract:$nutsVersion")
+    cordaCompile("nl.nuts.consent:flows:$nutsVersion")
+
     implementation("org.apache.qpid:proton-j:0.27.3")
 
     implementation "org.slf4j:jul-to-slf4j:$slf4jVersion"
 
-    testImplementation("net.corda:corda-test-utils:$corda")
-    testImplementation("net.corda:corda-node-driver:$corda")
+    testImplementation("net.corda:corda-test-utils:$cordaVersion")
+    testImplementation("net.corda:corda-node-driver:$cordaVersion")
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
 

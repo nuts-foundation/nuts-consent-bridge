@@ -33,6 +33,12 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Subscription
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.temporal.TemporalAccessor
+import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -40,7 +46,7 @@ import java.util.concurrent.atomic.AtomicReference
  * The idea is that one instance is used per client per State. If multiple instances are used for the same state, duplicate events will be published.
  * Each instance uses a single Corda RPC connection. These are limited, so starting up instances from threads might not be the wisest.
  */
-class StateChangeListener<S : ContractState> : AutoCloseable {
+class StateChangeListener<S : ContractState> {
 
     val logger:Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -50,8 +56,13 @@ class StateChangeListener<S : ContractState> : AutoCloseable {
     private var producedCallbacks = mutableListOf<(StateAndRef<S>) -> Unit>()
     private var consumedCallbacks = mutableListOf<(StateAndRef<S>) -> Unit>()
 
-    constructor(cordaRPCRPCProperties: ConsentBridgeRPCProperties) {
+    private var epochOffset:Long
+
+    private var shutdown:Boolean = false
+
+    constructor(cordaRPCRPCProperties: ConsentBridgeRPCProperties, epochOffset:Long = 0) {
         this.consentBridgeRPCProperties = cordaRPCRPCProperties
+        this.epochOffset = epochOffset
     }
 
     /**
@@ -74,15 +85,30 @@ class StateChangeListener<S : ContractState> : AutoCloseable {
 
     /**
      * This will initiate the RPC connection and start the observer stream
-     * todo: add timestamp argument to initiate feed with pointer to the past
      */
     fun start(stateClass: Class<S>) {
+        if (shutdown) {
+            return
+        }
+
         connection = connect()
         val proxy = connection!!.proxy
 
+        // time criteria
+        val asOfDateTime = Instant.ofEpochSecond(epochOffset, 0)
+        val recordedAfterExpression = QueryCriteria.TimeCondition(
+                QueryCriteria.TimeInstantType.RECORDED,
+                ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
+        val recordedCriteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = recordedAfterExpression)
+
+        val consumedAfterExpression = QueryCriteria.TimeCondition(
+                QueryCriteria.TimeInstantType.CONSUMED,
+                ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
+        val consumedCriteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = consumedAfterExpression)
+
         // feed criteria
         val feed = proxy.vaultTrackBy(
-                QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL),
+                recordedCriteria.or(consumedCriteria),
                 PageSpecification(DEFAULT_PAGE_NUM, 100),
                 Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
                 stateClass)
@@ -128,6 +154,10 @@ class StateChangeListener<S : ContractState> : AutoCloseable {
      * Connect to Corda node with a 5 second (default) delay between attempts
      */
     private fun connect() : CordaRPCConnection? {
+        if (shutdown) {
+            return null
+        }
+
         val retryInterval = consentBridgeRPCProperties.retryIntervalSeconds.seconds
         val nodeAddress = NetworkHostAndPort(consentBridgeRPCProperties.host, consentBridgeRPCProperties.port)
 
@@ -162,16 +192,15 @@ class StateChangeListener<S : ContractState> : AutoCloseable {
             }
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
-        } while (connection == null)
+        } while (!shutdown && connection == null)
 
-        // unreachable but compiler demands it
         return null
     }
-
     /**
      * Closes the RPC connection to the Corda node
      */
-    override fun close() {
-        connection?.close()
+    fun terminate() {
+        shutdown = true
+        connection?.forceClose()
     }
 }

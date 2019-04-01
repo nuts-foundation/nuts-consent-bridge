@@ -22,6 +22,9 @@ import nl.nuts.consent.bridge.ConsentBridgeZMQProperties
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mock
+import org.mockito.Mockito.mock
+import org.zeromq.SocketType
 import org.zeromq.ZContext
 import org.zeromq.ZMQ
 import kotlin.test.assertEquals
@@ -33,6 +36,7 @@ class RouterTest {
     fun setup() {
         router.consentBridgeZMQProperties = ConsentBridgeZMQProperties()
         router.context = ZContext()
+        router.publisher = mock(Publisher::class.java)
 
         router.init()
     }
@@ -45,9 +49,11 @@ class RouterTest {
     @Test
     fun `Router init uses ConsentBridgeZMQProperties for opening listener socket`() {
         // check if responds
-        router.context.createSocket(ZMQ.REQ).use {
+        router.context.createSocket(SocketType.REQ).use {
+            it.linger = 0
             it.connect("tcp://localhost:${router.consentBridgeZMQProperties.routerPort}")
-            it.send("0-0-0")
+            it.sendMore("topic")
+            it.send("0")
             assertEquals("ACK", it.recvStr())
         }
     }
@@ -55,10 +61,12 @@ class RouterTest {
     @Test
     fun `Client can disconnect cleanly`() {
         val clientContext = ZContext()
-        val socket = clientContext.createSocket(ZMQ.REQ)
+        val socket = clientContext.createSocket(SocketType.REQ)
         socket.use {
+            it.linger = 0
             it.connect("tcp://localhost:${router.consentBridgeZMQProperties.routerPort}")
-            it.send("0-0-0")
+            it.sendMore("topic")
+            it.send("0")
             assertEquals("ACK", it.recvStr())
         }
 

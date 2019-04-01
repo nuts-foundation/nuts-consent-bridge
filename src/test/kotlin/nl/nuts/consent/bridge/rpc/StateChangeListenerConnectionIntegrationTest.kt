@@ -37,13 +37,11 @@ import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val PASSWORD = "test"
         val USER = "user1"
@@ -95,7 +93,7 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
         // start flow after restart of node
         connection!!.proxy.startFlow(DummyFlow::ProduceFlow).returnValue.get()
 
-        StateChangeListenerTest.blockUntilSet {
+        StateChangeListenerIntegrationTest.blockUntilSet {
             producedState.get()
         }
 
@@ -103,7 +101,7 @@ class StateChangeListenerConnectionTest  : NodeBasedTest(listOf("nl.nuts.consent
         assertNotNull(producedState.get())
 
         // cleanup
-        callback.close()
+        callback.terminate()
         connection!!.close()
     }
 

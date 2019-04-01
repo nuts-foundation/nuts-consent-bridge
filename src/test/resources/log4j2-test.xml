@@ -31,7 +31,7 @@
         <Root level="debug">
             <AppenderRef ref="Console-Appender"/>
         </Root>
-        <Logger name="net.corda" level="error" additivity="false">
+        <Logger name="net.corda" level="warn" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
         <Logger name="org.hibernate" level="error" additivity="false">
