@@ -16,6 +16,23 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-rootProject.name = 'nuts-consent-bridge'
-include 'generated'
-include 'impl'
+package nl.nuts.consent.bridge
+
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.context.annotation.Configuration
+
+@Configuration
+@ConfigurationProperties("nuts.consent.rpc")
+data class ConsentBridgeRPCProperties(
+        var host: String = "localhost",
+        var port:Int = 10009,
+        var user:String = "user1",
+        var password:String = "test",
+        var retryIntervalSeconds:Int = 5)
+
+@Configuration
+@ConfigurationProperties("nuts.consent.zmq")
+data class ConsentBridgeZMQProperties(
+        var routerPort:Int = 5671,
+        var publisherAddress:String = "tcp://localhost:5672",
+        var maxClients:Int = 4)

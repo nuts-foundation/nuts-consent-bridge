@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-rootProject.name = 'nuts-consent-bridge'
-include 'generated'
-include 'impl'
+dependencies {
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
+
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+}
