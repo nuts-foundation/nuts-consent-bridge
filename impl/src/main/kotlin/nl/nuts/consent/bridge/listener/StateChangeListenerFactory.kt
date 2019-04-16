@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.zmq
+package nl.nuts.consent.bridge.listener
 
 import net.corda.core.contracts.ContractState
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
-import nl.nuts.consent.bridge.rpc.StateChangeListener
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
@@ -32,9 +32,9 @@ import org.springframework.stereotype.Service
 class StateChangeListenerFactory {
 
     @Autowired
-    lateinit var consentBridgeRPCProperties: ConsentBridgeRPCProperties
+    lateinit var cordaRPClientFactory: CordaRPClientFactory
 
     fun <T : ContractState> createInstance(epoch:Long) : StateChangeListener<T> {
-        return StateChangeListener(consentBridgeRPCProperties, epoch)
+        return StateChangeListener(cordaRPClientFactory.getObject(), epoch)
     }
 }

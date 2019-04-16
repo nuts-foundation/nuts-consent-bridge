@@ -22,7 +22,8 @@ import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import nl.nuts.consent.bridge.ConsentBridgeZMQProperties
-import nl.nuts.consent.bridge.rpc.StateChangeListener
+import nl.nuts.consent.bridge.listener.StateChangeListener
+import nl.nuts.consent.bridge.listener.StateChangeListenerFactory
 import nl.nuts.consent.state.ConsentRequestState
 import org.junit.Before
 import org.junit.Test

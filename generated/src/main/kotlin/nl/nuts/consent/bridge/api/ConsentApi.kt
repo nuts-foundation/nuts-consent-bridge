@@ -1,8 +1,9 @@
 package nl.nuts.consent.bridge.api
 
-import nl.nuts.consent.bridge.model.AcceptConsentRequestState
+import nl.nuts.consent.bridge.model.ConsentRequestMetadata
 import nl.nuts.consent.bridge.model.ConsentRequestState
 import nl.nuts.consent.bridge.model.EventStreamSetting
+import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -32,12 +33,21 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
 
 
     @RequestMapping(
-            value = ["/api/consent/accept_consent_request"],
+            value = ["/api/consent/consent_request/{uuid}/accept"],
             produces = ["text/plain"], 
             consumes = ["application/json"],
             method = [RequestMethod.POST])
-    fun acceptConsentRequestState( @Valid @RequestBody acceptConsentRequestState: AcceptConsentRequestState?): ResponseEntity<String> {
-        return ResponseEntity(service.acceptConsentRequestState(acceptConsentRequestState), HttpStatus.OK)
+    fun acceptConsentRequestState( @PathVariable("uuid") uuid: String, @Valid @RequestBody partyAttachmentSignature: PartyAttachmentSignature): ResponseEntity<String> {
+        return ResponseEntity(service.acceptConsentRequestState(uuid, partyAttachmentSignature), HttpStatus.OK)
+    }
+
+
+    @RequestMapping(
+            value = ["/api/consent/consent_request/{uuid}/finalize"],
+            produces = ["text/plain"], 
+            method = [RequestMethod.POST])
+    fun finalizeConsentRequestState( @PathVariable("uuid") uuid: String): ResponseEntity<String> {
+        return ResponseEntity(service.finalizeConsentRequestState(uuid), HttpStatus.OK)
     }
 
 
@@ -45,17 +55,17 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
             value = ["/api/attachment/{secureHash}"],
             produces = ["application/octet-stream"], 
             method = [RequestMethod.GET])
-    fun getAttachmentBySecureHash( @PathVariable("secureHash") secureHash: String): ResponseEntity<java.io.File> {
+    fun getAttachmentBySecureHash( @PathVariable("secureHash") secureHash: String): ResponseEntity<Any> {
         return ResponseEntity(service.getAttachmentBySecureHash(secureHash), HttpStatus.OK)
     }
 
 
     @RequestMapping(
-            value = ["/api/consent_request_state/{linearId}"],
+            value = ["/api/consent_request_state/{uuid}"],
             produces = ["application/json"], 
             method = [RequestMethod.GET])
-    fun getConsentRequestStateById( @PathVariable("linearId") linearId: String): ResponseEntity<ConsentRequestState> {
-        return ResponseEntity(service.getConsentRequestStateById(linearId), HttpStatus.OK)
+    fun getConsentRequestStateById( @PathVariable("uuid") uuid: String): ResponseEntity<ConsentRequestState> {
+        return ResponseEntity(service.getConsentRequestStateById(uuid), HttpStatus.OK)
     }
 
 
@@ -66,5 +76,15 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
             method = [RequestMethod.POST])
     fun initEventStream( @Valid @RequestBody eventStreamSetting: EventStreamSetting): ResponseEntity<String> {
         return ResponseEntity(service.initEventStream(eventStreamSetting), HttpStatus.OK)
+    }
+
+
+    @RequestMapping(
+            value = ["/api/consent/consent_request"],
+            produces = ["text/plain"], 
+            consumes = ["multipart/form-data"],
+            method = [RequestMethod.POST])
+    fun newConsentRequestState(@RequestParam(value="consentRequestMetadata", required=false) consentRequestMetadata: ConsentRequestMetadata, @Valid @RequestPart("file") attachment: MultipartFile): ResponseEntity<String> {
+        return ResponseEntity(service.newConsentRequestState(consentRequestMetadata, attachment), HttpStatus.OK)
     }
 }

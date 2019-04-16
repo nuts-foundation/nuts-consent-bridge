@@ -18,11 +18,19 @@
 
 package nl.nuts.consent.bridge.api
 
-import com.nhaarman.mockito_kotlin.mock
-import com.nhaarman.mockito_kotlin.verify
+import com.nhaarman.mockito_kotlin.*
+import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.TransactionState
+import net.corda.core.crypto.SecureHash
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.QueryCriteria
 import nl.nuts.consent.bridge.model.EventStreamSetting
+import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.zmq.Publisher
 import nl.nuts.consent.bridge.zmq.Subscription
+import nl.nuts.consent.state.ConsentRequestState
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -35,6 +43,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.util.ReflectionTestUtils
+import java.util.*
 import kotlin.test.assertEquals
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -48,9 +57,15 @@ class ConsentApiIntegrationTest {
 
     private var publisher: Publisher = mock()
 
+    private var cordaRPCOps: CordaRPCOps = mock()
+    private var cordaRPClientWrapper:CordaRPClientWrapper = mock {
+        on {proxy()} doReturn cordaRPCOps
+    }
+
     @Before
     fun setup() {
         ReflectionTestUtils.setField(consentApiService, "publisher", publisher)
+        ReflectionTestUtils.setField(consentApiService, "cordaRPClientWrapper", cordaRPClientWrapper)
     }
 
     @Test
@@ -63,5 +78,20 @@ class ConsentApiIntegrationTest {
         assertEquals(HttpStatus.OK, resp.statusCode) // part of protocol
 
         verify(publisher).addSubscription(Subscription("topic", 1))
+    }
+
+    @Test
+    fun `GET from api consent_request_state {uuid} returns state`() {
+        val mockReference : StateAndRef<ConsentRequestState> = mock()
+        val mockState : TransactionState<ConsentRequestState> = mock()
+
+        whenever(mockReference.state).thenReturn(mockState)
+        whenever(cordaRPCOps.vaultQueryBy<ConsentRequestState>(criteria = any<QueryCriteria.LinearStateQueryCriteria>(), contractStateType = anyOrNull(), paging = anyOrNull(), sorting = anyOrNull()))
+                .thenReturn(Vault.Page(listOf(mockReference), emptyList(), 0L, Vault.StateStatus.ALL, emptyList()))
+        whenever(mockState.data).thenReturn(ConsentRequestState("uuid", setOf(SecureHash.allOnesHash), emptyList(), emptyList()))
+
+        val resp = testRestTemplate.getForEntity("/api/consent_request_state/${UUID.randomUUID()}", String::class.java)
+        assertEquals(HttpStatus.OK, resp.statusCode)
+
     }
 }

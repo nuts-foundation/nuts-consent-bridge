@@ -84,7 +84,10 @@ allprojects {
     dependencies {
         implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
 
-        implementation("org.springframework.boot:spring-boot-starter-data-rest:${springBootVersion}")
+        implementation("org.springframework.boot:spring-boot-starter-data-rest:${springBootVersion}") {
+            exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+        }
+        implementation("org.springframework.boot:spring-boot-starter-jetty:${springBootVersion}")
 
         testImplementation 'org.jetbrains.kotlin:kotlin-test'
         testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
@@ -138,10 +141,10 @@ check.dependsOn jacocoTestReport
 
 openApiGenerate {
     generatorName = "kotlin-spring"
-    outputDir = "generated"
-    inputSpec = "https://nuts-node-rpc-spec.readthedocs.io/en/latest/_static/nuts-consent-bridge.yaml"
-    //inputSpec = "../nuts-node-rpc-spec/docs/_static/nuts-consent-bridge.yaml"
-    verbose = true
+    outputDir = "${project.rootDir}/generated"
+    //inputSpec = "https://nuts-node-rpc-spec.readthedocs.io/en/latest/_static/nuts-consent-bridge.yaml"
+    inputSpec = "../nuts-node-rpc-spec/docs/_static/nuts-consent-bridge.yaml"
+    verbose = false
     apiPackage = "nl.nuts.consent.bridge.api"
     modelPackage = "nl.nuts.consent.bridge.model"
     invokerPackage = "nl.nuts.consent.bridge"
@@ -152,6 +155,7 @@ openApiGenerate {
             gradleBuildFile: false,
             supportingFiles: []
     ]
+    skipOverwrite = false
 }
 
 openApiValidate {
