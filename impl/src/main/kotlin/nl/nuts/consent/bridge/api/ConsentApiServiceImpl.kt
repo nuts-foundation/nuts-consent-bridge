@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
+import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
@@ -136,7 +137,7 @@ class ConsentApiServiceImpl : ConsentApiService {
     }
 
     // todo: change spec to reflect string is in hexadecimal notation
-    override fun getAttachmentBySecureHash(secureHash: String): Any {
+    override fun getAttachmentBySecureHash(secureHash: String): ByteArray {
         val proxy = cordaRPClientWrapper.proxy()
 
         val hash = SecureHash.parse(secureHash)
@@ -145,7 +146,10 @@ class ConsentApiServiceImpl : ConsentApiService {
             throw NotFoundException("Attachment with hash $secureHash not found")
         }
 
-        return proxy.openAttachment(hash)
+        val stream = proxy.openAttachment(hash)
+
+        // stream would have been better, but api spe code generation does not support it
+        return stream.readFully()
     }
 
     override fun getConsentRequestStateById(uuid: String): ConsentRequestState {

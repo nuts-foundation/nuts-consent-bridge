@@ -55,7 +55,7 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
             value = ["/api/attachment/{secureHash}"],
             produces = ["application/octet-stream"], 
             method = [RequestMethod.GET])
-    fun getAttachmentBySecureHash( @PathVariable("secureHash") secureHash: String): ResponseEntity<Any> {
+    fun getAttachmentBySecureHash( @PathVariable("secureHash") secureHash: String): ResponseEntity<ByteArray> {
         return ResponseEntity(service.getAttachmentBySecureHash(secureHash), HttpStatus.OK)
     }
 

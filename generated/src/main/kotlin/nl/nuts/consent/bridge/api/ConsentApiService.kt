@@ -11,7 +11,7 @@ interface ConsentApiService {
 
     fun finalizeConsentRequestState(uuid: String): String
 
-    fun getAttachmentBySecureHash(secureHash: String): Any
+    fun getAttachmentBySecureHash(secureHash: String): ByteArray
 
     fun getConsentRequestStateById(uuid: String): ConsentRequestState
 
