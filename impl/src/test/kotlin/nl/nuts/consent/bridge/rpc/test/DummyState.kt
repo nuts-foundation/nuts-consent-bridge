@@ -16,6 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-rootProject.name = 'nuts-consent-bridge'
-include 'generated'
-include 'impl'
+package nl.nuts.consent.bridge.rpc.test
+
+import net.corda.core.contracts.BelongsToContract
+import net.corda.core.contracts.ContractState
+import net.corda.core.identity.AbstractParty
+
+@BelongsToContract(nl.nuts.consent.bridge.rpc.test.DummyContract::class)
+class DummyState(override val participants: List<AbstractParty>) : ContractState

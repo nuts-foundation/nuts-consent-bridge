@@ -16,6 +16,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-rootProject.name = 'nuts-consent-bridge'
-include 'generated'
-include 'impl'
+package nl.nuts.consent.bridge.rpc.test
+
+import net.corda.core.contracts.CommandData
+import net.corda.core.contracts.Contract
+import net.corda.core.transactions.LedgerTransaction
+
+class DummyContract : Contract {
+    companion object {
+        const val CONTRACT_ID = "DummyContract"
+    }
+
+    override fun verify(tx: LedgerTransaction) {
+        // OK
+    }
+
+    class DummyCommand : CommandData
+}

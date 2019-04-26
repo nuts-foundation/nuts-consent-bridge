@@ -15,3 +15,30 @@ App to bridge gap between the Corda kotlin world and Nuts polyglot service space
     :target: https://codecov.io/gh/nuts-foundation/nuts-consent-bridge
 
 .. inclusion-marker-for-contribution
+
+.. todo https://github.com/booksbyus/zguide/blob/master/examples/Java/asyncsrv.java
+        http://zguide.zeromq.org/php:chapter3#reliable-request-reply fig 38
+
+run tests
+---------
+
+.. code-block::
+
+        ./gradlew check
+
+generate code coverage report
+-----------------------------
+
+.. code-block::
+
+        ./gradlew codeCoverageReport
+
+This task depends on all tests from all sub-projects
+
+
+generate code from api spec
+---------------------------
+
+.. code-block::
+
+        ./gradlew openApiGenerate

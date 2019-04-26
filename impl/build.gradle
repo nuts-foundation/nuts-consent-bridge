@@ -1,0 +1,46 @@
+/*
+ * Nuts consent bridge
+ * Copyright (C) 2019 Nuts community
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+apply plugin: 'net.corda.plugins.cordapp'
+apply plugin: 'org.springframework.boot'
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter:${springBootVersion}")
+    implementation "org.zeromq:jeromq:$zeromqVersion"
+
+    implementation project(':generated')
+
+    cordaCompile("net.corda:corda-node-api:$cordaVersion")
+    cordaCompile("net.corda:corda-node:$cordaVersion")
+    cordaCompile("nl.nuts.consent:contract:$nutsVersion")
+    cordaCompile("nl.nuts.consent:flows:$nutsVersion")
+
+    implementation("org.apache.qpid:proton-j:0.27.3")
+
+    implementation "org.slf4j:jul-to-slf4j:$slf4jVersion"
+
+    testImplementation("net.corda:corda-test-utils:$cordaVersion")
+    testImplementation("net.corda:corda-node-driver:$cordaVersion")
+
+    testImplementation group: 'org.apache.mina', name: 'mina-core', version: '2.1.0'
+    testImplementation group: 'javax.json', name: 'javax.json-api', version: '1.1.4'
+
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+}
