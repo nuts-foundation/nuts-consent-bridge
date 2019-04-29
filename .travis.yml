@@ -1,9 +1,6 @@
-dist: xenial
 language: java
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer
+jdk:
+  - oraclejdk8
 script:
   - ./gradlew check
   - ./gradlew codeCoverageReport

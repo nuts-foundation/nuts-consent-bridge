@@ -93,6 +93,10 @@ allprojects {
         testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
     }
 
+    jacoco {
+        toolVersion = "0.8.3"
+    }
+
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
         kotlinOptions {
             languageVersion = "1.2"
@@ -103,7 +107,7 @@ allprojects {
     }
 
     test {
-        jvmArgs "-javaagent:${project.rootDir}/lib/quasar.jar",
+        jvmArgs "-javaagent:${project.rootDir}/lib/quasar-0.7.x.jar",
                 "-Dco.paralleluniverse.fibers.verifyInstrumentation=true"
         environment SPRING_PROFILES_ACTIVE: environment.SPRING_PROFILES_ACTIVE ?: "test"
     }
