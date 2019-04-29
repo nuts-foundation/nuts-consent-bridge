@@ -1,6 +1,8 @@
 language: java
-jdk:
-  - oraclejdk8
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
 script:
   - ./gradlew check --info --stacktrace
   - ./gradlew codeCoverageReport
