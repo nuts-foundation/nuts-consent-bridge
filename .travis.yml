@@ -1,10 +1,9 @@
+dist: xenial
 language: java
-addons:
-  apt:
-    packages:
-      - oracle-java8-installer=8u201-1~webupd8~1
+jdk:
+  - oraclejdk8
 script:
-  - ./gradlew check --info --stacktrace
+  - ./gradlew check
   - ./gradlew codeCoverageReport
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
