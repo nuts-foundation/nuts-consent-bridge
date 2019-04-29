@@ -4,7 +4,7 @@ addons:
     packages:
       - oracle-java8-installer
 script:
-  - ./gradlew check
+  - ./gradlew check --info --stacktrace
   - ./gradlew codeCoverageReport
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
