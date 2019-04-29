@@ -19,7 +19,8 @@
 package nl.nuts.consent.bridge.zmq
 
 import nl.nuts.consent.bridge.ConsentBridgeZMQProperties
-import nl.nuts.consent.bridge.rpc.StateChangeListener
+import nl.nuts.consent.bridge.listener.StateChangeListener
+import nl.nuts.consent.bridge.listener.StateChangeListenerFactory
 import nl.nuts.consent.state.ConsentRequestState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

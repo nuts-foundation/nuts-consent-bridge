@@ -16,20 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.rpc
+package nl.nuts.consent.bridge.listener
 
-import net.corda.client.rpc.CordaRPCClient
-import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.RPCException
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import net.corda.core.utilities.NetworkHostAndPort
-import net.corda.core.utilities.seconds
-import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
-import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
+import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import rx.Subscription
@@ -45,8 +39,7 @@ class StateChangeListener<S : ContractState> {
 
     val logger:Logger = LoggerFactory.getLogger(this::class.java)
 
-    private var consentBridgeRPCProperties : ConsentBridgeRPCProperties
-    private var connection: CordaRPCConnection? = null
+    private var cordaRPClientWrapper: CordaRPClientWrapper
 
     private var producedCallbacks = mutableListOf<(StateAndRef<S>) -> Unit>()
     private var consumedCallbacks = mutableListOf<(StateAndRef<S>) -> Unit>()
@@ -55,8 +48,8 @@ class StateChangeListener<S : ContractState> {
 
     private var shutdown:Boolean = false
 
-    constructor(cordaRPCRPCProperties: ConsentBridgeRPCProperties, epochOffset:Long = 0) {
-        this.consentBridgeRPCProperties = cordaRPCRPCProperties
+    constructor(cordaRPClientWrapper: CordaRPClientWrapper, epochOffset:Long = 0) {
+        this.cordaRPClientWrapper = cordaRPClientWrapper
         this.epochOffset = epochOffset
     }
 
@@ -86,8 +79,7 @@ class StateChangeListener<S : ContractState> {
             return
         }
 
-        connection = connect()
-        val proxy = connection!!.proxy
+        val proxy = cordaRPClientWrapper.proxy()
 
         // time criteria
         val asOfDateTime = Instant.ofEpochSecond(epochOffset, 0)
@@ -135,7 +127,7 @@ class StateChangeListener<S : ContractState> {
 
             // cleanup stuff to make sure we don't leak anything
             retryableStateUpdatesSubscription.get()?.unsubscribe()
-            connection?.forceClose()
+            cordaRPClientWrapper.close()
 
             // start again
             start(stateClass)
@@ -144,58 +136,11 @@ class StateChangeListener<S : ContractState> {
         // store in atomic reference, so that if the callback errors, the other thread can operate on it safely
         retryableStateUpdatesSubscription.set(subscription)
     }
-
-    /**
-     * Connect to Corda node with a 5 second (default) delay between attempts
-     */
-    private fun connect() : CordaRPCConnection? {
-        if (shutdown) {
-            return null
-        }
-
-        val retryInterval = consentBridgeRPCProperties.retryIntervalSeconds.seconds
-        val nodeAddress = NetworkHostAndPort(consentBridgeRPCProperties.host, consentBridgeRPCProperties.port)
-
-        do {
-            val connection = try {
-                logger.info("Connecting to: $nodeAddress")
-                val client = CordaRPCClient(
-                        nodeAddress,
-                        object : CordaRPCClientConfiguration() {
-                            override val connectionMaxRetryInterval = retryInterval
-                        }
-                )
-                val unvalidatedConnection = client.start(consentBridgeRPCProperties.user, consentBridgeRPCProperties.password)
-
-                // Check connection is truly operational before returning it.
-                val nodeInfo = unvalidatedConnection.proxy.nodeInfo()
-                require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
-                unvalidatedConnection
-            } catch(secEx: ActiveMQSecurityException) {
-                // Incorrect credentials, log and rethrow
-                logger.error(secEx.message)
-                throw secEx
-            } catch(ex: RPCException) {
-                // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                logger.error("Exception upon establishing connection: " + ex.message)
-                null
-            }
-
-            if(connection != null) {
-                logger.info("Connection successfully established with: $nodeAddress")
-                return connection
-            }
-            // Could not connect this time round - pause before giving another try.
-            Thread.sleep(retryInterval.toMillis())
-        } while (!shutdown && connection == null)
-
-        return null
-    }
     /**
      * Closes the RPC connection to the Corda node
      */
     fun terminate() {
         shutdown = true
-        connection?.forceClose()
+        cordaRPClientWrapper.close()
     }
 }

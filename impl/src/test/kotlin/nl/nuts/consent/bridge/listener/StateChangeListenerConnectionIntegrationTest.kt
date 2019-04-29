@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.rpc
+package nl.nuts.consent.bridge.listener
 
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
@@ -31,6 +31,8 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
+import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
@@ -75,7 +77,7 @@ class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.n
     fun `callbacks survive node stop and start`() {
         var producedState = AtomicReference<StateAndRef<DummyState>>()
         val address = node.node.configuration.rpcOptions.address
-        val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1))
+        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)))
         callback.onProduced { producedState.set(it) }
         callback.start(DummyState::class.java)
 
@@ -108,7 +110,7 @@ class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.n
     @Test
     fun `Incorrect credentials raises`() {
         val address = node.node.configuration.rpcOptions.address
-        val callback = StateChangeListener<DummyState>(ConsentBridgeRPCProperties(address.host, address.port, "not user", PASSWORD, 1))
+        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, "not user", PASSWORD, 1)))
         assertFailsWith<ActiveMQSecurityException> { callback.start(DummyState::class.java) }
     }
 }

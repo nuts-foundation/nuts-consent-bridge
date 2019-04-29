@@ -8,14 +8,14 @@ import javax.validation.constraints.*
 
 /**
  * 
- * @param party 
- * @param attachment Base64 SecureHash value
+ * @param legalEntityURI 
+ * @param attachment Hexidecimal SecureHash value
  * @param signature 
  */
-data class PartySignatureAttachment (
+data class PartyAttachmentSignature (
 
         @get:NotNull 
-        @JsonProperty("party") val party: String,
+        @JsonProperty("legalEntityURI") val legalEntityURI: String,
 
         @get:NotNull 
         @JsonProperty("attachment") val attachment: String,
