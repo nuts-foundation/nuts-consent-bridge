@@ -48,6 +48,7 @@ ext {
     slf4jVersion = '1.7.25'
     log4jVersion = '2.9.1'
     zeromqVersion = '0.5.0'
+    wiremockVersion = '2.23.2'
 }
 
 allprojects {
@@ -108,7 +109,7 @@ allprojects {
 
     test {
         jvmArgs "-javaagent:${project.rootDir}/lib/quasar-0.7.x.jar",
-                "-Dco.paralleluniverse.fibers.verifyInstrumentation=true"
+                "-Dco.paralleluniverse.fibers.verifyInstrumentation=false"
         environment SPRING_PROFILES_ACTIVE: environment.SPRING_PROFILES_ACTIVE ?: "test"
     }
 }
@@ -142,8 +143,7 @@ apply plugin: 'org.openapi.generator'
 
 check.dependsOn jacocoTestReport
 
-
-openApiGenerate {
+task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
     generatorName = "kotlin-spring"
     outputDir = "${project.rootDir}/generated"
     //inputSpec = "https://nuts-node-rpc-spec.readthedocs.io/en/latest/_static/nuts-consent-bridge.yaml"
@@ -152,9 +152,36 @@ openApiGenerate {
     apiPackage = "nl.nuts.consent.bridge.api"
     modelPackage = "nl.nuts.consent.bridge.model"
     invokerPackage = "nl.nuts.consent.bridge"
+    generateApiDocumentation = false
+    generateModelDocumentation = false
+    generateModelTests = false
+    generateApiTests = false
+    withXml = false
     configOptions = [
             dateLibrary: "java8",
             serviceInterface: true,
+            exceptionHandler: true,
+            gradleBuildFile: false,
+            supportingFiles: []
+    ]
+    skipOverwrite = false
+}
+
+task generateClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+    generatorName = "kotlin"
+    groupId = "${project.group}"
+    id = "registry-client"
+    outputDir = "${project.rootDir}/generated-client"
+    inputSpec = "../nuts-node-rpc-spec/docs/_static/nuts-registry.yaml"
+    verbose = false
+    generateApiDocumentation = false
+    generateModelDocumentation = false
+    generateModelTests = false
+    generateApiTests = false
+    withXml = false
+    configOptions = [
+            packageName: "nl.nuts.consent.bridge",
+            dateLibrary: "java8",
             exceptionHandler: true,
             gradleBuildFile: false,
             supportingFiles: []
@@ -166,3 +193,9 @@ openApiValidate {
     //inputSpec = "../nuts-node-rpc-spec/docs/_static/nuts-consent-bridge.yaml"
     inputSpec = "https://nuts-node-rpc-spec.readthedocs.io/en/latest/_static/nuts-consent-bridge.yaml"
 }
+
+openApiGenerate {
+
+}
+
+task codegen(dependsOn: ['generateServerApiStub', 'generateClientApiCode'])

@@ -19,3 +19,4 @@
 rootProject.name = 'nuts-consent-bridge'
 include 'generated'
 include 'impl'
+include 'generated-client'

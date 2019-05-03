@@ -17,5 +17,5 @@ interface ConsentApiService {
 
     fun initEventStream(eventStreamSetting: EventStreamSetting): String
 
-    fun newConsentRequestState(consentRequestMetadata: ConsentRequestMetadata, attachment: org.springframework.web.multipart.MultipartFile): String
+    fun newConsentRequestState(consentRequestMetadata: ConsentRequestMetadata,attachment: org.springframework.web.multipart.MultipartFile): String
 }

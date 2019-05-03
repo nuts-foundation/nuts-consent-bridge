@@ -18,7 +18,7 @@ The *Nuts Consent Bridge* application is a Spring boot application. Therefore al
 - Using a runtime JVM parameter specifying the spring configuration file: ``java -jar myproject.jar --spring.config.location=/tmp/overrides.properties``
 - Using environment variables, replacing all camelCasing and dots with underscores. So ``nuts.consent.zmq.publisherAddress`` becomes ``NUTS_CONSENT_ZMQ_PUBLISHER_ADDRESS``
 
-The following configuration properties are available (overlaps with properties from `ref:nuts-consent-bridge-pub-sub`):
+The following configuration properties are available:
 
 =====================================   ====================    ================================================================
 Property                                Default                 Description

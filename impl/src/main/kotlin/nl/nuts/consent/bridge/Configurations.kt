@@ -36,3 +36,8 @@ data class ConsentBridgeZMQProperties(
         var routerPort:Int = 5671,
         var publisherAddress:String = "tcp://localhost:5672",
         var maxClients:Int = 4)
+
+@Configuration
+@ConfigurationProperties("nuts.consent.registry")
+data class ConsentRegistryProperties(
+        var url: String = "http://localhost:8081")
