@@ -18,6 +18,10 @@
 
 package nl.nuts.consent.bridge.api
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig
 import com.nhaarman.mockito_kotlin.*
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
@@ -41,6 +45,7 @@ import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.state.ConsentRequestState
 import org.bouncycastle.util.io.pem.PemObject
 import org.bouncycastle.util.io.pem.PemWriter
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,16 +83,30 @@ class ConsentApiIntegrationTest {
     lateinit var consentApiService: ConsentApiService
 
     private var publisher: Publisher = mock()
-
     private var cordaRPCOps: CordaRPCOps = mock()
     private var cordaRPClientWrapper:CordaRPClientWrapper = mock {
         on {proxy()} doReturn cordaRPCOps
+    }
+
+    companion object {
+        val PORT = 8081
+        val wireMockServer: WireMockServer = WireMockServer(wireMockConfig().port(PORT))
+
+        init {
+            wireMockServer.start()
+            WireMock.configureFor("localhost", PORT)
+        }
     }
 
     @Before
     fun setup() {
         ReflectionTestUtils.setField(consentApiService, "publisher", publisher)
         ReflectionTestUtils.setField(consentApiService, "cordaRPClientWrapper", cordaRPClientWrapper)
+    }
+
+    @After
+    fun cleanup() {
+        WireMock.reset()
     }
 
     @Test
@@ -197,6 +216,11 @@ class ConsentApiIntegrationTest {
 
     @Test
     fun `POST for api consent consent_request returns 200`() {
+        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=https://nuts.nl/CodeSystem/endpoint-type%23consent"))
+            .willReturn(aResponse()
+                .withBody("[]")))
+
+
         val parameters = LinkedMultiValueMap<String, Any>()
         parameters.add("consentRequestMetadata", consentRequestMetadata())
         parameters.add("file", FileSystemResource("src/test/resources/valid_metadata.zip"))
@@ -210,6 +234,27 @@ class ConsentApiIntegrationTest {
 
         assertEquals(HttpStatus.OK, resp.statusCode)
         assertEquals("OK", resp.body!!)
+    }
+
+    @Test
+    fun `POST for api consent consent_request returns 500 if registry returns error`() {
+        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=https://nuts.nl/CodeSystem/endpoint-type%23consent"))
+                .willReturn(aResponse()
+                        .withStatus(500)))
+
+
+        val parameters = LinkedMultiValueMap<String, Any>()
+        parameters.add("consentRequestMetadata", consentRequestMetadata())
+        parameters.add("file", FileSystemResource("src/test/resources/valid_metadata.zip"))
+
+        val headers = HttpHeaders()
+        headers.contentType = MediaType.MULTIPART_FORM_DATA
+
+        val entity = HttpEntity(parameters, headers)
+
+        val resp = testRestTemplate.exchange("/api/consent/consent_request", HttpMethod.POST, entity, String::class.java)
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resp.statusCode)
     }
 
     @Test

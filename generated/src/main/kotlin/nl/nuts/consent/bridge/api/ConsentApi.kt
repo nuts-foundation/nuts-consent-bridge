@@ -84,7 +84,7 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
             produces = ["text/plain"], 
             consumes = ["multipart/form-data"],
             method = [RequestMethod.POST])
-    fun newConsentRequestState(@RequestParam(value="consentRequestMetadata", required=false) consentRequestMetadata: ConsentRequestMetadata, @Valid @RequestPart("file") attachment: MultipartFile): ResponseEntity<String> {
+    fun newConsentRequestState( @RequestParam(value="consentRequestMetadata", required=false) consentRequestMetadata: ConsentRequestMetadata , @Valid @RequestPart("file") attachment: MultipartFile): ResponseEntity<String> {
         return ResponseEntity(service.newConsentRequestState(consentRequestMetadata, attachment), HttpStatus.OK)
     }
 }

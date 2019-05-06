@@ -22,9 +22,4 @@
 # Then explicitly reverse the ignore rule for a single file:
 #!docs/README.md
 
-src/main/kotlin/nl/nuts/consent/bridge/Application.kt
-src/main/resources/application.yaml
-
-# not needed
-pom.xml
-README.md
+build.gradle

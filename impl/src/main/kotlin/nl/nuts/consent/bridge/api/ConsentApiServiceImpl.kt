@@ -22,11 +22,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
+import net.corda.core.identity.CordaX500Name
 import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
+import nl.nuts.consent.bridge.ConsentRegistryProperties
+import nl.nuts.consent.bridge.apis.EndpointsApi
 import nl.nuts.consent.bridge.model.ConsentRequestMetadata
 import nl.nuts.consent.bridge.model.ConsentRequestState
 import nl.nuts.consent.bridge.model.EventStreamSetting
@@ -45,6 +48,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.annotation.PostConstruct
 import javax.annotation.Resource
 
 /**
@@ -61,6 +65,11 @@ class ConsentApiServiceImpl : ConsentApiService {
     @Resource
     lateinit var cordaRPClientWrapper: CordaRPClientWrapper
 
+    @Autowired
+    lateinit var consentRegistryProperties: ConsentRegistryProperties
+
+    lateinit var endpointsApi: EndpointsApi
+
     object Serialisation {
         val _objectMapper : ObjectMapper by lazy {
             val objectMapper = ObjectMapper()
@@ -72,6 +81,11 @@ class ConsentApiServiceImpl : ConsentApiService {
         fun objectMapper() : ObjectMapper {
             return _objectMapper
         }
+    }
+
+    @PostConstruct
+    fun init() {
+        endpointsApi = EndpointsApi(consentRegistryProperties.url)
     }
 
     override fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): String {
@@ -123,14 +137,20 @@ class ConsentApiServiceImpl : ConsentApiService {
         // upload attachment
         val hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
 
-        // todo: find involved parties!
+        // gather orgIds from metadata
+        val orgIds = consentRequestMetadata.metadata.organisationSecureKeys.map { it.legalEntityURI }
+
+        // todo: magic string
+        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "https://nuts.nl/CodeSystem/endpoint-type#consent")
+        // todo: incompatible names
+        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.value) }
 
         // start flow
         val handle = proxy.startFlow(
                 ConsentRequestFlows::NewConsentRequest,
                 consentRequestMetadata.externalId,
                 setOf(hash),
-                emptyList())
+                nodeNames)
 
         // todo: do something with the result?, eg make async for logging purposes?
         return "OK"
