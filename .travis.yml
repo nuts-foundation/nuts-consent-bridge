@@ -1,7 +1,11 @@
+dist: xenial
 language: java
-jdk:
-  - oraclejdk8
+before_install:
+  - sudo add-apt-repository ppa:webupd8team/java
+  - sudo apt-get update
+  - sudo apt-get install oracle-java8-installer
 script:
+  - jdk_switcher use oraclejdk8
   - ./gradlew check
   - ./gradlew codeCoverageReport
 before_cache:
