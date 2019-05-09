@@ -14,6 +14,9 @@ App to bridge gap between the Corda kotlin world and Nuts polyglot service space
 .. image:: https://codecov.io/gh/nuts-foundation/nuts-consent-bridge/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/nuts-foundation/nuts-consent-bridge
 
+.. image:: https://api.codacy.com/project/badge/Grade/9118a6e2254e4db0a6c1fc3725a6ed02
+    :target: https://www.codacy.com/app/woutslakhorst/nuts-consent-bridge
+
 Build is failing since Corda needs a version for test that Travis does not have (Ubuntu)
 
 .. inclusion-marker-for-contribution
