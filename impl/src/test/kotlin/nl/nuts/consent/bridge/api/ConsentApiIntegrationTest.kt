@@ -29,10 +29,8 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.testing.core.TestIdentity
@@ -52,7 +50,6 @@ import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
-import org.springframework.boot.test.web.client.postForEntity
 import org.springframework.core.io.FileSystemResource
 import org.springframework.http.*
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
@@ -61,11 +58,9 @@ import java.io.ByteArrayInputStream
 import java.net.URI
 import java.util.*
 import kotlin.test.assertEquals
-import javax.ws.rs.POST
-import org.springframework.http.ResponseEntity
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.http.HttpEntity
-import org.springframework.web.multipart.MultipartFile
+import java.io.File
 import java.io.StringWriter
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
@@ -183,35 +178,25 @@ class ConsentApiIntegrationTest {
 
     @Test
     fun `POST for api consent consent_request with incomplete consentRequestMetadata returns 400`() {
-        val parameters = LinkedMultiValueMap<String, Any>()
-        parameters.add("consentRequestMetadata", "{}")
-        parameters.add("attachment","")
-
         val headers = HttpHeaders()
-        headers.contentType = MediaType.MULTIPART_FORM_DATA
+        headers.contentType = MediaType.APPLICATION_JSON
 
-        val entity = HttpEntity(parameters, headers)
-
-        val resp = testRestTemplate.exchange("/api/consent/consent_request", HttpMethod.POST, entity, String::class.java)
+        val entity = HttpEntity("{}", headers)
+        val resp = testRestTemplate.postForEntity("/api/consent/consent_request", entity, String::class.java)
 
         assertEquals(HttpStatus.BAD_REQUEST, resp.statusCode)
     }
 
     @Test
-    fun `POST for api consent consent_request with missing attachment returns 400`() {
-        val parameters = LinkedMultiValueMap<String, Any>()
-        parameters.add("consentRequestMetadata", consentRequestMetadata())
-        parameters.add("attachment","")
-
+    fun `POST for api consent consent_request with invalid attachment returns 400`() {
         val headers = HttpHeaders()
-        headers.contentType = MediaType.MULTIPART_FORM_DATA
+        headers.contentType = MediaType.APPLICATION_JSON
 
-        val entity = HttpEntity(parameters, headers)
-
-        val resp = testRestTemplate.exchange("/api/consent/consent_request", HttpMethod.POST, entity, String::class.java)
+        val entity = HttpEntity(invalidConsentRequestState(), headers)
+        val resp = testRestTemplate.postForEntity("/api/consent/consent_request", entity, String::class.java)
 
         assertEquals(HttpStatus.BAD_REQUEST, resp.statusCode)
-        assertTrue(resp.body!!.contains("Required request part 'file' is not present"))
+        assertTrue(resp.body!!.contains("given attachment is not using valid base64 encoding"))
     }
 
     @Test
@@ -221,16 +206,11 @@ class ConsentApiIntegrationTest {
                 .withBody("[]")))
 
 
-        val parameters = LinkedMultiValueMap<String, Any>()
-        parameters.add("consentRequestMetadata", consentRequestMetadata())
-        parameters.add("file", FileSystemResource("src/test/resources/valid_metadata.zip"))
-
         val headers = HttpHeaders()
-        headers.contentType = MediaType.MULTIPART_FORM_DATA
+        headers.contentType = MediaType.APPLICATION_JSON
 
-        val entity = HttpEntity(parameters, headers)
-
-        val resp = testRestTemplate.exchange("/api/consent/consent_request", HttpMethod.POST, entity, String::class.java)
+        val entity = HttpEntity(newConsentRequestState(), headers)
+        val resp = testRestTemplate.postForEntity("/api/consent/consent_request", entity, String::class.java)
 
         assertEquals(HttpStatus.OK, resp.statusCode)
         assertEquals("OK", resp.body!!)
@@ -243,16 +223,11 @@ class ConsentApiIntegrationTest {
                         .withStatus(500)))
 
 
-        val parameters = LinkedMultiValueMap<String, Any>()
-        parameters.add("consentRequestMetadata", consentRequestMetadata())
-        parameters.add("file", FileSystemResource("src/test/resources/valid_metadata.zip"))
-
         val headers = HttpHeaders()
-        headers.contentType = MediaType.MULTIPART_FORM_DATA
+        headers.contentType = MediaType.APPLICATION_JSON
 
-        val entity = HttpEntity(parameters, headers)
-
-        val resp = testRestTemplate.exchange("/api/consent/consent_request", HttpMethod.POST, entity, String::class.java)
+        val entity = HttpEntity(newConsentRequestState(), headers)
+        val resp = testRestTemplate.postForEntity("/api/consent/consent_request", entity, String::class.java)
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resp.statusCode)
     }
@@ -300,8 +275,8 @@ class ConsentApiIntegrationTest {
         )
     }
 
-    private fun consentRequestMetadata() : ConsentRequestMetadata {
-        return ConsentRequestMetadata(
+    private fun newConsentRequestState() : NewConsentRequestState {
+        return NewConsentRequestState(
                 externalId = "externalId",
                 metadata = Metadata(
                         domain = listOf(Domain.medical),
@@ -317,7 +292,34 @@ class ConsentApiIntegrationTest {
                                 alg = "aes_gcm",
                                 iv = "iv"
                         )
-                ))
+                ),
+                attachment = base64EncodedValidAttachment())
+    }
+
+    private fun invalidConsentRequestState() : NewConsentRequestState {
+        return NewConsentRequestState(
+                externalId = "externalId",
+                metadata = Metadata(
+                        domain = listOf(Domain.medical),
+                        organisationSecureKeys = listOf(
+                                ASymmetricKey(
+                                        legalEntityURI = "test",
+                                        alg = "RSA_3K",
+                                        cipherText = "encrypted cypher"
+                                )
+                        ),
+                        period = Period(validFrom = LocalDate.now()),
+                        secureKey = SymmetricKey(
+                                alg = "aes_gcm",
+                                iv = "iv"
+                        )
+                ),
+                attachment = "A")
+    }
+
+    private fun base64EncodedValidAttachment() : String {
+        val loc = "src/test/resources/valid_metadata.zip"
+        return Base64.getEncoder().encodeToString(File(loc).inputStream().readBytes())
     }
 
     private fun consentRequestState() : ConsentRequestState {

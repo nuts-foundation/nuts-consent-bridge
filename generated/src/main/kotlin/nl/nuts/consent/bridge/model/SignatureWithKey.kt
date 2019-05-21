@@ -7,7 +7,7 @@ import javax.validation.constraints.*
 
 /**
  * 
- * @param publicKey pem encoded public key
+ * @param publicKey pem encoded RSA public key
  * @param &#x60;data&#x60; base64 encoded bytes
  */
 data class SignatureWithKey (

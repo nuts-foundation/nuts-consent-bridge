@@ -1,8 +1,8 @@
 package nl.nuts.consent.bridge.api
 
-import nl.nuts.consent.bridge.model.ConsentRequestMetadata
 import nl.nuts.consent.bridge.model.ConsentRequestState
 import nl.nuts.consent.bridge.model.EventStreamSetting
+import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -82,9 +82,9 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
     @RequestMapping(
             value = ["/api/consent/consent_request"],
             produces = ["text/plain"], 
-            consumes = ["multipart/form-data"],
+            consumes = ["application/json"],
             method = [RequestMethod.POST])
-    fun newConsentRequestState( @RequestParam(value="consentRequestMetadata", required=false) consentRequestMetadata: ConsentRequestMetadata , @Valid @RequestPart("file") attachment: MultipartFile): ResponseEntity<String> {
-        return ResponseEntity(service.newConsentRequestState(consentRequestMetadata, attachment), HttpStatus.OK)
+    fun newConsentRequestState( @Valid @RequestBody newConsentRequestState: NewConsentRequestState): ResponseEntity<String> {
+        return ResponseEntity(service.newConsentRequestState(newConsentRequestState), HttpStatus.OK)
     }
 }

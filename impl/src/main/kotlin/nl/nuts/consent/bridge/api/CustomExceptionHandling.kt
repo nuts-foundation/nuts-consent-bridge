@@ -18,6 +18,7 @@
 
 package nl.nuts.consent.bridge.api
 
+import com.fasterxml.jackson.databind.JsonMappingException
 import nl.nuts.consent.bridge.infrastructure.ClientException
 import nl.nuts.consent.bridge.infrastructure.ServerException
 import org.slf4j.LoggerFactory
@@ -57,5 +58,11 @@ class CustomExceptionHandling {
     fun onIOException(ex: IOException, response: HttpServletResponse) {
         logger.error("Server error occurred: ${ex.message}", ex)
         return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
+    }
+
+    @ExceptionHandler(value = [JsonMappingException::class])
+    fun onJsonMappingException(ex: JsonMappingException, response: HttpServletResponse) {
+        logger.error("JsonMapping exception occurred: ${ex.message}", ex)
+        return response.sendError(HttpStatus.BAD_REQUEST.value(), ex.message)
     }
 }

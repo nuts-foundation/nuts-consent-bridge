@@ -1,8 +1,8 @@
 package nl.nuts.consent.bridge.api
 
-import nl.nuts.consent.bridge.model.ConsentRequestMetadata
 import nl.nuts.consent.bridge.model.ConsentRequestState
 import nl.nuts.consent.bridge.model.EventStreamSetting
+import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 
 interface ConsentApiService {
@@ -17,5 +17,5 @@ interface ConsentApiService {
 
     fun initEventStream(eventStreamSetting: EventStreamSetting): String
 
-    fun newConsentRequestState(consentRequestMetadata: ConsentRequestMetadata,attachment: org.springframework.web.multipart.MultipartFile): String
+    fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): String
 }

@@ -30,10 +30,7 @@ import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.apis.EndpointsApi
-import nl.nuts.consent.bridge.model.ConsentRequestMetadata
-import nl.nuts.consent.bridge.model.ConsentRequestState
-import nl.nuts.consent.bridge.model.EventStreamSetting
-import nl.nuts.consent.bridge.model.PartyAttachmentSignature
+import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.zmq.Publisher
 import nl.nuts.consent.bridge.zmq.Subscription
@@ -44,6 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.io.*
+import java.lang.IllegalArgumentException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
@@ -113,15 +111,21 @@ class ConsentApiServiceImpl : ConsentApiService {
         return "OK"
     }
 
-    override fun newConsentRequestState(consentRequestMetadata: ConsentRequestMetadata, attachment: MultipartFile): String {
+    override fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): String {
         val proxy = cordaRPClientWrapper.proxy()
 
-        // serialize consentRequestMetadata.metadata into metadata-hash.json
-        val metadataBytes = Serialisation.objectMapper().writeValueAsBytes(consentRequestMetadata.metadata)
+        // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
+        val metadataBytes = Serialisation.objectMapper().writeValueAsBytes(newConsentRequestState.metadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
 
         // attachment hash name component
-        val attachmentHash = SecureHash.sha256(attachment.bytes)
+        var attachmentBytes:ByteArray? = null
+        try {
+            attachmentBytes = Base64.getDecoder().decode(newConsentRequestState.attachment)
+        } catch(e:IllegalArgumentException) {
+            throw IllegalArgumentException("given attachment is not using valid base64 encoding: ${e.message}")
+        }
+        val attachmentHash = SecureHash.sha256(attachmentBytes)
 
         // create zip file with metadata file and attachment
         val targetStream = ByteArrayOutputStream()
@@ -131,14 +135,14 @@ class ConsentApiServiceImpl : ConsentApiService {
             it.write(metadataBytes)
 
             it.putNextEntry(ZipEntry("cipher_text-${attachmentHash}.bin"))
-            it.write(attachment.bytes)
+            it.write(attachmentBytes)
         }
 
         // upload attachment
         val hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
 
         // gather orgIds from metadata
-        val orgIds = consentRequestMetadata.metadata.organisationSecureKeys.map { it.legalEntityURI }
+        val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntityURI }
 
         // todo: magic string
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "https://nuts.nl/CodeSystem/endpoint-type#consent")
@@ -148,7 +152,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         // start flow
         val handle = proxy.startFlow(
                 ConsentRequestFlows::NewConsentRequest,
-                consentRequestMetadata.externalId,
+                newConsentRequestState.externalId,
                 setOf(hash),
                 nodeNames)
 
