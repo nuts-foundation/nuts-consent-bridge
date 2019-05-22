@@ -1,5 +1,6 @@
 package nl.nuts.consent.bridge.api
 
+import nl.nuts.consent.bridge.model.ConsentRequestJobState
 import nl.nuts.consent.bridge.model.ConsentRequestState
 import nl.nuts.consent.bridge.model.EventStreamSetting
 import nl.nuts.consent.bridge.model.NewConsentRequestState
@@ -34,19 +35,19 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
 
     @RequestMapping(
             value = ["/api/consent/consent_request/{uuid}/accept"],
-            produces = ["text/plain"], 
+            produces = ["application/json", "text/plain"], 
             consumes = ["application/json"],
             method = [RequestMethod.POST])
-    fun acceptConsentRequestState( @PathVariable("uuid") uuid: String, @Valid @RequestBody partyAttachmentSignature: PartyAttachmentSignature): ResponseEntity<String> {
+    fun acceptConsentRequestState( @PathVariable("uuid") uuid: String, @Valid @RequestBody partyAttachmentSignature: PartyAttachmentSignature): ResponseEntity<ConsentRequestJobState> {
         return ResponseEntity(service.acceptConsentRequestState(uuid, partyAttachmentSignature), HttpStatus.OK)
     }
 
 
     @RequestMapping(
             value = ["/api/consent/consent_request/{uuid}/finalize"],
-            produces = ["text/plain"], 
+            produces = ["application/json", "text/plain"], 
             method = [RequestMethod.POST])
-    fun finalizeConsentRequestState( @PathVariable("uuid") uuid: String): ResponseEntity<String> {
+    fun finalizeConsentRequestState( @PathVariable("uuid") uuid: String): ResponseEntity<ConsentRequestJobState> {
         return ResponseEntity(service.finalizeConsentRequestState(uuid), HttpStatus.OK)
     }
 
@@ -81,10 +82,10 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
 
     @RequestMapping(
             value = ["/api/consent/consent_request"],
-            produces = ["text/plain"], 
+            produces = ["application/json", "text/plain"], 
             consumes = ["application/json"],
             method = [RequestMethod.POST])
-    fun newConsentRequestState( @Valid @RequestBody newConsentRequestState: NewConsentRequestState): ResponseEntity<String> {
+    fun newConsentRequestState( @Valid @RequestBody newConsentRequestState: NewConsentRequestState): ResponseEntity<ConsentRequestJobState> {
         return ResponseEntity(service.newConsentRequestState(newConsentRequestState), HttpStatus.OK)
     }
 }

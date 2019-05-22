@@ -7,16 +7,14 @@ import javax.validation.constraints.*
 
 /**
  * 
- * @param externalId 
+ * @param externalId Unique hexadecimal identifier created based on BSN and private key of care provider.
  * @param UUID Unique identifier assigned by the consent cordapp
  */
 data class ConsentId (
 
-        @get:NotNull 
-        @JsonProperty("externalId") val externalId: String,
+        @JsonProperty("externalId") val externalId: String? = null,
 
-        @get:NotNull 
-        @JsonProperty("UUID") val UUID: String
+        @JsonProperty("UUID") val UUID: String? = null
 ) {
 
 }

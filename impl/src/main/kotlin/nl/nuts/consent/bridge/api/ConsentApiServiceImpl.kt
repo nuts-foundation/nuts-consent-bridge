@@ -86,7 +86,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         endpointsApi = EndpointsApi(consentRegistryProperties.url)
     }
 
-    override fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): String {
+    override fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): ConsentRequestJobState {
         val proxy = cordaRPClientWrapper.proxy()
 
         val handle = proxy.startFlow(
@@ -94,24 +94,30 @@ class ConsentApiServiceImpl : ConsentApiService {
                 UniqueIdentifier("dummy", UUID.fromString(uuid)),
                 listOf(partyAttachmentSignature.convert()))
 
-
-        // todo: do something with the result?, eg make async for logging purposes?
-        return "OK"
+        return ConsentRequestJobState(
+                consentId = ConsentId(
+                    UUID = uuid
+                ),
+                stateMachineId = handle.id.toString() // UUID
+        )
     }
 
-    override fun finalizeConsentRequestState(uuid: String): String {
+    override fun finalizeConsentRequestState(uuid: String): ConsentRequestJobState {
         val proxy = cordaRPClientWrapper.proxy()
 
         val handle = proxy.startFlow(
                 ConsentRequestFlows::FinalizeConsentRequest,
                 UniqueIdentifier("dummy", UUID.fromString(uuid)))
 
-
-        // todo: do something with the result?, eg make async for logging purposes?
-        return "OK"
+        return ConsentRequestJobState(
+                consentId = ConsentId(
+                        UUID = uuid
+                ),
+                stateMachineId = handle.id.toString() // UUID
+        )
     }
 
-    override fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): String {
+    override fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): ConsentRequestJobState {
         val proxy = cordaRPClientWrapper.proxy()
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
@@ -156,8 +162,12 @@ class ConsentApiServiceImpl : ConsentApiService {
                 setOf(hash),
                 nodeNames)
 
-        // todo: do something with the result?, eg make async for logging purposes?
-        return "OK"
+        return ConsentRequestJobState(
+                consentId = ConsentId(
+                        externalId = newConsentRequestState.externalId
+                ),
+                stateMachineId = handle.id.toString() // UUID
+        )
     }
 
     // todo: change spec to reflect string is in hexadecimal notation

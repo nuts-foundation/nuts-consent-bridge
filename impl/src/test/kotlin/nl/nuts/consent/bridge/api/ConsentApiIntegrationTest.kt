@@ -28,11 +28,14 @@ import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.core.TestIdentity
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
@@ -47,10 +50,10 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
-import org.springframework.core.io.FileSystemResource
 import org.springframework.http.*
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.util.ReflectionTestUtils
@@ -58,13 +61,13 @@ import java.io.ByteArrayInputStream
 import java.net.URI
 import java.util.*
 import kotlin.test.assertEquals
-import org.springframework.util.LinkedMultiValueMap
 import org.springframework.http.HttpEntity
 import java.io.File
 import java.io.StringWriter
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.time.LocalDate
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 
@@ -79,6 +82,9 @@ class ConsentApiIntegrationTest {
 
     private var publisher: Publisher = mock()
     private var cordaRPCOps: CordaRPCOps = mock()
+    private var handle: FlowHandle<SignedTransaction> = mock {
+        on {id} doReturn StateMachineRunId.createRandom()
+    }
     private var cordaRPClientWrapper:CordaRPClientWrapper = mock {
         on {proxy()} doReturn cordaRPCOps
     }
@@ -205,15 +211,18 @@ class ConsentApiIntegrationTest {
             .willReturn(aResponse()
                 .withBody("[]")))
 
+        val state = newConsentRequestState()
+        whenever(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::NewConsentRequest, state.externalId, setOf(SecureHash.allOnesHash), emptyList())).thenReturn(handle)
 
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
 
-        val entity = HttpEntity(newConsentRequestState(), headers)
-        val resp = testRestTemplate.postForEntity("/api/consent/consent_request", entity, String::class.java)
+        val entity = HttpEntity(state, headers)
+        val resp = testRestTemplate.postForEntity("/api/consent/consent_request", entity, ConsentRequestJobState::class.java)
 
         assertEquals(HttpStatus.OK, resp.statusCode)
-        assertEquals("OK", resp.body!!)
+        assertNotNull(resp.body!!.stateMachineId)
     }
 
     @Test
@@ -235,24 +244,25 @@ class ConsentApiIntegrationTest {
     @Test
     fun `POST for api consent consent_request {uuid} finalize returns 200`() {
         val uuid = UUID.randomUUID()
-        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::FinalizeConsentRequest, UniqueIdentifier("dummy", uuid))).thenReturn(null)
+        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::FinalizeConsentRequest, UniqueIdentifier("dummy", uuid))).thenReturn(handle)
 
-        val resp = testRestTemplate.postForEntity("/api/consent/consent_request/$uuid/finalize", "", String::class.java)
+        val resp = testRestTemplate.postForEntity("/api/consent/consent_request/$uuid/finalize", "", ConsentRequestJobState::class.java)
 
         assertEquals(HttpStatus.OK, resp.statusCode)
-        assertEquals("OK", resp.body!!)
+        assertNotNull(resp.body!!.stateMachineId)
     }
 
     @Test
     fun `POST for api consent consent_request {uuid} accept returns 200`() {
         val uuid = UUID.randomUUID()
 
-        whenever(cordaRPCOps.startFlow(eq(ConsentRequestFlows::AcceptConsentRequest), eq(UniqueIdentifier("dummy", uuid)), listOf(anyOrNull()))).thenReturn(null)
+        val pas = partyAttachmentSignature().convert()
+        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::AcceptConsentRequest, UniqueIdentifier("dummy", uuid), listOf(pas))).thenReturn(handle)
 
-        val resp = testRestTemplate.postForEntity("/api/consent/consent_request/$uuid/accept", partyAttachmentSignature(), String::class.java)
+        val resp = testRestTemplate.postForEntity("/api/consent/consent_request/$uuid/accept", partyAttachmentSignature(), ConsentRequestJobState::class.java)
 
         assertEquals(HttpStatus.OK, resp.statusCode)
-        assertEquals("OK", resp.body!!)
+        assertNotNull(resp.body!!.stateMachineId)
     }
 
     private fun partyAttachmentSignature() : PartyAttachmentSignature {
