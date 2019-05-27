@@ -20,7 +20,7 @@ class EndpointsApi(basePath: kotlin.String = "http://localhost") : ApiClient(bas
     /**
     * Find endpoints based on organisation identifiers and type of endpoint (optional)
     * 
-    * @param orgIds A list of organisation identifiers to query for. identifiers are URI&#39;s with proper escaping 
+    * @param orgIds A list of organisation identifiers to query for. identifiers are Nuts Identifiers with proper escaping 
     * @param type The type of endpoint requested, eg Nuts or FHIR (optional, default to null)
     * @return kotlin.Array<Endpoint>
     */

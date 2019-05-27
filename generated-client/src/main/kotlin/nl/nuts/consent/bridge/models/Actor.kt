@@ -11,23 +11,14 @@
 */
 package nl.nuts.consent.bridge.models
 
-import nl.nuts.consent.bridge.models.Actor
 
 /**
- * 
- * @param name the well-known name for the organization
+ * A person that acts on behalf of an organization
  * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN 
- * @param actors 
- * @param publicKey PEM encoded public key
  */
-data class Organization (
-    /* the well-known name for the organization */
-    val name: kotlin.String,
+data class Actor (
     /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN  */
-    val identifier: kotlin.String,
-    val actors: kotlin.Array<Actor>? = null,
-    /* PEM encoded public key */
-    val publicKey: kotlin.String? = null
+    val identifier: kotlin.String
 ) {
 
 }

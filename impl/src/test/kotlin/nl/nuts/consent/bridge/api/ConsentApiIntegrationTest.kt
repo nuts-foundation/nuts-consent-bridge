@@ -227,7 +227,7 @@ class ConsentApiIntegrationTest {
 
     @Test
     fun `POST for api consent consent_request returns 500 if registry returns error`() {
-        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=https://nuts.nl/CodeSystem/endpoint-type%23consent"))
+        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=urn:nuts:endpoint::consent"))
                 .willReturn(aResponse()
                         .withStatus(500)))
 
@@ -276,7 +276,7 @@ class ConsentApiIntegrationTest {
         writer.flush()
 
         return PartyAttachmentSignature(
-                legalEntityURI = "legalEntity",
+                legalEntity = "legalEntity",
                 attachment = SecureHash.allOnesHash.toString(),
                 signature = SignatureWithKey(
                         publicKey = stringWriter.toString(),
@@ -292,7 +292,7 @@ class ConsentApiIntegrationTest {
                         domain = listOf(Domain.medical),
                         organisationSecureKeys = listOf(
                                 ASymmetricKey(
-                                        legalEntityURI = "test",
+                                        legalEntity = "test",
                                         alg = "RSA_3K",
                                         cipherText = "encrypted cypher"
                                 )
@@ -313,7 +313,7 @@ class ConsentApiIntegrationTest {
                         domain = listOf(Domain.medical),
                         organisationSecureKeys = listOf(
                                 ASymmetricKey(
-                                        legalEntityURI = "test",
+                                        legalEntity = "test",
                                         alg = "RSA_3K",
                                         cipherText = "encrypted cypher"
                                 )

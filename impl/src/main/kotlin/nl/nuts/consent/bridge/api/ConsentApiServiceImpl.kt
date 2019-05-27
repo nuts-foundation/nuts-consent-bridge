@@ -148,12 +148,12 @@ class ConsentApiServiceImpl : ConsentApiService {
         val hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
 
         // gather orgIds from metadata
-        val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntityURI }
+        val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntity }
 
         // todo: magic string
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "https://nuts.nl/CodeSystem/endpoint-type#consent")
         // todo: incompatible names
-        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.value) }
+        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier) }
 
         // start flow
         val handle = proxy.startFlow(

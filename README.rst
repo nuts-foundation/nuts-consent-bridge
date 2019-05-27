@@ -46,4 +46,4 @@ generate code from api spec
 
 .. code-block::
 
-        ./gradlew openApiGenerate
+        ./gradlew codegen

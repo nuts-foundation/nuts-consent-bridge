@@ -69,7 +69,7 @@ fun PartyAttachmentSignature.convert() : nl.nuts.consent.contract.AttachmentSign
         val factory = KeyFactory.getInstance("RSA")
         val pk = factory.generatePublic(keySpec)
 
-        return nl.nuts.consent.contract.AttachmentSignature(this.legalEntityURI, SecureHash.parse(this.attachment), DigitalSignature.WithKey(pk, Base64.getDecoder().decode(this.signature.data)))
+        return nl.nuts.consent.contract.AttachmentSignature(this.legalEntity, SecureHash.parse(this.attachment), DigitalSignature.WithKey(pk, Base64.getDecoder().decode(this.signature.data)))
     } catch(e :IOException) {
         throw IllegalArgumentException("Exception on converting PartyAttachmentSignature: ${e.message}", e)
     }

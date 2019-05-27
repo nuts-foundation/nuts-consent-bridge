@@ -11,13 +11,12 @@
 */
 package nl.nuts.consent.bridge.models
 
-import nl.nuts.consent.bridge.models.Identifier
 
 import com.squareup.moshi.Json
 /**
  * 
  * @param endpointType URI of the type of endpoint
- * @param identifier 
+ * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN 
  * @param status status of the endpoint
  * @param version version number of the endpoint, used to distinguish between upgrades of endpoint
  * @param URL location of the actual en endpoint on the internet
@@ -25,7 +24,8 @@ import com.squareup.moshi.Json
 data class Endpoint (
     /* URI of the type of endpoint */
     val endpointType: kotlin.String,
-    val identifier: Identifier,
+    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN  */
+    val identifier: kotlin.String,
     /* status of the endpoint */
     val status: Endpoint.Status,
     /* version number of the endpoint, used to distinguish between upgrades of endpoint */
