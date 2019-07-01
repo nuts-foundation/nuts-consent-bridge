@@ -33,8 +33,7 @@ data class ConsentBridgeRPCProperties(
 @Configuration
 @ConfigurationProperties("nuts.consent.zmq")
 data class ConsentBridgeZMQProperties(
-        var routerPort:Int = 5671,
-        var publisherAddress:String = "tcp://localhost:5672",
+        var publisherAddress:String = "tcp://localhost:5563",
         var maxClients:Int = 4)
 
 @Configuration

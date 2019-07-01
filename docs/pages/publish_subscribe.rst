@@ -23,8 +23,7 @@ The following configuration properties are available:
 =====================================   ====================    ================================================================
 Property                                Default                 Description
 =====================================   ====================    ================================================================
-nuts.consent.zmq.routerPort             5671                    The ZeroMQ port for initiating the stream, to be used by *Nuts Service Space*
-nuts.consent.zmq.publisherAddress       tcp://localhost:5672    The ZeroMQ publisher address, to be used by *Nuts Service Space*
+nuts.consent.zmq.publisherAddress       tcp://localhost:5563    The ZeroMQ publisher address, to be used by *Nuts Service Space*
 nuts.consent.rpc.host                   localhost               The host running the Consent Cordapp.
 nuts.consent.rpc.port                   10009                   Port for Consent Cordapp.
 nuts.consent.rpc.user                   user1                   Configured user on the RPC methods of the Consent Cordapp node.
@@ -39,21 +38,20 @@ Stream initiation
 Clients that are interested in published events connect to the exposed ZeroMQ ``publisherAddress`` with a ZeroMQ ``SUB`` socket.
 A topic must be chosen to make sure all published events are at the right client. The ZeroMQ``socket.subscribe`` method can be used for this.
 Before any events are send, the client must send a request to the bridge with a moment in time. All events published after this moment will be send, including historic events.
-To do this, the client must open a ZeroMQ ``REQ`` socket and send a single message with two frames:
+To do this, the client must POST the following message to ``/api/consent/event_stream``:
 
-===== ======== ======
-frame contents type
-===== ======== ======
-1     topic    string
------ -------- ------
-2     epoch    string
-===== ======== ======
+.. code-block:: json
+
+    {
+        "topic": "some_unique_name",
+        "epoch", "0"
+    }
 
 .. important::
 
     The subscribe socket must be connected and a topic must have been registered before the initiation request is send.
 
-If everything goes well, the other side will respond with an ``ACK`` message. The ``REQ`` stream may be closed after the initial response.
+If everything goes well, the other side will respond with an ``OK`` response.
 
 
 Events format
