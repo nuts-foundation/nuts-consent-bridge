@@ -1,7 +1,7 @@
 .. _nuts-crypto-api:
 
-Nuts Crypto API
-===============
+Nuts consent bridge API
+=======================
 
 .. raw:: html
 
