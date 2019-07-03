@@ -25,9 +25,9 @@ import org.springframework.context.annotation.Configuration
 @ConfigurationProperties("nuts.consent.rpc")
 data class ConsentBridgeRPCProperties(
         var host: String = "localhost",
-        var port:Int = 10009,
-        var user:String = "user1",
-        var password:String = "test",
+        var port:Int = 7887,
+        var user:String = "admin",
+        var password:String = "nuts",
         var retryIntervalSeconds:Int = 5)
 
 @Configuration

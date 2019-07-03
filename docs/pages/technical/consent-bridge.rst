@@ -1,7 +1,7 @@
-.. _nuts-consent-bridge-pub-sub:
+.. _nuts-consent-bridge-technical:
 
-ZeroMQ Publish Subscribe Endpoint
-=================================
+Nuts consent bridge technical info
+##################################
 
 The publish subscribe endpoint is for receiving events about new or consumed states inside the *Nuts Consent Cordapp*.
 These events can then be used to update the internal state in *Service Space* or can be used to perform validations.
@@ -10,30 +10,8 @@ ZeroMQ is non-persistant. The main method of disaster-recovery is to reinitialis
 This will do a query on the Corda Vault with the given timestamp. Any missed updates will be read from the Vault before the new events are published.
 Its up to the subscriber to store the timestamp somewhere.
 
-Configuration
--------------
-
-The *Nuts Consent Bridge* application is a Spring boot application. Therefore all `Spring methods of configuring <https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-external-config.html>`_ can be used including:
-
-- Using a runtime JVM parameter specifying the spring configuration file: ``java -jar myproject.jar --spring.config.location=/tmp/overrides.properties``
-- Using environment variables, replacing all camelCasing and dots with underscores. So ``nuts.consent.zmq.publisherAddress`` becomes ``NUTS_CONSENT_ZMQ_PUBLISHER_ADDRESS``
-
-The following configuration properties are available:
-
-=====================================   ====================    ================================================================
-Property                                Default                 Description
-=====================================   ====================    ================================================================
-nuts.consent.zmq.publisherAddress       tcp://localhost:5563    The ZeroMQ publisher address, to be used by *Nuts Service Space*
-nuts.consent.rpc.host                   localhost               The host running the Consent Cordapp.
-nuts.consent.rpc.port                   10009                   Port for Consent Cordapp.
-nuts.consent.rpc.user                   user1                   Configured user on the RPC methods of the Consent Cordapp node.
-nuts.consent.rpc.password               test                    ^^ same, but password ^^
-nuts.consent.rpc.retryIntervalSeconds   5                       Cooldown period before trying to reconnect to node.
-=====================================   ====================    ================================================================
-
-
 Stream initiation
------------------
+*****************
 
 Clients that are interested in published events connect to the exposed ZeroMQ ``publisherAddress`` with a ZeroMQ ``SUB`` socket.
 A topic must be chosen to make sure all published events are at the right client. The ZeroMQ``socket.subscribe`` method can be used for this.
@@ -55,7 +33,7 @@ If everything goes well, the other side will respond with an ``OK`` response.
 
 
 Events format
--------------
+*************
 
 Events are received in the form
 
@@ -67,7 +45,7 @@ Where ``topic`` is the chosen topic for the queue, ``STATE`` represents the type
 
 
 Error handling
---------------
+**************
 
 If anything goes wrong with the connecting queue, the only option is to close it and restart the stream beginning at the last epoch that has been successfully processed.
 This means that the subscribing application MUST maintain a *last known epoch*. Using this approach means that no other persistent queueing technology is needed.

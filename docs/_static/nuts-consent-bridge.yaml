@@ -1,0 +1,315 @@
+openapi: "3.0.0"
+info:
+  title: Nuts consent bridge API spec
+  description: API specification for RPC services available at the nuts-consent-bridge
+  version: 0.1.0
+  license:
+    name: GPLv3
+paths:
+  /api/consent/event_stream:
+    post:
+      summary: Initialise a consent event steam
+      operationId: initEventStream
+      tags:
+        - consent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventStreamSetting"
+      responses:
+        '200':
+          description: OK response
+          content:
+            text/plain:
+              schema:
+                type: string
+        '400':
+          description: incorrect data
+          content:
+            text/plain:
+              example: epoch must be a positive value
+              schema:
+                type: string
+  /api/consent_request_state/{uuid}:
+    get:
+      operationId: getConsentRequestStateById
+      summary: "Get a consent request state by its UUID"
+      tags:
+        - consent
+      parameters:
+        - name: uuid
+          in: path
+          description: "The UUID as in created ConsentRequestState and event."
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "A ConsentRequestState object representing the Corda state"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentRequestState'
+        '404':
+          description: "The given ID can not be found"
+  /api/attachment/{secureHash}:
+    get:
+      operationId: getAttachmentBySecureHash
+      summary: "download an attachment identified by its hash"
+      tags:
+        - consent
+      parameters:
+        - name: secureHash
+          in: path
+          description: "The secure hash of the attachment bytes."
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "A byte stream representing the zip file"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: byte
+        '404':
+          description: "The given hash can not be found"
+  /api/consent/consent_request:
+    post:
+      summary: "Create a new consent request state."
+      operationId: newConsentRequestState
+      tags:
+        - consent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewConsentRequestState'
+      responses:
+        '200':
+          description: "The response holds the given consentID and a stateMachineId. The stateMachineId can be used to query the status of the request before it is committed to the vault"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentRequestJobState"
+        '400':
+          description: "incorrect data"
+          content:
+            text/plain:
+              example:
+                invalid metadata
+  /api/consent/consent_request/{uuid}/accept:
+    post:
+      summary: "Accept a consent request state. This means a Care provider lets the Nuts node know
+        that the patient mentioned in the attachment is also a patient for that care provider."
+      operationId: acceptConsentRequestState
+      tags:
+        - consent
+      parameters:
+        - name: uuid
+          in: path
+          description: "The Unique ID of the consent request record"
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartyAttachmentSignature"
+      responses:
+        '200':
+          description: "The response holds the given consentID and a stateMachineId. The stateMachineId can be used to query the status of the request before it is committed to the vault"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentRequestJobState"
+        '400':
+          description: incorrect data
+          content:
+            text/plain:
+              example:
+                "externalID not found"
+  /api/consent/consent_request/{uuid}/finalize:
+    post:
+      summary: "Finalize a consent request state. This means a Care provider lets the Nuts node know
+        that all checks have been done and that this request can be promoted to a consent record."
+      operationId: finalizeConsentRequestState
+      tags:
+        - consent
+      parameters:
+        - name: uuid
+          in: path
+          description: "The Unique ID of the consent request record"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "The response holds the given consentID and a stateMachineId. The stateMachineId can be used to query the status of the request before it is committed to the vault"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsentRequestJobState"
+        '400':
+          description: incorrect data
+          content:
+            text/plain:
+              example:
+                "externalID not found"
+components:
+  schemas:
+    EventStreamSetting:
+      required:
+        - topic
+        - epoch
+      properties:
+        topic:
+          type: string
+        epoch:
+          type: integer
+          format: int64
+    ConsentRequestState:
+      required:
+        - consentId
+        - attachments
+        - signatures
+      properties:
+        consentId:
+          $ref: '#/components/schemas/ConsentId'
+        attachments:
+          type: array
+          items:
+            type: string
+            description: Hexidecimal SecureHash values
+        signatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartyAttachmentSignature'
+    ConsentRequestJobState:
+      required:
+        - consentId
+        - stateMachineId
+      properties:
+        consentId:
+          $ref: '#/components/schemas/ConsentId'
+        stateMachineId:
+          $ref: '#/components/schemas/StateMachineId'
+    PartyAttachmentSignature:
+      required:
+        - legalEntity
+        - attachment
+        - signature
+      properties:
+        legalEntity:
+          $ref: "#/components/schemas/Identifier"
+        attachment:
+          type: string
+          description: Hexidecimal SecureHash value
+        signature:
+          $ref: '#/components/schemas/SignatureWithKey'
+    SignatureWithKey:
+      required:
+        - publicKey
+        - data
+      properties:
+        publicKey:
+          type: string
+          description: "pem encoded RSA public key"
+        data:
+          type: string
+          description: "base64 encoded bytes"
+    NewConsentRequestState:
+      required:
+        - externalId
+        - metadata
+        - attachment
+      properties:
+        externalId:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        attachment:
+          type: string
+          description: "Base64 encoded data"
+    Metadata:
+      required:
+        - domain
+        - secureKey
+        - organisationSecureKeys
+        - period
+      properties:
+        domain:
+          type: array
+          items:
+            $ref: '#/components/schemas/Domain'
+        secureKey:
+          $ref: '#/components/schemas/SymmetricKey'
+        organisationSecureKeys:
+          type: array
+          items:
+            $ref: '#/components/schemas/ASymmetricKey'
+        period:
+          $ref: '#/components/schemas/Period'
+    Domain:
+      type: string
+      enum: ["medical", "pgo", "insurance"]
+    SymmetricKey:
+      required:
+        - alg
+        - iv
+      properties:
+        alg:
+          type: string
+        iv:
+          type: string
+    ASymmetricKey:
+      required:
+        - legalEntity
+      properties:
+        legalEntity:
+          $ref: "#/components/schemas/Identifier"
+        alg:
+          type: string
+        cipherText:
+          type: string
+          description: "base64 encoded"
+    Period:
+      required:
+        - validFrom
+      properties:
+        validFrom:
+          type: string
+          format: date
+        validTo:
+          type: string
+          format: date
+    ConsentId:
+      properties:
+        externalId:
+          type: string
+          description: "Unique hexadecimal identifier created based on BSN and private key of care provider."
+          example: "abc2345d6a5B6445cd"
+        UUID:
+          type: string
+          description: "Unique identifier assigned by the consent cordapp"
+          example: "cb94aaa4-fa68-4633-aee8-3eef143b3535"
+    StateMachineId:
+      type: string
+      description: "Corda StateMachineID, can be used to diagnose stuck Corda flows"
+      example: "cb94aaa4-fa68-4633-aee8-3eef143b3535"
+    Identifier:
+      type: string
+      description: >
+        Generic identifier used for representing BSN, agbcode, etc.
+        It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
+      example: |
+        * urn:oid:2.16.840.1.113883.2.4.6.3:999999990
+        * urn:oid:2.16.840.1.113883.2.4.6.1:00000007
+        * urn:nuts:endpoint:consent
+        * urn:ietf:rfc:1779:O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local
