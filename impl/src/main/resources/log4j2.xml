@@ -52,5 +52,8 @@
         <Logger name="org.springframework" level="warn" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
+        <Logger name="io.netty" level="warn" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
     </Loggers>
 </Configuration>
