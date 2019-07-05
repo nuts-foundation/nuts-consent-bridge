@@ -90,7 +90,7 @@ class ConsentApiIntegrationTest {
     }
 
     companion object {
-        val PORT = 8081
+        val PORT = 8088
         val wireMockServer: WireMockServer = WireMockServer(wireMockConfig().port(PORT))
 
         init {
@@ -207,7 +207,7 @@ class ConsentApiIntegrationTest {
 
     @Test
     fun `POST for api consent consent_request returns 200`() {
-        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=https://nuts.nl/CodeSystem/endpoint-type%23consent"))
+        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=urn:nuts:endpoint::consent"))
             .willReturn(aResponse()
                 .withBody("[]")))
 

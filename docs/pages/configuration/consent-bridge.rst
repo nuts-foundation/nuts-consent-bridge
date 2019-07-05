@@ -17,5 +17,5 @@ nuts.consent.rpc.port                   7887                    Port for Consent
 nuts.consent.rpc.user                   admin                   Configured user on the RPC methods of the Consent Cordapp node.
 nuts.consent.rpc.password               nuts                    ^^ same, but password ^^
 nuts.consent.rpc.retryIntervalSeconds   5                       Cooldown period before trying to reconnect to node.
-nuts.consent.registry.url               http://localhost:8081   The address + path where the Nuts registry is running
+nuts.consent.registry.url               http://localhost:8088   The address + path where the Nuts registry is running
 =====================================   =====================   ================================================================

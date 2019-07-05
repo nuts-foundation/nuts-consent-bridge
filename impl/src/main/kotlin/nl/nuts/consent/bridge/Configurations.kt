@@ -39,4 +39,4 @@ data class ConsentBridgeZMQProperties(
 @Configuration
 @ConfigurationProperties("nuts.consent.registry")
 data class ConsentRegistryProperties(
-        var url: String = "http://localhost:8081")
+        var url: String = "http://localhost:8088")

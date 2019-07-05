@@ -151,7 +151,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntity }
 
         // todo: magic string
-        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "https://nuts.nl/CodeSystem/endpoint-type#consent")
+        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint::consent")
         // todo: incompatible names
         val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier) }
 
