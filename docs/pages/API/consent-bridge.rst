@@ -1,4 +1,4 @@
-.. _nuts-crypto-api:
+.. _nuts-consent-bridge-api:
 
 Nuts consent bridge API
 =======================

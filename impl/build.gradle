@@ -19,6 +19,8 @@
 apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'org.springframework.boot'
 
+archivesBaseName="consent-bridge"
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter:${springBootVersion}")
     implementation "org.zeromq:jeromq:$zeromqVersion"
@@ -34,6 +36,7 @@ dependencies {
     implementation("nl.nuts.consent.cordapp:flows:$nutsVersion")
 
     implementation("org.apache.qpid:proton-j:0.27.3")
+    implementation group: 'javax.json', name: 'javax.json-api', version: '1.1.4'
 
     implementation "org.slf4j:jul-to-slf4j:$slf4jVersion"
 
@@ -41,7 +44,6 @@ dependencies {
     testImplementation("net.corda:corda-node-driver:$cordaVersion")
 
     testImplementation group: 'org.apache.mina', name: 'mina-core', version: '2.1.0'
-    testImplementation group: 'javax.json', name: 'javax.json-api', version: '1.1.4'
     testImplementation "com.github.tomakehurst:wiremock:$wiremockVersion"
     testImplementation "org.springframework.boot:spring-boot-starter-test"
 

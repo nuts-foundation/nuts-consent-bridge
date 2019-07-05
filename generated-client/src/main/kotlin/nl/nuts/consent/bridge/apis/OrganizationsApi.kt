@@ -46,7 +46,6 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
             ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
-            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
         }
     }
 
@@ -78,7 +77,6 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
             ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
-            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
         }
     }
 
@@ -110,7 +108,6 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
             ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
-            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
         }
     }
 
