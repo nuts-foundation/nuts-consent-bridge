@@ -51,27 +51,7 @@ To build locally
 
     docker build . -f docker/Dockerfile-dev
 
-The ``nutsfoundation/nuts-consent-bridge:latest-dev`` docker image can be used to connect to one of the 2 consent nodes locally. It's important to mount the different files from ``docker/nodes/x``
-
-.. code-block:: shell
-
-    docker run -it -p 8080:8080 \
-        --network=nuts
-        -v /home/user/nuts-consent-bridge/docker/nodes/dahmer/application.properties:/opt/nuts/application.properties
-        --rm
-        nutsfoundation/nuts-consent-bridge:latest-dev
-
-The ports need to be changed if already in use. Port ``8080`` is the port for API calls. Check :ref:`nuts-consent-bridge-api` for the calls that can be made.
-
-This image requires the ``nutsfoundation/nuts-consent-cordapp`` image to be running in a container exposed at ``dahmer:7886`` and/or ``bundy:7886``.
-
-If you haven't created a docker network yet, create one to to able to connect the containers together:
-
-.. code-block:: shell
-
-    docker network create -d bridge nuts
-
-TODO: EXAMPLE consent between dahmer/bundy for 999999990
+The ``nutsfoundation/nuts-consent-bridge:latest-dev`` docker image can be used to connect to one of the 2 consent nodes locally. Checkout :ref:`nuts-network-local-development-docker` for setting up a complete environment with ``docker-compose``.
 
 README
 ******
