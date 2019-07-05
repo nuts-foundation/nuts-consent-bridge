@@ -7,4 +7,4 @@ FROM openjdk:8-jdk-slim
 COPY --from=builder impl/build/libs/consent-bridge-0.2.0.jar /opt/nuts/consent-bridge-0.2.0.jar
 ENTRYPOINT ["/usr/local/openjdk-8/bin/java"]
 CMD ["-jar", "/opt/nuts/consent-bridge-0.2.0.jar", "--spring.config.location=file:/opt/nuts/application.properties"]
-EXPOSE 8080
+EXPOSE 8080, 5563
