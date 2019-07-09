@@ -207,7 +207,7 @@ class ConsentApiIntegrationTest {
 
     @Test
     fun `POST for api consent consent_request returns 200`() {
-        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=urn:nuts:endpoint::consent"))
+        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=urn:nuts:endpoint:consent"))
             .willReturn(aResponse()
                 .withBody("[]")))
 
@@ -227,7 +227,7 @@ class ConsentApiIntegrationTest {
 
     @Test
     fun `POST for api consent consent_request returns 500 if registry returns error`() {
-        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=urn:nuts:endpoint::consent"))
+        stubFor(get(urlEqualTo("/api/endpoints?orgIds=test&type=urn:nuts:endpoint:consent"))
                 .willReturn(aResponse()
                         .withStatus(500)))
 
