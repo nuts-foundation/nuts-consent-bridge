@@ -67,6 +67,7 @@ import java.io.StringWriter
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -297,7 +298,7 @@ class ConsentApiIntegrationTest {
                                         cipherText = "encrypted cypher"
                                 )
                         ),
-                        period = Period(validFrom = LocalDate.now()),
+                        period = Period(validFrom = OffsetDateTime.now()),
                         secureKey = SymmetricKey(
                                 alg = "aes_gcm",
                                 iv = "iv"
@@ -318,7 +319,7 @@ class ConsentApiIntegrationTest {
                                         cipherText = "encrypted cypher"
                                 )
                         ),
-                        period = Period(validFrom = LocalDate.now()),
+                        period = Period(validFrom = OffsetDateTime.now()),
                         secureKey = SymmetricKey(
                                 alg = "aes_gcm",
                                 iv = "iv"

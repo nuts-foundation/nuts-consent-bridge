@@ -14,10 +14,10 @@ package nl.nuts.consent.bridge.models
 
 /**
  * A person that acts on behalf of an organization
- * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN 
+ * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  */
 data class Actor (
-    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN  */
+    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
     val identifier: kotlin.String
 ) {
 

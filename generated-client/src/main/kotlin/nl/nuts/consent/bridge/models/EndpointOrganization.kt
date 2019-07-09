@@ -15,14 +15,14 @@ package nl.nuts.consent.bridge.models
 import com.squareup.moshi.Json
 /**
  * Mapping between Endpoints and Organizations
- * @param endpoint Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN 
- * @param organization Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN 
+ * @param endpoint Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
+ * @param organization Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  * @param status status of the endpoint
  */
 data class EndpointOrganization (
-    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN  */
+    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
     val endpoint: kotlin.String,
-    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (::) and then the identifying value of the given URN  */
+    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
     val organization: kotlin.String,
     /* status of the endpoint */
     val status: EndpointOrganization.Status

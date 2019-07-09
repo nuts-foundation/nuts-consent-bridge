@@ -18,6 +18,37 @@ import nl.nuts.consent.bridge.infrastructure.*
 class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient(basePath) {
 
     /**
+    * Remove organization by id
+    * 
+    * @param id URL encoded identifier 
+    * @return void
+    */
+    fun deregisterOrganization(id: kotlin.String) : Unit {
+        val localVariableBody: kotlin.Any? = null
+        val localVariableQuery: MultiValueMap = mapOf()
+        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
+        val localVariableConfig = RequestConfig(
+            RequestMethod.DELETE,
+            "/api/organization/{id}".replace("{"+"id"+"}", "$id"),
+            query = localVariableQuery,
+            headers = localVariableHeaders
+        )
+        val response = request<Any?>(
+            localVariableConfig,
+            localVariableBody
+        )
+
+        return when (response.responseType) {
+            ResponseType.Success -> Unit
+            ResponseType.Informational -> TODO()
+            ResponseType.Redirection -> TODO()
+            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
+            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
+        }
+    }
+
+    /**
     * get actors for given organization, the main question that is answered by this api: may the professional represent the organization?
     * 
     * @param id URL encoded Identifier 
@@ -46,11 +77,12 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
             ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
         }
     }
 
     /**
-    * Get organization bij id
+    * Get organization by id
     * 
     * @param id URL encoded identifier 
     * @return Organization
@@ -77,6 +109,38 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
             ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
+        }
+    }
+
+    /**
+    * Add an organization to the registry
+    * 
+    * @param organization  
+    * @return void
+    */
+    fun registerOrganization(organization: Organization) : Unit {
+        val localVariableBody: kotlin.Any? = organization
+        val localVariableQuery: MultiValueMap = mapOf()
+        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
+        val localVariableConfig = RequestConfig(
+            RequestMethod.POST,
+            "/api/organizations",
+            query = localVariableQuery,
+            headers = localVariableHeaders
+        )
+        val response = request<Any?>(
+            localVariableConfig,
+            localVariableBody
+        )
+
+        return when (response.responseType) {
+            ResponseType.Success -> Unit
+            ResponseType.Informational -> TODO()
+            ResponseType.Redirection -> TODO()
+            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
+            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
         }
     }
 
@@ -108,6 +172,7 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
             ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
         }
     }
 

@@ -150,7 +150,7 @@ task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.
     generatorName = "kotlin-spring"
     outputDir = "${project.rootDir}/generated"
     //inputSpec = "https://nuts-node-rpc-spec.readthedocs.io/en/latest/_static/nuts-consent-bridge.yaml"
-    inputSpec = "../nuts-api-spec/docs/_static/nuts-consent-bridge.yaml"
+    inputSpec = "docs/_static/nuts-consent-bridge.yaml"
     verbose = false
     apiPackage = "nl.nuts.consent.bridge.api"
     modelPackage = "nl.nuts.consent.bridge.model"
@@ -175,7 +175,7 @@ task generateClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.
     groupId = "${project.group}"
     id = "registry-client"
     outputDir = "${project.rootDir}/generated-client"
-    inputSpec = "../nuts-api-spec/docs/_static/nuts-registry.yaml"
+    inputSpec = "../nuts-registry/docs/_static/nuts-registry.yaml"
     verbose = false
     generateApiDocumentation = false
     generateModelDocumentation = false

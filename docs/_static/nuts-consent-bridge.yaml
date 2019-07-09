@@ -285,10 +285,10 @@ components:
       properties:
         validFrom:
           type: string
-          format: date
+          format: 'date-time'
         validTo:
           type: string
-          format: date
+          format: 'date-time'
     ConsentId:
       properties:
         externalId:

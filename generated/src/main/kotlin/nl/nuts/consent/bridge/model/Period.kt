@@ -13,9 +13,9 @@ import javax.validation.constraints.*
 data class Period (
 
         @get:NotNull 
-        @JsonProperty("validFrom") val validFrom: java.time.LocalDate,
+        @JsonProperty("validFrom") val validFrom: java.time.OffsetDateTime,
 
-        @JsonProperty("validTo") val validTo: java.time.LocalDate? = null
+        @JsonProperty("validTo") val validTo: java.time.OffsetDateTime? = null
 ) {
 
 }
