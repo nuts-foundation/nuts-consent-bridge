@@ -258,7 +258,7 @@ components:
           $ref: '#/components/schemas/Period'
     Domain:
       type: string
-      enum: ["medical", "pgo", "insurance"]
+      enum: ["MEDICAL", "PGO", "INSURANCE", "SOCIAL"]
     SymmetricKey:
       required:
         - alg

@@ -7,15 +7,17 @@ import javax.validation.constraints.*
 
 /**
 * 
-* Values: medical,pgo,insurance
+* Values: mEDICAL,pGO,iNSURANCE,sOCIAL
 */
 enum class Domain(val value: String) {
 
-    medical("medical"),
+    mEDICAL("MEDICAL"),
 
-    pgo("pgo"),
+    pGO("PGO"),
 
-    insurance("insurance");
+    iNSURANCE("INSURANCE"),
+
+    sOCIAL("SOCIAL");
 
 }
 
