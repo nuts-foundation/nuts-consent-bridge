@@ -125,7 +125,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val metadataHash = SecureHash.sha256(metadataBytes)
 
         // attachment hash name component
-        var attachmentBytes:ByteArray? = null
+        var attachmentBytes: ByteArray?
         try {
             attachmentBytes = Base64.getDecoder().decode(newConsentRequestState.attachment)
         } catch(e:IllegalArgumentException) {
@@ -152,8 +152,9 @@ class ConsentApiServiceImpl : ConsentApiService {
 
         // todo: magic string
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
-        // todo: incompatible names
-        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier) }
+
+        // urn:ietf:rfc:1779:X to X
+        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }
 
         // start flow
         val handle = proxy.startFlow(
