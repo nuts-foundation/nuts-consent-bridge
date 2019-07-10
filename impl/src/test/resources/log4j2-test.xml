@@ -49,7 +49,7 @@
         <Logger name="org.eclipse.jetty" level="error" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
-        <Logger name="org.springframework" level="debug" additivity="false">
+        <Logger name="org.springframework" level="info" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
     </Loggers>

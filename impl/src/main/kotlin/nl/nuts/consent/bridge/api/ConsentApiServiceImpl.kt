@@ -38,6 +38,8 @@ import nl.nuts.consent.flow.ConsentRequestFlows
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.io.*
@@ -54,7 +56,7 @@ import javax.annotation.Resource
  */
 @Service
 class ConsentApiServiceImpl : ConsentApiService {
-    private val logger: Logger = LoggerFactory.getLogger(this::class.java)
+    //private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Autowired
     lateinit var publisher: Publisher
@@ -62,6 +64,10 @@ class ConsentApiServiceImpl : ConsentApiService {
     @Autowired
     @Resource
     lateinit var cordaRPClientWrapper: CordaRPClientWrapper
+
+    @Qualifier("mvcConversionService")
+    @Autowired
+    lateinit var conversionService: ConversionService
 
     @Autowired
     lateinit var consentRegistryProperties: ConsentRegistryProperties
@@ -121,7 +127,8 @@ class ConsentApiServiceImpl : ConsentApiService {
         val proxy = cordaRPClientWrapper.proxy()
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
-        val metadataBytes = Serialisation.objectMapper().writeValueAsBytes(newConsentRequestState.metadata)
+        val targetMetadata = conversionService.convert(newConsentRequestState.metadata, nl.nuts.consent.model.ConsentMetadata::class.java)
+        val metadataBytes = Serialisation.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
 
         // attachment hash name component
@@ -209,7 +216,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val stateAndRef = page.states.first()
         val state = stateAndRef.state.data
 
-        return state.convert()
+        return conversionService.convert(state, nl.nuts.consent.bridge.model.ConsentRequestState::class.java)
     }
 
     override fun initEventStream(eventStreamSetting: EventStreamSetting) : String {

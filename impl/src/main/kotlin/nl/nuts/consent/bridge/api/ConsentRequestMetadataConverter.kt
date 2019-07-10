@@ -27,7 +27,7 @@ import org.springframework.core.convert.converter.Converter
 import org.springframework.stereotype.Component
 import java.lang.IllegalArgumentException
 
-@Component
+//@Component
 class ConsentRequestMetadataConverter : Converter<String, ConsentRequestMetadata> {
     @Autowired
     lateinit var objectMapper: ObjectMapper
