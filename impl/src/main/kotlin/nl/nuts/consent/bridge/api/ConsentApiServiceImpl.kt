@@ -56,7 +56,7 @@ import javax.annotation.Resource
  */
 @Service
 class ConsentApiServiceImpl : ConsentApiService {
-    //private val logger: Logger = LoggerFactory.getLogger(this::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Autowired
     lateinit var publisher: Publisher
@@ -124,6 +124,7 @@ class ConsentApiServiceImpl : ConsentApiService {
     }
 
     override fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): ConsentRequestJobState {
+        logger.debug("newConsentRequestState() with {}", Serialisation.objectMapper().writeValueAsString(newConsentRequestState))
         val proxy = cordaRPClientWrapper.proxy()
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
@@ -195,11 +196,13 @@ class ConsentApiServiceImpl : ConsentApiService {
     }
 
     override fun getConsentRequestStateById(uuid: String): ConsentRequestState {
+        logger.debug("getConsentRequestStateById({})", uuid)
+
         // not autoclose, but reuse instance
         val proxy = cordaRPClientWrapper.proxy()
 
         val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
-            linearId = listOf(UniqueIdentifier("", UUID.fromString(uuid))),
+            linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
             status = Vault.StateStatus.UNCONSUMED,
             contractStateTypes = setOf(nl.nuts.consent.state.ConsentRequestState::class.java))
 
