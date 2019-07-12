@@ -307,7 +307,7 @@ components:
       type: string
       description: >
         Generic identifier used for representing BSN, agbcode, etc.
-        It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN
+        It's always constructed as an URN followed by a colon (:) and then the identifying value of the given URN
       example: |
         * urn:oid:2.16.840.1.113883.2.4.6.3:999999990
         * urn:oid:2.16.840.1.113883.2.4.6.1:00000007
