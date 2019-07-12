@@ -55,6 +55,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
+import org.springframework.core.convert.ConversionService
 import org.springframework.http.*
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.util.ReflectionTestUtils
@@ -81,6 +82,10 @@ class ConsentApiIntegrationTest {
 
     @Autowired
     lateinit var consentApiService: ConsentApiService
+
+    @Qualifier("mvcConversionService")
+    @Autowired
+    lateinit var conversionService: ConversionService
 
     private var publisher: Publisher = mock()
     private var cordaRPCOps: CordaRPCOps = mock()
@@ -215,7 +220,7 @@ class ConsentApiIntegrationTest {
 
         val state = newConsentRequestState()
         whenever(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::NewConsentRequest, state.externalId, setOf(SecureHash.allOnesHash), emptyList())).thenReturn(handle)
+        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::NewConsentRequest, state.externalId, setOf(SecureHash.allOnesHash), listOf("test"), emptyList())).thenReturn(handle)
 
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
@@ -258,7 +263,7 @@ class ConsentApiIntegrationTest {
     fun `POST for api consent consent_request {uuid} accept returns 200`() {
         val uuid = UUID.randomUUID()
 
-        val pas = partyAttachmentSignature().convert()
+        val pas = conversionService.convert(partyAttachmentSignature(), AttachmentSignature::class.java)
         whenever(cordaRPCOps.startFlow(ConsentRequestFlows::AcceptConsentRequest, UniqueIdentifier("dummy", uuid), listOf(pas))).thenReturn(handle)
 
         val resp = testRestTemplate.postForEntity("/api/consent/consent_request/$uuid/accept", partyAttachmentSignature(), ConsentRequestJobState::class.java)
@@ -344,6 +349,7 @@ class ConsentApiIntegrationTest {
                 parties = listOf(
                         party
                 ),
+                legalEntities = listOf("legalEntity"),
                 signatures = listOf(
                         AttachmentSignature(
                                 legalEntityURI = "legalEntity",

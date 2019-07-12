@@ -56,7 +56,7 @@ class ASymmetricKeyToCordappType : Converter<nl.nuts.consent.bridge.model.ASymme
         return ASymmetricKey(
                 alg = source.alg!!,
                 cipherText = source.cipherText!!,
-                legalEntityURI = source.legalEntity
+                legalEntity = source.legalEntity
         )
     }
 }

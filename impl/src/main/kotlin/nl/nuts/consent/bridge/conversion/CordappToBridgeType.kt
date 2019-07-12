@@ -49,6 +49,7 @@ class ConsentRequestStateToBridgeType : Converter<ConsentRequestState, nl.nuts.c
         return nl.nuts.consent.bridge.model.ConsentRequestState(
                 consentId = UniqueIdentifierToBridgeType().convert(source.consentStateUUID)!!,
                 attachments = source.attachments.map{it.toString()},
+                legalEntities = source.legalEntities,
                 signatures = source.signatures.map{ AttachmentSignatureToBridgeType().convert(it)!! }
         )
     }

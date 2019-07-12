@@ -12,6 +12,7 @@ import javax.validation.constraints.*
  * @param consentId 
  * @param attachments 
  * @param signatures 
+ * @param legalEntities 
  */
 data class ConsentRequestState (
 
@@ -22,7 +23,10 @@ data class ConsentRequestState (
         @JsonProperty("attachments") val attachments: List<String>,
 
         @get:NotNull 
-        @JsonProperty("signatures") val signatures: List<PartyAttachmentSignature>
+        @JsonProperty("signatures") val signatures: List<PartyAttachmentSignature>,
+
+        @get:NotNull 
+        @JsonProperty("legalEntities") val legalEntities: List<String>
 ) {
 
 }

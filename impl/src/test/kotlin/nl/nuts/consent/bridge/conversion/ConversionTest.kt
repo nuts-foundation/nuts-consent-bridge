@@ -85,7 +85,7 @@ class ConversionTest {
     fun `ASymmetrickey is converted correctly`() {
         val csk = conversionService.convert(testAsymmetricKey, nl.nuts.consent.model.ASymmetricKey::class.java)!!
         assertEquals(testAsymmetricKey.cipherText, csk.cipherText)
-        assertEquals(testAsymmetricKey.legalEntity, csk.legalEntityURI)
+        assertEquals(testAsymmetricKey.legalEntity, csk.legalEntity)
         assertEquals(testAsymmetricKey.alg, csk.alg)
     }
 

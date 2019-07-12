@@ -178,6 +178,7 @@ components:
       required:
         - consentId
         - attachments
+        - legalEntities
         - signatures
       properties:
         consentId:
@@ -191,6 +192,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PartyAttachmentSignature'
+        legalEntities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
     ConsentRequestJobState:
       required:
         - consentId

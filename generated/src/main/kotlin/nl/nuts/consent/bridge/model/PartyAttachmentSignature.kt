@@ -8,7 +8,7 @@ import javax.validation.constraints.*
 
 /**
  * 
- * @param legalEntity Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
+ * @param legalEntity Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a colon (:) and then the identifying value of the given URN 
  * @param attachment Hexidecimal SecureHash value
  * @param signature 
  */

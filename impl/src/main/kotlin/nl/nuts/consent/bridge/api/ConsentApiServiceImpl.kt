@@ -35,6 +35,7 @@ import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.zmq.Publisher
 import nl.nuts.consent.bridge.zmq.Subscription
 import nl.nuts.consent.flow.ConsentRequestFlows
+import nl.nuts.consent.contract.AttachmentSignature
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -98,7 +99,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val handle = proxy.startFlow(
                 ConsentRequestFlows::AcceptConsentRequest,
                 UniqueIdentifier("dummy", UUID.fromString(uuid)),
-                listOf(partyAttachmentSignature.convert()))
+                listOf(conversionService.convert(partyAttachmentSignature, AttachmentSignature::class.java)))
 
         return ConsentRequestJobState(
                 consentId = ConsentId(
@@ -169,6 +170,7 @@ class ConsentApiServiceImpl : ConsentApiService {
                 ConsentRequestFlows::NewConsentRequest,
                 newConsentRequestState.externalId,
                 setOf(hash),
+                orgIds,
                 nodeNames)
 
         return ConsentRequestJobState(
