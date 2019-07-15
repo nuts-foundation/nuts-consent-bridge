@@ -94,11 +94,12 @@ class ConsentApiServiceImpl : ConsentApiService {
     }
 
     override fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): ConsentRequestJobState {
+        logger.debug("newConsentRequestState({}) with {}", uuid, Serialisation.objectMapper().writeValueAsString(partyAttachmentSignature))
         val proxy = cordaRPClientWrapper.proxy()
 
         val handle = proxy.startFlow(
                 ConsentRequestFlows::AcceptConsentRequest,
-                UniqueIdentifier("dummy", UUID.fromString(uuid)),
+                UniqueIdentifier(id = UUID.fromString(uuid)),
                 listOf(conversionService.convert(partyAttachmentSignature, AttachmentSignature::class.java)))
 
         return ConsentRequestJobState(
@@ -114,7 +115,7 @@ class ConsentApiServiceImpl : ConsentApiService {
 
         val handle = proxy.startFlow(
                 ConsentRequestFlows::FinalizeConsentRequest,
-                UniqueIdentifier("dummy", UUID.fromString(uuid)))
+                UniqueIdentifier(id = UUID.fromString(uuid)))
 
         return ConsentRequestJobState(
                 consentId = ConsentId(
@@ -183,6 +184,7 @@ class ConsentApiServiceImpl : ConsentApiService {
 
     // todo: change spec to reflect string is in hexadecimal notation
     override fun getAttachmentBySecureHash(secureHash: String): ByteArray {
+        logger.debug("getAttachmentBySecureHash({})", secureHash)
         val proxy = cordaRPClientWrapper.proxy()
 
         val hash = SecureHash.parse(secureHash)
