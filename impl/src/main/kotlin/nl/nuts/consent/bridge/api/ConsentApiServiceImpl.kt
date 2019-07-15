@@ -157,13 +157,13 @@ class ConsentApiServiceImpl : ConsentApiService {
         val hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
 
         // gather orgIds from metadata
-        val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntity }
+        val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
 
         // todo: magic string
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
 
         // urn:ietf:rfc:1779:X to X
-        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }
+        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }.toSet()
 
         // start flow
         val handle = proxy.startFlow(
@@ -221,7 +221,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val stateAndRef = page.states.first()
         val state = stateAndRef.state.data
 
-        return conversionService.convert(state, nl.nuts.consent.bridge.model.ConsentRequestState::class.java)
+        return conversionService.convert(state, nl.nuts.consent.bridge.model.ConsentRequestState::class.java)!!
     }
 
     override fun initEventStream(eventStreamSetting: EventStreamSetting) : String {

@@ -148,7 +148,7 @@ class ConsentApiIntegrationTest {
     fun `GET from api consent_request_state {uuid} returns not found for non existing state`() {
         whenever(cordaRPCOps.vaultQueryBy<ConsentRequestState>(criteria = any<QueryCriteria.LinearStateQueryCriteria>(), contractStateType = anyOrNull(), paging = anyOrNull(), sorting = anyOrNull()))
                 .thenReturn(Vault.Page(emptyList(), emptyList(), 0L, Vault.StateStatus.ALL, emptyList()))
-
+        ConsentApiServiceImpl
         val resp = testRestTemplate.getForEntity("/api/consent_request_state/${UUID.randomUUID()}", String::class.java)
         assertEquals(HttpStatus.NOT_FOUND, resp.statusCode)
 
@@ -220,7 +220,7 @@ class ConsentApiIntegrationTest {
 
         val state = newConsentRequestState()
         whenever(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::NewConsentRequest, state.externalId, setOf(SecureHash.allOnesHash), listOf("test"), emptyList())).thenReturn(handle)
+        whenever(cordaRPCOps.startFlow(ConsentRequestFlows::NewConsentRequest, state.externalId, setOf(SecureHash.allOnesHash), setOf("test"), emptySet())).thenReturn(handle)
 
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
@@ -346,10 +346,10 @@ class ConsentApiIntegrationTest {
         return ConsentRequestState(
                 externalId = "uuid",
                 attachments = setOf(SecureHash.allOnesHash),
-                parties = listOf(
+                parties = setOf(
                         party
                 ),
-                legalEntities = listOf("legalEntity"),
+                legalEntities = setOf("legalEntity"),
                 signatures = listOf(
                         AttachmentSignature(
                                 legalEntityURI = "legalEntity",
