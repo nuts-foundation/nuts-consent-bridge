@@ -148,7 +148,7 @@ class ConsentApiIntegrationTest {
     fun `GET from api consent_request_state {uuid} returns not found for non existing state`() {
         whenever(cordaRPCOps.vaultQueryBy<ConsentRequestState>(criteria = any<QueryCriteria.LinearStateQueryCriteria>(), contractStateType = anyOrNull(), paging = anyOrNull(), sorting = anyOrNull()))
                 .thenReturn(Vault.Page(emptyList(), emptyList(), 0L, Vault.StateStatus.ALL, emptyList()))
-        ConsentApiServiceImpl
+
         val resp = testRestTemplate.getForEntity("/api/consent_request_state/${UUID.randomUUID()}", String::class.java)
         assertEquals(HttpStatus.NOT_FOUND, resp.statusCode)
 

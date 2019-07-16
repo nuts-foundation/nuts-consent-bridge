@@ -94,7 +94,7 @@ class ConsentApiServiceImpl : ConsentApiService {
     }
 
     override fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): ConsentRequestJobState {
-        logger.debug("newConsentRequestState({}) with {}", uuid, Serialisation.objectMapper().writeValueAsString(partyAttachmentSignature))
+        logger.debug("acceptConsentRequestState({}) with {}", uuid, Serialisation.objectMapper().writeValueAsString(partyAttachmentSignature))
         val proxy = cordaRPClientWrapper.proxy()
 
         val handle = proxy.startFlow(
