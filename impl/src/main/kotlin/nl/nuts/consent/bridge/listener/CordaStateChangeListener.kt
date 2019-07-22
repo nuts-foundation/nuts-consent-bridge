@@ -24,8 +24,7 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.internal.readFully
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
-import nl.nuts.consent.bridge.Serialisation
-import nl.nuts.consent.bridge.api.ConsentApiServiceImpl
+import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.model.Metadata
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.nats.Event
@@ -174,7 +173,7 @@ class CordaStateChangeListenerController {
 
             val state = it.state.data
             val event = contractStateToEvent(state)
-            val jsonBytes = Serialisation.objectMapper().writeValueAsBytes(event)
+            val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
             nutsEventPublisher.publish("consentRequest", jsonBytes)
         })
 
@@ -203,7 +202,7 @@ class CordaStateChangeListenerController {
                 attachment = Base64.getEncoder().encodeToString(attachment.data)
         )
 
-        val ncrsBytes = Serialisation.objectMapper().writeValueAsBytes(ncrs)
+        val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)
         val ncrsBase64 = Base64.getEncoder().encodeToString(ncrsBytes)
 
         return Event(
@@ -228,7 +227,7 @@ class CordaStateChangeListenerController {
 
             if (entry.name.endsWith(".json")) {
                 val reader = jarInputStream.bufferedReader(Charset.forName("UTF8"))
-                metadata = Serialisation.objectMapper().readValue(reader, ConsentMetadata::class.java)
+                metadata = Serialization.objectMapper().readValue(reader, ConsentMetadata::class.java)
             } else if (entry.name.endsWith(".bin")) {
                 attachment = jarInputStream.readFully()
             }

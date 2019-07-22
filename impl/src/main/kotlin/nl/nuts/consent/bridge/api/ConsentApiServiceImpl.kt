@@ -18,8 +18,6 @@
 
 package nl.nuts.consent.bridge.api
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -29,7 +27,7 @@ import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import nl.nuts.consent.bridge.ConsentRegistryProperties
-import nl.nuts.consent.bridge.Serialisation
+import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.apis.EndpointsApi
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
@@ -45,7 +43,6 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -78,7 +75,7 @@ class ConsentApiServiceImpl : ConsentApiService {
     }
 
     override fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): ConsentRequestJobState {
-        logger.debug("acceptConsentRequestState({}) with {}", uuid, Serialisation.objectMapper().writeValueAsString(partyAttachmentSignature))
+        logger.debug("acceptConsentRequestState({}) with {}", uuid, Serialization.objectMapper().writeValueAsString(partyAttachmentSignature))
         val proxy = cordaRPClientWrapper.proxy()
 
         val handle = proxy!!.startFlow(
@@ -110,12 +107,12 @@ class ConsentApiServiceImpl : ConsentApiService {
     }
 
     override fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): ConsentRequestJobState {
-        logger.debug("newConsentRequestState() with {}", Serialisation.objectMapper().writeValueAsString(newConsentRequestState))
+        logger.debug("newConsentRequestState() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
         val proxy = cordaRPClientWrapper.proxy()
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
         val targetMetadata = conversionService.convert(newConsentRequestState.metadata, nl.nuts.consent.model.ConsentMetadata::class.java)
-        val metadataBytes = Serialisation.objectMapper().writeValueAsBytes(targetMetadata)
+        val metadataBytes = Serialization.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
 
         // attachment hash name component
