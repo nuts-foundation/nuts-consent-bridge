@@ -23,9 +23,8 @@ archivesBaseName="consent-bridge"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter:${springBootVersion}")
-    implementation "org.zeromq:jeromq:$zeromqVersion"
+    implementation "io.nats:java-nats-streaming:$stanVersion"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion"
-
 
     implementation project(':generated')
     implementation project(':generated-client')

@@ -97,7 +97,7 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
         var count = AtomicInteger(0)
         val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(validProperties))
         callback.onProduced { count.incrementAndGet() }
-        callback.terminate()
+        callback.stop()
         callback.start(DummyState::class.java)
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
@@ -116,7 +116,7 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
 
         assertEquals(1, count.get())
 
-        callback.terminate()
+        callback.stop()
     }
 
     @Test
@@ -149,7 +149,7 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
         assertNotNull(producedState.get())
 
         // cleanup
-        callback.terminate()
+        callback.stop()
     }
 
     @Test
@@ -179,6 +179,6 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
         assertNotNull(consumedState.get())
 
         // cleanup
-        callback.terminate()
+        callback.stop()
     }
 }

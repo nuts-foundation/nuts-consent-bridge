@@ -25,7 +25,9 @@ import nl.nuts.consent.bridge.model.ASymmetricKey
 import nl.nuts.consent.bridge.model.Domain
 import nl.nuts.consent.bridge.model.Period
 import nl.nuts.consent.bridge.model.SymmetricKey
+import nl.nuts.consent.bridge.nats.StateChange
 import org.bouncycastle.util.io.pem.PemReader
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired

@@ -2,7 +2,6 @@ package nl.nuts.consent.bridge.api
 
 import nl.nuts.consent.bridge.model.ConsentRequestJobState
 import nl.nuts.consent.bridge.model.ConsentRequestState
-import nl.nuts.consent.bridge.model.EventStreamSetting
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import org.springframework.http.HttpStatus
@@ -67,16 +66,6 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
             method = [RequestMethod.GET])
     fun getConsentRequestStateById( @PathVariable("uuid") uuid: String): ResponseEntity<ConsentRequestState> {
         return ResponseEntity(service.getConsentRequestStateById(uuid), HttpStatus.OK)
-    }
-
-
-    @RequestMapping(
-            value = ["/api/consent/event_stream"],
-            produces = ["text/plain"], 
-            consumes = ["application/json"],
-            method = [RequestMethod.POST])
-    fun initEventStream( @Valid @RequestBody eventStreamSetting: EventStreamSetting): ResponseEntity<String> {
-        return ResponseEntity(service.initEventStream(eventStreamSetting), HttpStatus.OK)
     }
 
 

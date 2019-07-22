@@ -67,11 +67,11 @@ class CordaRPClientWrapper : AutoCloseable {
     private var shutdown:Boolean = false
 
     private var consentBridgeRPCProperties:ConsentBridgeRPCProperties
+    private var retryCount:Int
 
     constructor(consentBridgeRPCProperties:ConsentBridgeRPCProperties) {
         this.consentBridgeRPCProperties = consentBridgeRPCProperties
-
-
+        retryCount = consentBridgeRPCProperties.retryCount
     }
 
     override fun close() {
@@ -88,7 +88,7 @@ class CordaRPClientWrapper : AutoCloseable {
         close()
     }
 
-    fun proxy() : CordaRPCOps {
+    fun proxy() : CordaRPCOps? {
         if (shutdown) {
             throw IllegalStateException("Request for proxy when shutdown is in progress")
         }
@@ -97,7 +97,7 @@ class CordaRPClientWrapper : AutoCloseable {
             connect()
         }
 
-        return connection!!.proxy
+        return connection?.proxy
     }
 
     private fun connect() {
@@ -130,6 +130,10 @@ class CordaRPClientWrapper : AutoCloseable {
             } catch(ex: RPCException) {
                 // Deliberately not logging full stack trace as it will be full of internal stacktraces.
                 logger.error("Exception upon establishing connection: " + ex.message)
+                retryCount--
+                if (retryCount == 0) {
+                    term()
+                }
                 null
             }
 

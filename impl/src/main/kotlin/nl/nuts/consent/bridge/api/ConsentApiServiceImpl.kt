@@ -32,19 +32,18 @@ import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.apis.EndpointsApi
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
-import nl.nuts.consent.bridge.zmq.Publisher
-import nl.nuts.consent.bridge.zmq.Subscription
-import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.contract.AttachmentSignature
+import nl.nuts.consent.flow.ConsentRequestFlows
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
-import org.springframework.web.multipart.MultipartFile
-import java.io.*
-import java.lang.IllegalArgumentException
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
@@ -58,9 +57,6 @@ import javax.annotation.Resource
 @Service
 class ConsentApiServiceImpl : ConsentApiService {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
-
-    @Autowired
-    lateinit var publisher: Publisher
 
     @Autowired
     @Resource
@@ -97,7 +93,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         logger.debug("acceptConsentRequestState({}) with {}", uuid, Serialisation.objectMapper().writeValueAsString(partyAttachmentSignature))
         val proxy = cordaRPClientWrapper.proxy()
 
-        val handle = proxy.startFlow(
+        val handle = proxy!!.startFlow(
                 ConsentRequestFlows::AcceptConsentRequest,
                 UniqueIdentifier(id = UUID.fromString(uuid)),
                 listOf(conversionService.convert(partyAttachmentSignature, AttachmentSignature::class.java)))
@@ -113,7 +109,7 @@ class ConsentApiServiceImpl : ConsentApiService {
     override fun finalizeConsentRequestState(uuid: String): ConsentRequestJobState {
         val proxy = cordaRPClientWrapper.proxy()
 
-        val handle = proxy.startFlow(
+        val handle = proxy!!.startFlow(
                 ConsentRequestFlows::FinalizeConsentRequest,
                 UniqueIdentifier(id = UUID.fromString(uuid)))
 
@@ -155,7 +151,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         }
 
         // upload attachment
-        val hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
+        val hash = proxy!!.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
 
         // gather orgIds from metadata
         val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
@@ -167,7 +163,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }.toSet()
 
         // start flow
-        val handle = proxy.startFlow(
+        val handle = proxy!!.startFlow(
                 ConsentRequestFlows::NewConsentRequest,
                 newConsentRequestState.externalId,
                 setOf(hash),
@@ -189,11 +185,11 @@ class ConsentApiServiceImpl : ConsentApiService {
 
         val hash = SecureHash.parse(secureHash)
 
-        if(!proxy.attachmentExists(hash)) {
+        if(!proxy!!.attachmentExists(hash)) {
             throw NotFoundException("Attachment with hash $secureHash not found")
         }
 
-        val stream = proxy.openAttachment(hash)
+        val stream = proxy!!.openAttachment(hash)
 
         // stream would have been better, but api spe code generation does not support it
         return stream.readFully()
@@ -210,7 +206,7 @@ class ConsentApiServiceImpl : ConsentApiService {
             status = Vault.StateStatus.UNCONSUMED,
             contractStateTypes = setOf(nl.nuts.consent.state.ConsentRequestState::class.java))
 
-        val page : Vault.Page<nl.nuts.consent.state.ConsentRequestState> = proxy.vaultQueryBy(criteria = criteria)
+        val page : Vault.Page<nl.nuts.consent.state.ConsentRequestState> = proxy!!.vaultQueryBy(criteria = criteria)
 
         if (page.states.isEmpty()) {
             throw NotFoundException("No states found with linearId $uuid")
@@ -224,10 +220,5 @@ class ConsentApiServiceImpl : ConsentApiService {
         val state = stateAndRef.state.data
 
         return conversionService.convert(state, nl.nuts.consent.bridge.model.ConsentRequestState::class.java)!!
-    }
-
-    override fun initEventStream(eventStreamSetting: EventStreamSetting) : String {
-        publisher.addSubscription(Subscription(eventStreamSetting.topic, eventStreamSetting.epoch))
-        return "OK"
     }
 }

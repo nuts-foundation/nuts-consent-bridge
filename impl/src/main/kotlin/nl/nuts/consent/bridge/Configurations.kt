@@ -28,13 +28,14 @@ data class ConsentBridgeRPCProperties(
         var port:Int = 7887,
         var user:String = "admin",
         var password:String = "nuts",
-        var retryIntervalSeconds:Int = 5)
+        var retryIntervalSeconds:Int = 5,
+        var retryCount:Int = 0)
 
 @Configuration
-@ConfigurationProperties("nuts.consent.zmq")
-data class ConsentBridgeZMQProperties(
-        var publisherAddress:String = "tcp://localhost:5563",
-        var maxClients:Int = 4)
+@ConfigurationProperties("nuts.consent.nats")
+data class ConsentBridgeNatsProperties(
+        var address:String = "nats://localhost:4222",
+        var cluster:String = "test-cluster")
 
 @Configuration
 @ConfigurationProperties("nuts.consent.registry")

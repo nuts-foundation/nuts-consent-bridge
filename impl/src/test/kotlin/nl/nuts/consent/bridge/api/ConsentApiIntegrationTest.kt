@@ -39,8 +39,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.testing.core.TestIdentity
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
-import nl.nuts.consent.bridge.zmq.Publisher
-import nl.nuts.consent.bridge.zmq.Subscription
+import nl.nuts.consent.bridge.nats.NutsEventListener
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.state.ConsentRequestState
@@ -50,7 +49,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.mockito.Mockito
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.SpringBootTest
@@ -68,7 +66,6 @@ import java.io.File
 import java.io.StringWriter
 import java.security.KeyPairGenerator
 import java.security.SecureRandom
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -87,7 +84,6 @@ class ConsentApiIntegrationTest {
     @Autowired
     lateinit var conversionService: ConversionService
 
-    private var publisher: Publisher = mock()
     private var cordaRPCOps: CordaRPCOps = mock()
     private var handle: FlowHandle<SignedTransaction> = mock {
         on {id} doReturn StateMachineRunId.createRandom()
@@ -108,25 +104,12 @@ class ConsentApiIntegrationTest {
 
     @Before
     fun setup() {
-        ReflectionTestUtils.setField(consentApiService, "publisher", publisher)
         ReflectionTestUtils.setField(consentApiService, "cordaRPClientWrapper", cordaRPClientWrapper)
     }
 
     @After
     fun cleanup() {
         WireMock.reset()
-    }
-
-    @Test
-    fun `POST to api consent event_stream adds subscription to publisher`() {
-        val headers = HttpHeaders()
-        headers.contentType = MediaType.APPLICATION_JSON
-        headers.accept = listOf(MediaType.TEXT_PLAIN)
-        val entity = HttpEntity(EventStreamSetting("topic", 1), headers)
-        val resp = testRestTemplate.postForEntity("/api/consent/event_stream", entity, String::class.java)
-        assertEquals(HttpStatus.OK, resp.statusCode) // part of protocol
-
-        verify(publisher).addSubscription(Subscription("topic", 1))
     }
 
     @Test

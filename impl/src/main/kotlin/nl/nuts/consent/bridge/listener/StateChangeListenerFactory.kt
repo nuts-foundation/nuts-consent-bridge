@@ -25,7 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
 /**
- * Not a real Spring factory but needed to disconnect the Publisher from the StateChangeListener
+ * Not a real Spring factory but needed to disconnect the NutsEventListener from the StateChangeListener
  * This way it's easier to test everything.
  */
 @Service
@@ -36,5 +36,9 @@ class StateChangeListenerFactory {
 
     fun <T : ContractState> createInstance(epoch:Long) : StateChangeListener<T> {
         return StateChangeListener(cordaRPClientFactory.getObject(), epoch)
+    }
+
+    fun <T : ContractState> createInstance() : StateChangeListener<T> {
+        return StateChangeListener(cordaRPClientFactory.getObject())
     }
 }

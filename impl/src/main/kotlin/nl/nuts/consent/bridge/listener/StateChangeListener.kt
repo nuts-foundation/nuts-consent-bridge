@@ -81,6 +81,12 @@ class StateChangeListener<S : ContractState> {
 
         val proxy = cordaRPClientWrapper.proxy()
 
+        if (proxy == null) {
+            logger.warn("Couldn't get proxy, stopping StateChangeListener")
+            shutdown = true
+            return
+        }
+
         // time criteria
         val asOfDateTime = Instant.ofEpochSecond(epochOffset, 0)
         val recordedAfterExpression = QueryCriteria.TimeCondition(
@@ -139,8 +145,8 @@ class StateChangeListener<S : ContractState> {
     /**
      * Closes the RPC connection to the Corda node
      */
-    fun terminate() {
+    fun stop() {
         shutdown = true
-        cordaRPClientWrapper.close()
+        cordaRPClientWrapper.term()
     }
 }

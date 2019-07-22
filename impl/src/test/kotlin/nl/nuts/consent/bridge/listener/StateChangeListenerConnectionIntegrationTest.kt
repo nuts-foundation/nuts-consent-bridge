@@ -31,7 +31,6 @@ import net.corda.testing.core.DUMMY_NOTARY_NAME
 import net.corda.testing.node.User
 import net.corda.testing.node.internal.NodeBasedTest
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
-import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
@@ -103,7 +102,7 @@ class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.n
         assertNotNull(producedState.get())
 
         // cleanup
-        callback.terminate()
+        callback.stop()
         connection!!.close()
     }
 

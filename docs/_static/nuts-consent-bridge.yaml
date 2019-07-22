@@ -6,32 +6,6 @@ info:
   license:
     name: GPLv3
 paths:
-  /api/consent/event_stream:
-    post:
-      summary: Initialise a consent event steam
-      operationId: initEventStream
-      tags:
-        - consent
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EventStreamSetting"
-      responses:
-        '200':
-          description: OK response
-          content:
-            text/plain:
-              schema:
-                type: string
-        '400':
-          description: incorrect data
-          content:
-            text/plain:
-              example: epoch must be a positive value
-              schema:
-                type: string
   /api/consent_request_state/{uuid}:
     get:
       operationId: getConsentRequestStateById
@@ -164,16 +138,6 @@ paths:
                 "externalID not found"
 components:
   schemas:
-    EventStreamSetting:
-      required:
-        - topic
-        - epoch
-      properties:
-        topic:
-          type: string
-        epoch:
-          type: integer
-          format: int64
     ConsentRequestState:
       required:
         - consentId
