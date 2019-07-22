@@ -23,6 +23,7 @@ import io.nats.streaming.StreamingConnectionFactory
 import io.nats.streaming.Subscription
 import io.nats.streaming.SubscriptionOptions
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import nl.nuts.consent.bridge.Serialisation
 import nl.nuts.consent.bridge.api.ConsentApiService
 import nl.nuts.consent.bridge.api.ConsentApiServiceImpl
 import nl.nuts.consent.bridge.model.NewConsentRequestState
@@ -64,7 +65,7 @@ class NutsEventListener {
         subscription = connection.subscribe("consentRequest", {
             try {
                 logger.debug("Received event with data ${String(it.data)}")
-                val e = ConsentApiServiceImpl.Serialisation.objectMapper().readValue(it.data, Event::class.java)
+                val e = Serialisation.objectMapper().readValue(it.data, Event::class.java)
                 processEvent(e)
             } catch (e : Exception) {
                 logger.error("Error during event processing: $e")
@@ -93,13 +94,13 @@ class NutsEventListener {
 
             // if not publish to Corda
             val payload = Base64.getDecoder().decode(e.payload)
-            val newConsentRequestState = ConsentApiServiceImpl.Serialisation.objectMapper().readValue(payload, NewConsentRequestState::class.java)
+            val newConsentRequestState = Serialisation.objectMapper().readValue(payload, NewConsentRequestState::class.java)
             consentService.newConsentRequestState(newConsentRequestState)
         } else if (e.state == "accepted") {
             // check if exists
 
             val payload = Base64.getDecoder().decode(e.payload)
-            val partyAttachmentSignature = ConsentApiServiceImpl.Serialisation.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
+            val partyAttachmentSignature = Serialisation.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
             consentService.acceptConsentRequestState(e.consentId!!, partyAttachmentSignature)
         }
     }

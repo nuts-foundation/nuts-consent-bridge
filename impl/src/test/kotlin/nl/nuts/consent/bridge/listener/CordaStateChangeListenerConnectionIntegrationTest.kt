@@ -76,7 +76,7 @@ class CordaStateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf(
     fun `callbacks survive node stop and start`() {
         var producedState = AtomicReference<StateAndRef<DummyState>>()
         val address = node.node.configuration.rpcOptions.address
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)), 0, {
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)),  {
             producedState.set(it)
         })
         listener.start(DummyState::class.java)

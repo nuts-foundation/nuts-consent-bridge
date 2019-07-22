@@ -25,6 +25,7 @@ import com.nhaarman.mockito_kotlin.verify
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import nl.nuts.consent.bridge.Serialisation
 import nl.nuts.consent.bridge.api.ConsentApiService
 import nl.nuts.consent.bridge.api.ConsentApiServiceImpl
 import nl.nuts.consent.bridge.model.*
@@ -62,7 +63,7 @@ class NutsEventListenerTest {
     @Test
     fun `non 'requested' or 'accepted' are ignored`() {
         //when
-        val e = ConsentApiServiceImpl.Serialisation.objectMapper().writeValueAsBytes(event("finalized"))
+        val e = Serialisation.objectMapper().writeValueAsBytes(event("finalized"))
         connection.publish("consentRequest", e)
 
         // then
@@ -71,7 +72,7 @@ class NutsEventListenerTest {
     @Test
     fun `requested state is forwarded to consentService`() {
         //when
-        val e = ConsentApiServiceImpl.Serialisation.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
+        val e = Serialisation.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
         connection.publish("consentRequest", e)
 
         Thread.sleep(1000)
@@ -83,7 +84,7 @@ class NutsEventListenerTest {
     @Test
     fun `accepted state is forwarded to consentService`() {
         //when
-        val e = ConsentApiServiceImpl.Serialisation.objectMapper().writeValueAsBytes(acceptConsentRequestAsEvent())
+        val e = Serialisation.objectMapper().writeValueAsBytes(acceptConsentRequestAsEvent())
         connection.publish("consentRequest", e)
 
         Thread.sleep(1000)
@@ -116,7 +117,7 @@ class NutsEventListenerTest {
                         secureKey = SymmetricKey(alg = "alg", iv = "iv")
                 )
         )
-        val emptyJson = ConsentApiServiceImpl.Serialisation.objectMapper().writeValueAsString(newConsentRequestState)
+        val emptyJson = Serialisation.objectMapper().writeValueAsString(newConsentRequestState)
 
         return Event(
                 UUID = "uuid",
@@ -140,7 +141,7 @@ class NutsEventListenerTest {
                         data = ""
                 )
         )
-        val emptyJson = ConsentApiServiceImpl.Serialisation.objectMapper().writeValueAsString(partyAttachmentSignature)
+        val emptyJson = Serialisation.objectMapper().writeValueAsString(partyAttachmentSignature)
 
         return Event(
                 UUID = "uuid",

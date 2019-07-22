@@ -29,6 +29,7 @@ import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import nl.nuts.consent.bridge.ConsentRegistryProperties
+import nl.nuts.consent.bridge.Serialisation
 import nl.nuts.consent.bridge.apis.EndpointsApi
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
@@ -70,19 +71,6 @@ class ConsentApiServiceImpl : ConsentApiService {
     lateinit var consentRegistryProperties: ConsentRegistryProperties
 
     lateinit var endpointsApi: EndpointsApi
-
-    object Serialisation {
-        val _objectMapper : ObjectMapper by lazy {
-            val objectMapper = ObjectMapper()
-            objectMapper.registerModule(JavaTimeModule())
-            objectMapper.dateFormat = SimpleDateFormat.getDateInstance()
-            objectMapper
-        }
-
-        fun objectMapper() : ObjectMapper {
-            return _objectMapper
-        }
-    }
 
     @PostConstruct
     fun init() {

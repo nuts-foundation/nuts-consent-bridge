@@ -96,7 +96,7 @@ class CordaStateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.co
     @Test
     fun `onProduces is not called for a new state when callback was stopped`() {
         var count = AtomicInteger(0)
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
             count.incrementAndGet()
         })
         listener.stop()
@@ -110,7 +110,7 @@ class CordaStateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.co
     @Test
     fun `onProduces is called for a new state`() {
         var count = AtomicInteger(0)
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
             count.incrementAndGet()
         })
         listener.start(DummyState::class.java)
@@ -125,7 +125,7 @@ class CordaStateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.co
     @Test
     fun `onProduces returns refAndState`() {
         var producedState = AtomicReference<StateAndRef<DummyState>>()
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
             producedState.set(it)
         })
         listener.start(DummyState::class.java)
@@ -146,7 +146,7 @@ class CordaStateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.co
     fun `onConsumes returns refAndState`() {
         var producedState = AtomicReference<StateAndRef<DummyState>>()
         var consumedState = AtomicReference<StateAndRef<DummyState>>()
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
             producedState.set(it)
         },{
             consumedState.set(it)
