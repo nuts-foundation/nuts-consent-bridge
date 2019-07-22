@@ -7,7 +7,7 @@ before_script:
   - unzip nats-streaming-server.zip -d tmp
   - tmp/nats-streaming-server-v0.15.1-linux-amd64/nats-streaming-server &
 script:
-  - ./gradlew check
+  - ./gradlew check --info
   - ./gradlew codeCoverageReport
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
