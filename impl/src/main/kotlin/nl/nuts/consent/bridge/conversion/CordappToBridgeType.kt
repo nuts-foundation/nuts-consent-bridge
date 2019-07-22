@@ -25,6 +25,7 @@ import nl.nuts.consent.bridge.model.ConsentId
 import nl.nuts.consent.bridge.model.Metadata
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.bridge.model.SignatureWithKey
+import nl.nuts.consent.bridge.model.SymmetricKey
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.model.*
 import nl.nuts.consent.state.ConsentRequestState
@@ -41,7 +42,9 @@ import java.io.StringReader
 import java.io.StringWriter
 import java.security.KeyFactory
 import java.security.spec.X509EncodedKeySpec
+import java.time.ZoneId
 import java.util.*
+import nl.nuts.consent.bridge.model.Metadata as BridgeMetadata
 
 @Component
 class ConsentRequestStateToBridgeType : Converter<ConsentRequestState, nl.nuts.consent.bridge.model.ConsentRequestState> {
@@ -88,4 +91,56 @@ class DigitalSignatureToBridgeType : Converter<DigitalSignature.WithKey, Signatu
                 data = Base64.getEncoder().encodeToString(source.bytes)
         )
     }
+}
+
+@Component
+class ConsentMetadataToBridgeType : Converter<ConsentMetadata, BridgeMetadata> {
+    override fun convert(source: ConsentMetadata): BridgeMetadata? {
+        return BridgeMetadata(
+            domain = source.domain.map { DomainToBridgeType().convert(it)!! },
+            period = PeriodToBridgeType().convert(source.period)!!,
+            secureKey = SymmetricKeyToBridgeType().convert(source.secureKey)!!,
+            organisationSecureKeys = source.organisationSecureKeys.map { ASymmetricKeysToBridgeType() .convert(it)!! }
+        )
+    }
+}
+
+@Component
+class ASymmetricKeysToBridgeType : Converter<ASymmetricKey, nl.nuts.consent.bridge.model.ASymmetricKey> {
+    override fun convert(source: ASymmetricKey): nl.nuts.consent.bridge.model.ASymmetricKey? {
+        return nl.nuts.consent.bridge.model.ASymmetricKey (
+                legalEntity = source.legalEntity,
+                alg = source.alg,
+                cipherText = source.cipherText
+        )
+    }
+}
+
+@Component
+class SymmetricKeyToBridgeType : Converter<nl.nuts.consent.model.SymmetricKey, SymmetricKey> {
+    override fun convert(source: nl.nuts.consent.model.SymmetricKey): SymmetricKey? {
+        return SymmetricKey(
+                alg = source.alg,
+                iv = source.iv
+        )
+    }
+}
+
+@Component
+class DomainToBridgeType : Converter<Domain, nl.nuts.consent.bridge.model.Domain> {
+    override fun convert(source: Domain): nl.nuts.consent.bridge.model.Domain? {
+        return nl.nuts.consent.bridge.model.Domain.valueOf(source.toString())
+    }
+}
+
+// todo possible localDate => dateTime issues
+@Component
+class PeriodToBridgeType : Converter<Period, nl.nuts.consent.bridge.model.Period> {
+    override fun convert(source: Period): nl.nuts.consent.bridge.model.Period? {
+        return nl.nuts.consent.bridge.model.Period(
+                validFrom = source.validFrom.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime(),
+                validTo = source.validTo?.atStartOfDay(ZoneId.systemDefault())?.toOffsetDateTime()
+        )
+    }
+
 }

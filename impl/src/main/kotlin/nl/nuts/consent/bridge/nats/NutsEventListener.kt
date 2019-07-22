@@ -18,29 +18,26 @@
 
 package nl.nuts.consent.bridge.nats
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
 import io.nats.streaming.Subscription
 import io.nats.streaming.SubscriptionOptions
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.api.ConsentApiService
+import nl.nuts.consent.bridge.api.ConsentApiServiceImpl
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
-import nl.nuts.consent.bridge.nats.NutsEventListener.Serialisation.objectMapper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.text.SimpleDateFormat
 import java.util.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
 
 /**
- * Control class for linking StateChangeListener to publisher topics.
+ * Control class for linking CordaStateChangeListener to publisher topics.
  */
 @Service
 class NutsEventListener {
@@ -51,20 +48,7 @@ class NutsEventListener {
 
     lateinit var cf: StreamingConnectionFactory
     lateinit var connection: StreamingConnection
-    lateinit var subscribtion: Subscription
-
-    object Serialisation {
-        val _objectMapper : ObjectMapper by lazy {
-            val objectMapper = ObjectMapper()
-            objectMapper.registerModule(JavaTimeModule())
-            objectMapper.dateFormat = SimpleDateFormat.getDateInstance()
-            objectMapper
-        }
-
-        fun objectMapper() : ObjectMapper {
-            return _objectMapper
-        }
-    }
+    lateinit var subscription: Subscription
 
     @Autowired
     lateinit var consentService : ConsentApiService
@@ -77,10 +61,10 @@ class NutsEventListener {
         cf.natsUrl = consentBridgeNatsProperties.address
         connection = cf.createConnection()
 
-        subscribtion = connection.subscribe("consentRequest", {
+        subscription = connection.subscribe("consentRequest", {
             try {
                 logger.debug("Received event with data ${String(it.data)}")
-                val e = objectMapper().readValue(it.data, Event::class.java)
+                val e = ConsentApiServiceImpl.Serialisation.objectMapper().readValue(it.data, Event::class.java)
                 processEvent(e)
             } catch (e : Exception) {
                 logger.error("Error during event processing: $e")
@@ -94,7 +78,7 @@ class NutsEventListener {
     fun destroy() {
         logger.debug("Disconnecting listener from Nats")
 
-        subscribtion.unsubscribe()
+        subscription.unsubscribe()
         connection.close()
 
         logger.info("Disconnected listener from Nats")
@@ -109,13 +93,13 @@ class NutsEventListener {
 
             // if not publish to Corda
             val payload = Base64.getDecoder().decode(e.payload)
-            val newConsentRequestState = objectMapper().readValue(payload, NewConsentRequestState::class.java)
+            val newConsentRequestState = ConsentApiServiceImpl.Serialisation.objectMapper().readValue(payload, NewConsentRequestState::class.java)
             consentService.newConsentRequestState(newConsentRequestState)
         } else if (e.state == "accepted") {
             // check if exists
 
             val payload = Base64.getDecoder().decode(e.payload)
-            val partyAttachmentSignature = objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
+            val partyAttachmentSignature = ConsentApiServiceImpl.Serialisation.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
             consentService.acceptConsentRequestState(e.consentId!!, partyAttachmentSignature)
         }
     }

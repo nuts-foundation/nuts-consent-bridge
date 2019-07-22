@@ -18,18 +18,15 @@
 
 package nl.nuts.consent.bridge.nats
 
-import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
-import nl.nuts.consent.bridge.listener.StateChangeListener
-import nl.nuts.consent.bridge.listener.StateChangeListenerFactory
+import nl.nuts.consent.bridge.listener.CordaStateChangeListener
 import nl.nuts.consent.state.ConsentRequestState
-import org.mockito.ArgumentMatchers
 
 class StateChangeSubscriberTest {
-    private var mockStateChangeListener: StateChangeListener<ConsentRequestState> = mock()
-    private var stateChangeListenerFactory: StateChangeListenerFactory = mock {
-        on { createInstance<ConsentRequestState>(ArgumentMatchers.anyLong()) } doReturn mockStateChangeListener
-    }
+    private var mockCordaStateChangeListener: CordaStateChangeListener<ConsentRequestState> = mock()
+//    private var stateChangeListenerFactory: CordaStateChangeListenerController = mock {
+//        on { createInstance<ConsentRequestState>(ArgumentMatchers.anyLong()) } doReturn mockCordaStateChangeListener
+//    }
 
 
 }

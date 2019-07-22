@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class CordaStateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val PASSWORD = "test"
         val USER = "user1"
@@ -76,9 +76,10 @@ class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.n
     fun `callbacks survive node stop and start`() {
         var producedState = AtomicReference<StateAndRef<DummyState>>()
         val address = node.node.configuration.rpcOptions.address
-        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)))
-        callback.onProduced { producedState.set(it) }
-        callback.start(DummyState::class.java)
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)), 0, {
+            producedState.set(it)
+        })
+        listener.start(DummyState::class.java)
 
         // restart node
         node.dispose()
@@ -94,7 +95,7 @@ class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.n
         // start flow after restart of node
         connection!!.proxy.startFlow(DummyFlow::ProduceFlow).returnValue.get()
 
-        StateChangeListenerIntegrationTest.blockUntilSet {
+        CordaStateChangeListenerIntegrationTest.blockUntilSet {
             producedState.get()
         }
 
@@ -102,14 +103,14 @@ class StateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.n
         assertNotNull(producedState.get())
 
         // cleanup
-        callback.stop()
+        listener.stop()
         connection!!.close()
     }
 
     @Test
     fun `Incorrect credentials raises`() {
         val address = node.node.configuration.rpcOptions.address
-        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, "not user", PASSWORD, 1)))
+        val callback = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, "not user", PASSWORD, 1)))
         assertFailsWith<ActiveMQSecurityException> { callback.start(DummyState::class.java) }
     }
 }

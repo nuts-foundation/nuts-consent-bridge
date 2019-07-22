@@ -163,7 +163,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }.toSet()
 
         // start flow
-        val handle = proxy!!.startFlow(
+        val handle = proxy.startFlow(
                 ConsentRequestFlows::NewConsentRequest,
                 newConsentRequestState.externalId,
                 setOf(hash),
@@ -189,7 +189,7 @@ class ConsentApiServiceImpl : ConsentApiService {
             throw NotFoundException("Attachment with hash $secureHash not found")
         }
 
-        val stream = proxy!!.openAttachment(hash)
+        val stream = proxy.openAttachment(hash)
 
         // stream would have been better, but api spe code generation does not support it
         return stream.readFully()

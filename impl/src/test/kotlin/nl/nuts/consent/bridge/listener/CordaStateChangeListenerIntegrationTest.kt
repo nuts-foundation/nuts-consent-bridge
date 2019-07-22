@@ -21,6 +21,7 @@ package nl.nuts.consent.bridge.listener
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
+import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
@@ -46,7 +47,7 @@ import kotlin.test.assertNotNull
 /**
  * These tests are quite slow....
  */
-class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class CordaStateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
     companion object {
         val PASSWORD = "test"
         val USER = "user1"
@@ -95,10 +96,11 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
     @Test
     fun `onProduces is not called for a new state when callback was stopped`() {
         var count = AtomicInteger(0)
-        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(validProperties))
-        callback.onProduced { count.incrementAndGet() }
-        callback.stop()
-        callback.start(DummyState::class.java)
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+            count.incrementAndGet()
+        })
+        listener.stop()
+        listener.start(DummyState::class.java)
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
@@ -108,37 +110,25 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
     @Test
     fun `onProduces is called for a new state`() {
         var count = AtomicInteger(0)
-        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(validProperties))
-        callback.onProduced { count.incrementAndGet() }
-        callback.start(DummyState::class.java)
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+            count.incrementAndGet()
+        })
+        listener.start(DummyState::class.java)
 
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
         assertEquals(1, count.get())
 
-        callback.stop()
-    }
-
-    @Test
-    fun `onProduces is called for each listener`() {
-        var count = AtomicInteger(0)
-        repeat(2) {
-            val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(validProperties))
-            callback.onProduced { count.incrementAndGet() }
-            callback.start(DummyState::class.java)
-        }
-
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
-
-        assertEquals(2, count.get())
+        listener.stop()
     }
 
     @Test
     fun `onProduces returns refAndState`() {
-        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(validProperties))
         var producedState = AtomicReference<StateAndRef<DummyState>>()
-        callback.onProduced { producedState.set(it) }
-        callback.start(DummyState::class.java)
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+            producedState.set(it)
+        })
+        listener.start(DummyState::class.java)
 
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
@@ -149,17 +139,19 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
         assertNotNull(producedState.get())
 
         // cleanup
-        callback.stop()
+        listener.stop()
     }
 
     @Test
     fun `onConsumes returns refAndState`() {
-        val callback = StateChangeListener<DummyState>(CordaRPClientWrapper(validProperties))
         var producedState = AtomicReference<StateAndRef<DummyState>>()
         var consumedState = AtomicReference<StateAndRef<DummyState>>()
-        callback.onProduced { producedState.set(it) }
-        callback.onConsumed { consumedState.set(it) }
-        callback.start(DummyState::class.java)
+        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), 0, {
+            producedState.set(it)
+        },{
+            consumedState.set(it)
+        })
+        listener.start(DummyState::class.java)
 
         // produce 1 state
         connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
@@ -179,6 +171,6 @@ class StateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent
         assertNotNull(consumedState.get())
 
         // cleanup
-        callback.stop()
+        listener.stop()
     }
 }
