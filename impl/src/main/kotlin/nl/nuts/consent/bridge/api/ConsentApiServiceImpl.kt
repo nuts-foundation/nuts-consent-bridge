@@ -21,7 +21,6 @@ package nl.nuts.consent.bridge.api
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.internal.readFully
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
@@ -39,10 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
+import java.io.*
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -177,7 +173,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         val stream = proxy.openAttachment(hash)
 
         // stream would have been better, but api spe code generation does not support it
-        return stream.readFully()
+        return stream.bufferedReader().use(BufferedReader::readText).toByteArray()
     }
 
     override fun getConsentRequestStateById(uuid: String): ConsentRequestState {

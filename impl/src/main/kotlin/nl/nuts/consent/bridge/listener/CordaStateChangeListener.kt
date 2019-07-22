@@ -21,7 +21,6 @@ package nl.nuts.consent.bridge.listener
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
-import net.corda.core.internal.readFully
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import nl.nuts.consent.bridge.Serialization
@@ -40,6 +39,7 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
 import rx.Subscription
+import java.io.BufferedReader
 import java.nio.charset.Charset
 import java.time.Instant
 import java.util.*
@@ -229,7 +229,7 @@ class CordaStateChangeListenerController {
                 val reader = jarInputStream.bufferedReader(Charset.forName("UTF8"))
                 metadata = Serialization.objectMapper().readValue(reader, ConsentMetadata::class.java)
             } else if (entry.name.endsWith(".bin")) {
-                attachment = jarInputStream.readFully()
+                attachment = jarInputStream.bufferedReader().use(BufferedReader::readText).toByteArray()
             }
         } while (jarInputStream.available() != 0)
 
