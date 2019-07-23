@@ -1,4 +1,4 @@
-# nl.nuts.consent.bridge - Kotlin client library for Nuts registry API spec
+# nl.nuts.consent.bridge.registry - Kotlin client library for Nuts registry API spec
 
 ## Requires
 

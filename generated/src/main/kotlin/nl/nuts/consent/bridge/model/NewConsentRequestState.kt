@@ -1,7 +1,10 @@
 package nl.nuts.consent.bridge.model
 
+import java.util.Objects
 import com.fasterxml.jackson.annotation.JsonProperty
-import javax.validation.constraints.NotNull
+import nl.nuts.consent.bridge.model.Metadata
+import javax.validation.Valid
+import javax.validation.constraints.*
 
 /**
  * 
@@ -19,4 +22,7 @@ data class NewConsentRequestState (
 
         @get:NotNull 
         @JsonProperty("attachment") val attachment: String
-)
+) {
+
+}
+

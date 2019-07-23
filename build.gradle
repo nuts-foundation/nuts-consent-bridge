@@ -171,11 +171,11 @@ task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.
     skipOverwrite = false
 }
 
-task generateClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
     generatorName = "kotlin"
     groupId = "${project.group}"
     id = "registry-client"
-    outputDir = "${project.rootDir}/generated-client"
+    outputDir = "${project.rootDir}/generated-registry-client"
     inputSpec = "../nuts-registry/docs/_static/nuts-registry.yaml"
     verbose = false
     generateApiDocumentation = false
@@ -184,7 +184,30 @@ task generateClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.
     generateApiTests = false
     withXml = false
     configOptions = [
-            packageName: "nl.nuts.consent.bridge",
+            packageName: "nl.nuts.consent.bridge.registry",
+            dateLibrary: "java8",
+            exceptionHandler: true,
+            gradleBuildFile: false,
+            supportingFiles: []
+    ]
+    skipOverwrite = false
+}
+
+
+task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+    generatorName = "kotlin"
+    groupId = "${project.group}"
+    id = "event-store-client"
+    outputDir = "${project.rootDir}/generated-event-store-client"
+    inputSpec = "../nuts-event-octopus/docs/_static/nuts-event-store.yaml"
+    verbose = false
+    generateApiDocumentation = false
+    generateModelDocumentation = false
+    generateModelTests = false
+    generateApiTests = false
+    withXml = false
+    configOptions = [
+            packageName: "nl.nuts.consent.bridge.events",
             dateLibrary: "java8",
             exceptionHandler: true,
             gradleBuildFile: false,
@@ -202,4 +225,4 @@ openApiGenerate {
 
 }
 
-task codegen(dependsOn: ['generateServerApiStub', 'generateClientApiCode'])
+task codegen(dependsOn: ['generateServerApiStub', 'generateRegistryClientApiCode', 'generateEventStoreClientApiCode'])

@@ -41,3 +41,8 @@ data class ConsentBridgeNatsProperties(
 @ConfigurationProperties("nuts.consent.registry")
 data class ConsentRegistryProperties(
         var url: String = "http://localhost:8088")
+
+@Configuration
+@ConfigurationProperties("nuts.consent.events")
+data class EventStoreProperties(
+        var url: String = "http://localhost:8088")

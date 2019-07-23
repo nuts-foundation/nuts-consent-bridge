@@ -27,7 +27,8 @@ dependencies {
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion"
 
     implementation project(':generated')
-    implementation project(':generated-client')
+    implementation project(':generated-registry-client')
+    implementation project(':generated-event-store-client')
 
     implementation("net.corda:corda-node-api:$cordaVersion")
     implementation("net.corda:corda-node:$cordaVersion")
