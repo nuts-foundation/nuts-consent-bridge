@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-apply plugin: 'net.corda.plugins.cordapp'
+//apply plugin: 'net.corda.plugins.cordapp'
 apply plugin: 'org.springframework.boot'
 
 archivesBaseName="consent-bridge"
