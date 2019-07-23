@@ -23,7 +23,11 @@ import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
+import nl.nuts.consent.bridge.EventStoreProperties
 import nl.nuts.consent.bridge.Serialization
+import nl.nuts.consent.bridge.api.ConsentApiService
+import nl.nuts.consent.bridge.events.apis.EventApi
+import nl.nuts.consent.bridge.events.infrastructure.ClientException
 import nl.nuts.consent.bridge.model.Metadata
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.nats.Event
@@ -162,17 +166,33 @@ class CordaStateChangeListenerController {
     @Autowired
     lateinit var conversionService: ConversionService
 
+    @Autowired
+    lateinit var eventstoreProperties: EventStoreProperties
+    lateinit var eventApi: EventApi
+
     @PostConstruct
     fun init() {
+        eventApi = EventApi(eventstoreProperties.url)
         cordaRPClientWrapper = cordaRPClientFactory.getObject()
         cordaStateChangeListener = CordaStateChangeListener(cordaRPClientWrapper,  {
             logger.debug("Received produced state event from Corda: ${it.state.data}")
 
-            // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
-            // the contents of the new event will be a NewConsentRequestState object as json/base64
-
             val state = it.state.data
             val event = contractStateToEvent(state)
+
+            // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
+            // the contents of the new event will be a NewConsentRequestState object as json/base64
+            var knownEvent: Event? = null
+            try {
+                knownEvent = remoteEvent(event.externalId)
+            } catch (e : ClientException) {
+                // nop
+            }
+
+            if (knownEvent != null) {
+                event.UUID = knownEvent.UUID
+            }
+
             val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
             nutsEventPublisher.publish("consentRequest", jsonBytes)
         })
@@ -190,6 +210,22 @@ class CordaStateChangeListenerController {
         logger.info("Corda state change listener stopped")
     }
 
+    private fun remoteEvent(uuid: String) : Event {
+        return eventToEvent(eventApi.getEvent(UUID.fromString(uuid)))
+    }
+
+    private fun eventToEvent(source: nl.nuts.consent.bridge.events.models.Event) : Event {
+        return Event(
+                UUID = source.uuid.toString(),
+                payload = source.payload,
+                custodian = source.custodian,
+                externalId = source.externalId,
+                consentId = source.consentId.toString(),
+                retryCount = source.retryCount,
+                error = source.error,
+                state = source.state.value
+        )
+    }
 
     private fun contractStateToEvent(state: ConsentRequestState) : Event {
 

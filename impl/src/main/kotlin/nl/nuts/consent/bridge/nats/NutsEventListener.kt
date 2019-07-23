@@ -23,8 +23,11 @@ import io.nats.streaming.StreamingConnectionFactory
 import io.nats.streaming.Subscription
 import io.nats.streaming.SubscriptionOptions
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import nl.nuts.consent.bridge.ConsentRegistryProperties
+import nl.nuts.consent.bridge.EventStoreProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.ConsentApiService
+import nl.nuts.consent.bridge.events.apis.EventApi
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import org.slf4j.Logger
@@ -46,12 +49,12 @@ class NutsEventListener {
     @Autowired
     lateinit var consentBridgeNatsProperties: ConsentBridgeNatsProperties
 
+    @Autowired
+    lateinit var consentService : ConsentApiService
+
     lateinit var cf: StreamingConnectionFactory
     lateinit var connection: StreamingConnection
     lateinit var subscription: Subscription
-
-    @Autowired
-    lateinit var consentService : ConsentApiService
 
     @PostConstruct
     fun init() {

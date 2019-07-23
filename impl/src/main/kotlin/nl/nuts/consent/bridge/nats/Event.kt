@@ -23,7 +23,7 @@ import javax.validation.constraints.NotNull
 
 data class Event(
         @get:NotNull
-        @JsonProperty("uuid") val UUID: String,
+        @JsonProperty("uuid") var UUID: String,
 
         @get:NotNull
         @JsonProperty("state") val state: String,
@@ -40,7 +40,7 @@ data class Event(
         @get:NotNull
         @JsonProperty("payload") val payload: String,
 
-        @JsonProperty("consentId") val consentId: String? = null,
+        @JsonProperty("consentId") var consentId: String? = null,
         @JsonProperty("error") val error: String? = null
 ) {
     override fun toString() : String {
