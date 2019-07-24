@@ -47,7 +47,6 @@ ext {
     jacksonVersion = '2.9.8'
     slf4jVersion = '1.7.25'
     log4jVersion = '2.9.1'
-    zeromqVersion = '0.5.0'
     wiremockVersion = '2.23.2'
     stanVersion = '2.1.6'
 }

@@ -26,7 +26,7 @@ data class Event(
         @JsonProperty("uuid") var UUID: String,
 
         @get:NotNull
-        @JsonProperty("state") val state: String,
+        @JsonProperty("name") var name: EventName,
 
         @get:NotNull
         @JsonProperty("retryCount") val retryCount: Int,
@@ -35,15 +35,32 @@ data class Event(
         @JsonProperty("externalId") val externalId: String,
 
         @get:NotNull
-        @JsonProperty("custodian") val custodian: String,
-
-        @get:NotNull
         @JsonProperty("payload") val payload: String,
 
         @JsonProperty("consentId") var consentId: String? = null,
-        @JsonProperty("error") val error: String? = null
+        @JsonProperty("initiatorLegalEntity") val initiatorLegalEntity: String? = null,
+        @JsonProperty("error") val error: String? = null,
+        @JsonProperty("transactionId") var transactionId: String? = null
 ) {
     override fun toString() : String {
-        return "ID: $UUID, ExternalID: $externalId, State: $state"
+        return "ID: $UUID, ExternalID: $externalId, Name: $name"
     }
+}
+
+enum class EventName(val value: String) {
+
+    ConsentRequestConstructed("consentRequest constructed"),
+    EventConsentRequestInFlight("consentRequest in flight"),
+    EventConsentRequestFlowErrored("consentRequest flow errored"),
+    EventConsentRequestFlowSuccess("consentRequest flow success"),
+    EventDistributedConsentRequestReceived("distributed ConsentRequest received"),
+    EventAllSignaturesPresent("all signatures present"),
+    EventInFinalFlight("consentRequest in flight for final state"),
+    EventConsentRequestValid("consentRequest valid"),
+    EventConsentRequestAcked("consentRequest acked"),
+    EventConsentRequestNacked("consentRequest nacked"),
+    EventAttachmentSigned("attachment signed"),
+    EventConsentDistributed("consent distributed"),
+    EventCompleted("completed"),
+    EventErrored("social");
 }

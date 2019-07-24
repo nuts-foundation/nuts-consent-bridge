@@ -31,9 +31,11 @@ import nl.nuts.consent.bridge.events.infrastructure.ClientException
 import nl.nuts.consent.bridge.model.Metadata
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.nats.Event
+import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
+import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentRequestState
 import org.slf4j.Logger
@@ -156,11 +158,11 @@ class CordaStateChangeListenerController {
     lateinit var cordaStateChangeListener: CordaStateChangeListener<ConsentRequestState>
 
     @Autowired
-    lateinit var cordaRPClientFactory: CordaRPClientFactory
-    lateinit var cordaRPClientWrapper: CordaRPClientWrapper
+    lateinit var nutsEventPublisher: NutsEventPublisher
+
 
     @Autowired
-    lateinit var nutsEventPublisher: NutsEventPublisher
+    lateinit var cordaService: CordaService
 
     @Qualifier("mvcConversionService")
     @Autowired
@@ -173,25 +175,25 @@ class CordaStateChangeListenerController {
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
-        cordaRPClientWrapper = cordaRPClientFactory.getObject()
-        cordaStateChangeListener = CordaStateChangeListener(cordaRPClientWrapper,  {
+        cordaStateChangeListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), {
             logger.debug("Received produced state event from Corda: ${it.state.data}")
 
             val state = it.state.data
-            val event = contractStateToEvent(state)
+            val event = cordaService.contractStateToEvent(state)
 
             // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
             // the contents of the new event will be a NewConsentRequestState object as json/base64
             var knownEvent: Event? = null
             try {
                 knownEvent = remoteEvent(event.externalId)
-            } catch (e : ClientException) {
+            } catch (e: ClientException) {
                 // nop
             }
 
             if (knownEvent != null) {
                 event.UUID = knownEvent.UUID
             }
+            event.name = EventName.EventDistributedConsentRequestReceived
 
             val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
             nutsEventPublisher.publish("consentRequest", jsonBytes)
@@ -205,78 +207,27 @@ class CordaStateChangeListenerController {
         logger.debug("Stopping corda state change listener")
 
         cordaStateChangeListener.stop()
-        cordaRPClientWrapper.term()
 
         logger.info("Corda state change listener stopped")
     }
 
-    private fun remoteEvent(uuid: String) : Event {
-        return eventToEvent(eventApi.getEvent(UUID.fromString(uuid)))
+    private fun remoteEvent(externalId: String): Event {
+        return eventToEvent(eventApi.getEventByExternalId(externalId))
     }
 
-    private fun eventToEvent(source: nl.nuts.consent.bridge.events.models.Event) : Event {
+    private fun eventToEvent(source: nl.nuts.consent.bridge.events.models.Event): Event {
         return Event(
                 UUID = source.uuid.toString(),
                 payload = source.payload,
-                custodian = source.custodian,
+                initiatorLegalEntity = source.initiatorLegalEntity,
                 externalId = source.externalId,
                 consentId = source.consentId.toString(),
                 retryCount = source.retryCount,
                 error = source.error,
-                state = source.state.value
+                name = EventName.valueOf(source.name.value)
         )
-    }
-
-    private fun contractStateToEvent(state: ConsentRequestState) : Event {
-
-        val attachment= getAttachment(state.attachments.first())
-
-
-        val ncrs =  NewConsentRequestState(
-                externalId = state.consentStateUUID.externalId!!,
-                metadata = conversionService.convert(attachment.metadata, Metadata::class.java)!!,
-                attachment = Base64.getEncoder().encodeToString(attachment.data)
-        )
-
-        val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)
-        val ncrsBase64 = Base64.getEncoder().encodeToString(ncrsBytes)
-
-        return Event(
-                UUID = UUID.randomUUID().toString(),
-                state = "to be accepted",
-                retryCount = 0,
-                externalId = state.consentStateUUID.externalId!!,
-                consentId = state.consentStateUUID.id.toString(),
-                custodian = "unknown",
-                payload = ncrsBase64
-        )
-    }
-
-    private fun getAttachment(secureHash: SecureHash) : Attachment {
-        val jarInputStream = JarInputStream(cordaRPClientWrapper.proxy()?.openAttachment(secureHash))
-
-        var metadata:ConsentMetadata? = null
-        var attachment:ByteArray? = null
-
-        do {
-            var entry: JarEntry = jarInputStream.nextJarEntry
-
-            if (entry.name.endsWith(".json")) {
-                val reader = jarInputStream.bufferedReader(Charset.forName("UTF8"))
-                metadata = Serialization.objectMapper().readValue(reader, ConsentMetadata::class.java)
-            } else if (entry.name.endsWith(".bin")) {
-                attachment = jarInputStream.bufferedReader().use(BufferedReader::readText).toByteArray()
-            }
-        } while (jarInputStream.available() != 0)
-
-        return Attachment(metadata!!, attachment!!)
     }
 }
-
-data class Attachment (
-        val metadata: ConsentMetadata,
-        val data: ByteArray
-)
 
 typealias Callback<S> = (StateAndRef<S>) -> Unit
 object Callbacks {

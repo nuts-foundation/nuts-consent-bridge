@@ -23,13 +23,13 @@ import io.nats.streaming.StreamingConnectionFactory
 import io.nats.streaming.Subscription
 import io.nats.streaming.SubscriptionOptions
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
-import nl.nuts.consent.bridge.ConsentRegistryProperties
-import nl.nuts.consent.bridge.EventStoreProperties
 import nl.nuts.consent.bridge.Serialization
-import nl.nuts.consent.bridge.api.ConsentApiService
-import nl.nuts.consent.bridge.events.apis.EventApi
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
+import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
+import nl.nuts.consent.bridge.rpc.CordaService
+import nl.nuts.consent.state.ConsentRequestState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -50,11 +50,14 @@ class NutsEventListener {
     lateinit var consentBridgeNatsProperties: ConsentBridgeNatsProperties
 
     @Autowired
-    lateinit var consentService : ConsentApiService
+    lateinit var cordaService : CordaService
 
     lateinit var cf: StreamingConnectionFactory
     lateinit var connection: StreamingConnection
     lateinit var subscription: Subscription
+
+    @Autowired
+    lateinit var nutsEventPublisher: NutsEventPublisher
 
     @PostConstruct
     fun init() {
@@ -88,22 +91,48 @@ class NutsEventListener {
     }
 
     private fun processEvent(e : Event) {
-        // check if state is still correct
+        // todo null checks -> error condition
+        when (e.name) {
+            EventName.EventDistributedConsentRequestReceived -> {
+                val payload = Base64.getDecoder().decode(e.payload)
+                val newConsentRequestState = Serialization.objectMapper().readValue(payload, NewConsentRequestState::class.java)
+                val handle = cordaService.newConsentRequestState(newConsentRequestState)
 
-        // process if state == "requested" || "accepted"
-        if (e.state == "requested") {
-            // check if exists
+                e.name = EventName.EventConsentRequestInFlight
+                e.transactionId = handle.id.uuid.toString()
 
-            // if not publish to Corda
-            val payload = Base64.getDecoder().decode(e.payload)
-            val newConsentRequestState = Serialization.objectMapper().readValue(payload, NewConsentRequestState::class.java)
-            consentService.newConsentRequestState(newConsentRequestState)
-        } else if (e.state == "accepted") {
-            // check if exists
+                nutsEventPublisher.publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(e))
+            }
+            EventName.EventConsentRequestInFlight -> {
+                // todo
+                logger.debug("Starting to listen for transaction update")
+            }
+            EventName.EventInFinalFlight -> {
+                // todo
+                logger.debug("Starting to listen for transaction update")
+            }
+            EventName.EventAllSignaturesPresent -> {
+                if (e.initiatorLegalEntity != null) {
+                    // this node is the initiator, finalize flow
+                    val handle = cordaService.finalizeConsentRequestState(e.consentId!!)
 
-            val payload = Base64.getDecoder().decode(e.payload)
-            val partyAttachmentSignature = Serialization.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
-            consentService.acceptConsentRequestState(e.consentId!!, partyAttachmentSignature)
+                    e.name = EventName.EventInFinalFlight
+                    e.transactionId = handle.id.uuid.toString()
+                }
+            }
+            EventName.EventConsentRequestNacked -> {
+                logger.debug("Request for cancellation received, NOT YET IMPLEMENTED")
+            }
+            EventName.EventAttachmentSigned -> {
+                val payload = Base64.getDecoder().decode(e.payload)
+                val attachmentSignature = Serialization.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
+                val handle = cordaService.acceptConsentRequestState(e.consentId!!, attachmentSignature)
+
+                e.name = EventName.EventConsentRequestInFlight
+                e.transactionId = handle.id.uuid.toString()
+
+                nutsEventPublisher.publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(e))
+            } else -> {}
         }
     }
 }

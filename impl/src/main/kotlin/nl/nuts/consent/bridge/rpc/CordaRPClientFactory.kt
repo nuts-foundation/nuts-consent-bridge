@@ -132,7 +132,7 @@ class CordaRPClientWrapper : AutoCloseable {
                 logger.error("Exception upon establishing connection: " + ex.message)
                 retryCount--
                 if (retryCount == 0) {
-                    term()
+                    shutdown = true
                 }
                 null
             }

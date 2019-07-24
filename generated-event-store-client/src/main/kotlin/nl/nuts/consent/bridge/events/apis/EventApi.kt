@@ -51,6 +51,38 @@ class EventApi(basePath: kotlin.String = "http://localhost") : ApiClient(basePat
     }
 
     /**
+    * Find a specific event by its externalId
+    * 
+    * @param externalId external_id of consent request action 
+    * @return Event
+    */
+    @Suppress("UNCHECKED_CAST")
+    fun getEventByExternalId(externalId: kotlin.String) : Event {
+        val localVariableBody: kotlin.Any? = null
+        val localVariableQuery: MultiValueMap = mapOf()
+        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
+        val localVariableConfig = RequestConfig(
+            RequestMethod.POST,
+            "/events/by_external_id/{external_id}".replace("{"+"external_id"+"}", "$externalId"),
+            query = localVariableQuery,
+            headers = localVariableHeaders
+        )
+        val response = request<Event>(
+            localVariableConfig,
+            localVariableBody
+        )
+
+        return when (response.responseType) {
+            ResponseType.Success -> (response as Success<*>).data as Event
+            ResponseType.Informational -> TODO()
+            ResponseType.Redirection -> TODO()
+            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
+            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
+        }
+    }
+
+    /**
     * Return all events currently in store
     * 
     * @return EventListResponse

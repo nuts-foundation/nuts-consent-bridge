@@ -19,8 +19,8 @@
 package nl.nuts.consent.bridge.api
 
 import com.fasterxml.jackson.databind.JsonMappingException
-import nl.nuts.consent.bridge.infrastructure.ClientException
-import nl.nuts.consent.bridge.infrastructure.ServerException
+import nl.nuts.consent.bridge.events.infrastructure.ClientException
+import nl.nuts.consent.bridge.events.infrastructure.ServerException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ControllerAdvice
@@ -50,6 +50,18 @@ class CustomExceptionHandling {
 
     @ExceptionHandler(value = [ServerException::class])
     fun onApiServerException(ex: ServerException, response: HttpServletResponse) {
+        logger.error("Server error occurred: ${ex.message}", ex)
+        return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
+    }
+
+    @ExceptionHandler(value = [nl.nuts.consent.bridge.registry.infrastructure.ClientException::class])
+    fun onApiRegistryClientException(ex: ClientException, response: HttpServletResponse) {
+        logger.error("Server error occurred: ${ex.message}", ex)
+        return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
+    }
+
+    @ExceptionHandler(value = [nl.nuts.consent.bridge.registry.infrastructure.ServerException::class])
+    fun onApiRegisitryServerException(ex: ServerException, response: HttpServletResponse) {
         logger.error("Server error occurred: ${ex.message}", ex)
         return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
     }

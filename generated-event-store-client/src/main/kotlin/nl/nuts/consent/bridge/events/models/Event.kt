@@ -16,49 +16,64 @@ import com.squareup.moshi.Json
 /**
  * 
  * @param uuid V4 UUID
- * @param state 
+ * @param name 
  * @param retryCount 0 to X
  * @param externalId ID calculated by crypto using BSN and private key of custodian
  * @param consentId V4 UUID assigned by Corda to a record
- * @param custodian Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
+ * @param transactionId V4 UUID assigned by Corda to a transaction
+ * @param initiatorLegalEntity Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  * @param payload NewConsentRequestState JSON as accepted by consent-bridge (:ref:`nuts-consent-bridge-api`)
  * @param error error reason in case of a functional error
  */
 data class Event (
     /* V4 UUID */
     val uuid: java.util.UUID,
-    val state: Event.State,
+    val name: Event.Name,
     /* 0 to X */
     val retryCount: kotlin.Int,
     /* ID calculated by crypto using BSN and private key of custodian */
     val externalId: kotlin.String,
-    /* V4 UUID assigned by Corda to a record */
-    val consentId: java.util.UUID,
-    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
-    val custodian: kotlin.String,
     /* NewConsentRequestState JSON as accepted by consent-bridge (:ref:`nuts-consent-bridge-api`) */
     val payload: kotlin.String,
+    /* V4 UUID assigned by Corda to a record */
+    val consentId: java.util.UUID? = null,
+    /* V4 UUID assigned by Corda to a transaction */
+    val transactionId: java.util.UUID? = null,
+    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
+    val initiatorLegalEntity: kotlin.String? = null,
     /* error reason in case of a functional error */
     val error: kotlin.String? = null
 ) {
 
     /**
     * 
-    * Values: requested,offered,toBeAccepted,accepted,finalized,toBePersisted,completed,error
+    * Values: consentRequestConstructed,consentRequestInFlight,consentRequestFlowErrored,consentRequestFlowSuccess,distributedConsentRequestReceived,allSignaturesPresent,consentRequestInFlightForFinalState,consentRequestValid,consentRequestAcked,consentRequestNacked,attachmentSigned,consentDistributed,completed,error
     */
-    enum class State(val value: kotlin.String){
+    enum class Name(val value: kotlin.String){
     
-        @Json(name = "requested") requested("requested"),
+        @Json(name = "consentRequest constructed") consentRequestConstructed("consentRequest constructed"),
     
-        @Json(name = "offered") offered("offered"),
+        @Json(name = "consentRequest in flight") consentRequestInFlight("consentRequest in flight"),
     
-        @Json(name = "to be accepted") toBeAccepted("to be accepted"),
+        @Json(name = "consentRequest flow errored") consentRequestFlowErrored("consentRequest flow errored"),
     
-        @Json(name = "accepted") accepted("accepted"),
+        @Json(name = "consentRequest flow success") consentRequestFlowSuccess("consentRequest flow success"),
     
-        @Json(name = "finalized") finalized("finalized"),
+        @Json(name = "distributed ConsentRequest received") distributedConsentRequestReceived("distributed ConsentRequest received"),
     
-        @Json(name = "to be persisted") toBePersisted("to be persisted"),
+        @Json(name = "all signatures present") allSignaturesPresent("all signatures present"),
+    
+        @Json(name = "consentRequest in flight for final state") consentRequestInFlightForFinalState("consentRequest in flight for final state"),
+    
+        @Json(name = "consentRequest valid") consentRequestValid("consentRequest valid"),
+    
+        @Json(name = "consentRequest acked") consentRequestAcked("consentRequest acked"),
+    
+        @Json(name = "consentRequest nacked") consentRequestNacked("consentRequest nacked"),
+    
+        @Json(name = "attachment signed") attachmentSigned("attachment signed"),
+    
+        @Json(name = "consent distributed") consentDistributed("consent distributed"),
     
         @Json(name = "completed") completed("completed"),
     

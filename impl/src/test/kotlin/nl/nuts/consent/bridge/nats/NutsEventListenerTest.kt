@@ -19,15 +19,19 @@
 package nl.nuts.consent.bridge.nats
 
 import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
+import net.corda.core.messaging.CordaRPCOps
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.ConsentApiService
 import nl.nuts.consent.bridge.model.*
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
+import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
+import nl.nuts.consent.bridge.rpc.CordaService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -40,13 +44,13 @@ class NutsEventListenerTest {
     lateinit var connection: StreamingConnection
     lateinit var nutsEventListener: NutsEventListener
 
-    private var consentService: ConsentApiService = mock()
+    private var cordaService: CordaService = mock()
 
     @Before
     fun setup() {
         nutsEventListener = NutsEventListener()
         nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties()
-        nutsEventListener.consentService = consentService
+        nutsEventListener.cordaService = cordaService
 
         cf.natsUrl = nutsEventListener.consentBridgeNatsProperties.address
         connection = cf.createConnection()
@@ -60,9 +64,9 @@ class NutsEventListenerTest {
     }
 
     @Test
-    fun `non 'requested' or 'accepted' are ignored`() {
+    fun `events are ignored when for other modules`() {
         //when
-        val e = Serialization.objectMapper().writeValueAsBytes(event("finalized"))
+        val e = Serialization.objectMapper().writeValueAsBytes(event(EventName.EventCompleted))
         connection.publish("consentRequest", e)
 
         // then
@@ -77,28 +81,16 @@ class NutsEventListenerTest {
         Thread.sleep(1000)
 
         // then
-        verify(consentService).newConsentRequestState(any())
+        verify(cordaService).newConsentRequestState(any())
     }
 
-    @Test
-    fun `accepted state is forwarded to consentService`() {
-        //when
-        val e = Serialization.objectMapper().writeValueAsBytes(acceptConsentRequestAsEvent())
-        connection.publish("consentRequest", e)
-
-        Thread.sleep(1000)
-
-        // then
-        verify(consentService).acceptConsentRequestState(eq("consentUuid"), any())
-    }
-
-    private fun event(state : String) : Event {
+    private fun event(name : EventName) : Event {
         return Event(
-                UUID = "uuid",
-                state = state,
+                UUID = "1111-2222-33334444-5555-6666",
+                name = name,
                 retryCount = 0,
                 externalId = "uuid",
-                custodian = "custodian",
+                initiatorLegalEntity = "custodian",
                 payload = "",
                 consentId = "consentUuid",
                 error = null
@@ -119,11 +111,11 @@ class NutsEventListenerTest {
         val emptyJson = Serialization.objectMapper().writeValueAsString(newConsentRequestState)
 
         return Event(
-                UUID = "uuid",
-                state = "requested",
+                UUID = "1111-2222-33334444-5555-6666",
+                name = EventName.EventDistributedConsentRequestReceived,
                 retryCount = 0,
                 externalId = "uuid",
-                custodian = "custodian",
+                initiatorLegalEntity = "custodian",
                 payload = Base64.getEncoder().encodeToString(emptyJson.toByteArray()),
                 consentId = "consentUuid",
                 error = null
@@ -143,11 +135,11 @@ class NutsEventListenerTest {
         val emptyJson = Serialization.objectMapper().writeValueAsString(partyAttachmentSignature)
 
         return Event(
-                UUID = "uuid",
-                state = "accepted",
+                UUID = "1111-2222-33334444-5555-6666",
+                name = EventName.EventAttachmentSigned,
                 retryCount = 0,
                 externalId = "uuid",
-                custodian = "custodian",
+                initiatorLegalEntity = "custodian",
                 payload = Base64.getEncoder().encodeToString(emptyJson.toByteArray()),
                 consentId = "consentUuid",
                 error = null

@@ -1,8 +1,13 @@
 group 'nl.nuts.consent.bridge'
 version '1.0.0'
 
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.3'
+    distributionUrl = "https://services.gradle.org/distributions/gradle-$gradleVersion-all.zip"
+}
+
 buildscript {
-    ext.kotlin_version = '1.2.71'
+    ext.kotlin_version = '1.1.2'
 
     repositories {
         mavenCentral()
@@ -19,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jre8:$kotlin_version"
     compile "com.squareup.moshi:moshi-kotlin:1.5.0"
     compile "com.squareup.moshi:moshi-adapters:1.5.0"
     compile "com.squareup.okhttp3:okhttp:3.8.0"
