@@ -63,7 +63,7 @@ class NutsEventListener {
     fun init() {
         logger.debug("Connecting listener to Nats on ${consentBridgeNatsProperties.address} with ClusterID: ${consentBridgeNatsProperties.cluster}")
 
-        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "cordaBridgePublisher")
+        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "cordaBridgePublisher-${Integer.toHexString(Random().nextInt())}")
         cf.natsUrl = consentBridgeNatsProperties.address
         connection = cf.createConnection()
 

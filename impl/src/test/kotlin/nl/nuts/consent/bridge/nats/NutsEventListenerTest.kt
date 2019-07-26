@@ -35,12 +35,13 @@ import nl.nuts.consent.bridge.rpc.CordaService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.security.SecureRandom
 import java.time.OffsetDateTime
 import java.util.*
 
 class NutsEventListenerTest {
 
-    val cf = StreamingConnectionFactory("test-cluster", "cordaBridgeTest")
+    val cf = StreamingConnectionFactory("test-cluster", "cordaBridgeTest-${Integer.toHexString(Random().nextInt())}")
     lateinit var connection: StreamingConnection
     lateinit var nutsEventListener: NutsEventListener
 

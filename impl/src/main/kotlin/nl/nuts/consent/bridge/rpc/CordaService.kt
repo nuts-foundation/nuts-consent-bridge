@@ -90,6 +90,7 @@ class CordaService {
         return cordaRPClientWrapper
     }
 
+    @Throws(NotFoundException::class)
     fun consentRequestStateByUUID(uuid: String) : ConsentRequestState {
         // not autoclose, but reuse instance
         val proxy = cordaRPClientWrapper.proxy()

@@ -99,6 +99,19 @@ components:
         data:
           type: string
           description: "base64 encoded bytes"
+    NewConsentRequestState:
+      required:
+        - externalId
+        - metadata
+        - attachment
+      properties:
+        externalId:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        attachment:
+          type: string
+          description: "Base64 encoded data"
     Metadata:
       required:
         - domain
