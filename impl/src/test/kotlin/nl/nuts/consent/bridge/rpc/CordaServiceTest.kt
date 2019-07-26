@@ -186,7 +186,6 @@ class CordaServiceTest {
         assertEquals(EventName.EventDistributedConsentRequestReceived, event.name)
         assertEquals("externalId", event.externalId)
         assertNotNull( event.consentId)
-        assertEquals("eyJleHRlcm5hbElkIjoiZXh0ZXJuYWxJZCIsIm1ldGFkYXRhIjp7ImRvbWFpbiI6WyJtZWRpY2FsIl0sInNlY3VyZUtleSI6eyJhbGciOiJhbGciLCJpdiI6Iml2In0sIm9yZ2FuaXNhdGlvblNlY3VyZUtleXMiOltdLCJwZXJpb2QiOnsidmFsaWRGcm9tIjoiMjAxOS0wNy0yNlQwMDowMDowMCswMjowMCIsInZhbGlkVG8iOm51bGx9fSwiYXR0YWNobWVudCI6IllteHZZZz09In0=", event.payload)
     }
 
     @Test
