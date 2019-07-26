@@ -41,7 +41,7 @@ import java.util.*
 
 class NutsEventListenerTest {
 
-    val cf = StreamingConnectionFactory("test-cluster", "cordaBridgeTest-${Integer.toHexString(Random().nextInt())}")
+    lateinit var cf : StreamingConnectionFactory
     lateinit var connection: StreamingConnection
     lateinit var nutsEventListener: NutsEventListener
 
@@ -49,6 +49,8 @@ class NutsEventListenerTest {
 
     @Before
     fun setup() {
+        cf = StreamingConnectionFactory("test-cluster", "cordaBridgeTest-${Integer.toHexString(Random().nextInt())}")
+
         nutsEventListener = NutsEventListener()
         nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties()
         nutsEventListener.cordaService = cordaService
