@@ -25,7 +25,9 @@ import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
@@ -100,7 +102,12 @@ class CordaService {
                 status = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes = setOf(nl.nuts.consent.state.ConsentRequestState::class.java))
 
-        val page : Vault.Page<nl.nuts.consent.state.ConsentRequestState> = proxy!!.vaultQueryBy(criteria = criteria)
+        val page : Vault.Page<ConsentRequestState> = proxy!!.vaultQueryBy(
+                criteria = criteria,
+                paging = PageSpecification(),
+                sorting = Sort(emptySet()),
+                contractStateType = ConsentRequestState::class.java
+        )
 
         if (page.states.isEmpty()) {
             throw NotFoundException("No states found with linearId $uuid")
