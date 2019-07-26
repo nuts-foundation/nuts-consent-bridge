@@ -19,13 +19,12 @@
 package nl.nuts.consent.bridge.api
 
 import net.corda.core.crypto.SecureHash
+import nl.nuts.consent.bridge.conversion.CordappToBridgeType.Companion.convert
 import nl.nuts.consent.bridge.model.ConsentRequestState
 import nl.nuts.consent.bridge.rpc.CordaService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
 
 /**
@@ -34,10 +33,6 @@ import org.springframework.stereotype.Service
 @Service
 class ConsentApiServiceImpl : ConsentApiService {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
-
-    @Qualifier("mvcConversionService")
-    @Autowired
-    lateinit var conversionService: ConversionService
 
     @Autowired
     lateinit var cordaService : CordaService
@@ -55,6 +50,6 @@ class ConsentApiServiceImpl : ConsentApiService {
     override fun getConsentRequestStateById(uuid: String): ConsentRequestState {
         logger.debug("getConsentRequestStateById({})", uuid)
 
-        return conversionService.convert(cordaService.consentRequestStateByUUID(uuid), nl.nuts.consent.bridge.model.ConsentRequestState::class.java)!!
+        return convert<ConsentRequestState>(cordaService.consentRequestStateByUUID(uuid))
     }
 }

@@ -26,12 +26,6 @@ import nl.nuts.consent.bridge.model.Period
 import nl.nuts.consent.bridge.model.SymmetricKey
 import org.bouncycastle.util.io.pem.PemReader
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.core.convert.ConversionService
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import java.io.StringReader
 import java.security.KeyFactory
 import java.security.PublicKey
@@ -43,13 +37,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@RunWith(SpringJUnit4ClassRunner::class)
-class ConversionTest {
-    @Qualifier("mvcConversionService")
-    @Autowired
-    lateinit var conversionService: ConversionService
-
+class BridgeToCordappTypeTest {
     val testPeriod = Period(validFrom = OffsetDateTime.now(), validTo = OffsetDateTime.now())
     val testDomain = Domain.medical
     val testSymmetricKey = SymmetricKey(alg = "AES_GCM", iv = "iv")
@@ -63,7 +51,7 @@ class ConversionTest {
 
     @Test
     fun `Period is converted correctly`() {
-        val cPeriod = conversionService.convert(testPeriod, nl.nuts.consent.model.Period::class.java)!!
+        val cPeriod = BridgeToCordappType.convert<nl.nuts.consent.model.Period>(testPeriod)
         assertEquals(LocalDate.now(), cPeriod.validFrom)
         assertEquals(LocalDate.now(), cPeriod.validTo)
     }
@@ -71,20 +59,20 @@ class ConversionTest {
     @Test
     fun `Period without validTo is converted correctly`() {
         val testPeriod = Period(validFrom = OffsetDateTime.now())
-        val cPeriod = conversionService.convert(testPeriod, nl.nuts.consent.model.Period::class.java)!!
+        val cPeriod = BridgeToCordappType.convert<nl.nuts.consent.model.Period>(testPeriod)
         assertEquals(LocalDate.now(), cPeriod.validFrom)
         assertNull(cPeriod.validTo)
     }
 
     @Test
     fun `Domain is converted correctly`() {
-        val cDomain = conversionService.convert(testDomain, nl.nuts.consent.model.Domain::class.java)!!
+        val cDomain = BridgeToCordappType.convert<nl.nuts.consent.model.Domain>(testDomain)
         assertEquals("medical", cDomain.name)
     }
 
     @Test
     fun `Symmetrickey is converted correctly`() {
-        val csk = conversionService.convert(testSymmetricKey, nl.nuts.consent.model.SymmetricKey::class.java)!!
+        val csk = BridgeToCordappType.convert<nl.nuts.consent.model.SymmetricKey>(testSymmetricKey)
         assertEquals(testSymmetricKey.iv, csk.iv)
         assertEquals(testSymmetricKey.alg, csk.alg)
 
@@ -92,7 +80,7 @@ class ConversionTest {
 
     @Test
     fun `ASymmetrickey is converted correctly`() {
-        val csk = conversionService.convert(testAsymmetricKey, nl.nuts.consent.model.ASymmetricKey::class.java)!!
+        val csk = BridgeToCordappType.convert<nl.nuts.consent.model.ASymmetricKey>(testAsymmetricKey)
         assertEquals(testAsymmetricKey.cipherText, csk.cipherText)
         assertEquals(testAsymmetricKey.legalEntity, csk.legalEntity)
         assertEquals(testAsymmetricKey.alg, csk.alg)
@@ -100,7 +88,7 @@ class ConversionTest {
 
     @Test
     fun `Metadata is converted correctly`() {
-        val m = conversionService.convert(testMetadata, nl.nuts.consent.model.ConsentMetadata::class.java)!!
+        val m = BridgeToCordappType.convert<nl.nuts.consent.model.ConsentMetadata>(testMetadata)
         assertEquals(LocalDate.now(), m.period.validFrom)
         assertEquals("medical", m.domain.first().name)
         assertEquals(testSymmetricKey.iv, m.secureKey.iv)

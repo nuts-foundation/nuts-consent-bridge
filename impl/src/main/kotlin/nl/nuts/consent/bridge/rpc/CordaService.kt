@@ -32,6 +32,8 @@ import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
+import nl.nuts.consent.bridge.conversion.BridgeToCordappType
+import nl.nuts.consent.bridge.conversion.CordappToBridgeType
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
@@ -44,7 +46,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
 import java.io.*
 import java.nio.charset.Charset
@@ -63,10 +64,6 @@ class CordaService {
     @Autowired
     lateinit var cordaRPClientFactory: CordaRPClientFactory
     lateinit var cordaRPClientWrapper: CordaRPClientWrapper
-
-    @Qualifier("mvcConversionService")
-    @Autowired
-    lateinit var conversionService : ConversionService
 
     @Autowired
     lateinit var consentRegistryProperties: ConsentRegistryProperties
@@ -128,7 +125,7 @@ class CordaService {
 
         val ncrs =  NewConsentRequestState(
                 externalId = state.consentStateUUID.externalId!!,
-                metadata = conversionService.convert(attachment.metadata, Metadata::class.java)!!,
+                metadata = CordappToBridgeType.convert<Metadata>(attachment.metadata),
                 attachment = Base64.getEncoder().encodeToString(attachment.data)
         )
 
@@ -175,7 +172,7 @@ class CordaService {
         val proxy = cordaRPClientWrapper.proxy()
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
-        val targetMetadata = conversionService.convert(newConsentRequestState.metadata, nl.nuts.consent.model.ConsentMetadata::class.java)
+        val targetMetadata = BridgeToCordappType.convert<ConsentMetadata>(newConsentRequestState.metadata)
         val metadataBytes = Serialization.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
 
@@ -226,7 +223,7 @@ class CordaService {
         return proxy!!.startFlow(
                 ConsentRequestFlows::AcceptConsentRequest,
                 UniqueIdentifier(id = UUID.fromString(uuid)),
-                listOf(conversionService.convert(partyAttachmentSignature, AttachmentSignature::class.java)))
+                listOf(BridgeToCordappType.convert<AttachmentSignature>(partyAttachmentSignature)))
     }
 
     fun finalizeConsentRequestState(uuid: String): FlowHandle<SignedTransaction> {

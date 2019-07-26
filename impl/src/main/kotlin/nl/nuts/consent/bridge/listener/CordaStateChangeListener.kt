@@ -20,23 +20,17 @@ package nl.nuts.consent.bridge.listener
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.crypto.SecureHash
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import nl.nuts.consent.bridge.EventStoreProperties
 import nl.nuts.consent.bridge.Serialization
-import nl.nuts.consent.bridge.api.ConsentApiService
 import nl.nuts.consent.bridge.events.apis.EventApi
 import nl.nuts.consent.bridge.events.infrastructure.ClientException
-import nl.nuts.consent.bridge.model.Metadata
-import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
-import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
-import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentRequestState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -45,13 +39,8 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
 import rx.Subscription
-import java.io.BufferedReader
-import java.nio.charset.Charset
 import java.time.Instant
-import java.util.*
 import java.util.concurrent.atomic.AtomicReference
-import java.util.jar.JarEntry
-import java.util.jar.JarInputStream
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
