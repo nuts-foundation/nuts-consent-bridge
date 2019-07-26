@@ -53,6 +53,7 @@ import java.util.*
 import java.util.jar.JarEntry
 import java.util.jar.JarInputStream
 import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
@@ -148,21 +149,36 @@ class CordaService {
             return null
         }
 
-        val jarInputStream = JarInputStream(proxy.openAttachment(secureHash))
+        val zipInputStream = ZipInputStream(proxy.openAttachment(secureHash))
 
         var metadata: ConsentMetadata? = null
         var attachment:ByteArray? = null
 
-        do {
-            var entry: JarEntry = jarInputStream.nextJarEntry
+        zipInputStream.use {
+            do {
+                var entry: ZipEntry? = zipInputStream.nextEntry
 
-            if (entry.name.endsWith(".json")) {
-                val reader = jarInputStream.bufferedReader(Charset.forName("UTF8"))
-                metadata = Serialization.objectMapper().readValue(reader, ConsentMetadata::class.java)
-            } else if (entry.name.endsWith(".bin")) {
-                attachment = jarInputStream.bufferedReader().use(BufferedReader::readText).toByteArray()
-            }
-        } while (jarInputStream.available() != 0)
+                if (entry == null) {
+                    break
+                }
+
+                if (entry.name.endsWith(".json")) {
+                    val reader = zipInputStream.bufferedReader(Charset.forName("UTF8"))
+                    val content = reader.readText()
+                    metadata = Serialization.objectMapper().readValue(content, ConsentMetadata::class.java)
+                } else if (entry.name.endsWith(".bin")) {
+                    val reader = zipInputStream.bufferedReader()
+                    attachment = reader.readText().toByteArray()
+                }
+            } while (entry != null)
+        }
+
+        if (metadata == null) {
+            throw IllegalStateException("attachment does not contain a valid metadata file")
+        }
+        if (attachment == null) {
+            throw IllegalStateException("attachment does not contain a valid binary file")
+        }
 
         return Attachment(metadata!!, attachment!!)
     }
