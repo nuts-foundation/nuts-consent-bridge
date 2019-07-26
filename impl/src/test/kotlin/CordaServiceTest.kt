@@ -18,30 +18,45 @@
 
 package nl.nuts.consent.bridge.rpc
 
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
+import net.corda.core.transactions.SignedTransaction
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
+import nl.nuts.consent.bridge.conversion.BridgeToCordappType
+import nl.nuts.consent.bridge.model.*
+import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.registry.models.Endpoint
+import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
 import nl.nuts.consent.model.SymmetricKey
 import nl.nuts.consent.state.ConsentRequestState
-import org.assertj.core.api.Assertions
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.FileInputStream
 import java.io.InputStream
-import java.lang.IllegalStateException
 import java.time.LocalDate
+import java.time.OffsetDateTime
+import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.assertFailsWith
@@ -49,9 +64,11 @@ import kotlin.test.assertFailsWith
 class CordaServiceTest {
 
     val cordaRPCOps: CordaRPCOps = mock()
-    val cordaRPClientWrapper: CordaRPClientWrapper = mock() {
+    val cordaRPClientWrapper: CordaRPClientWrapper = mock {
         on(it.proxy()) doReturn cordaRPCOps
     }
+
+    val VALID_HEX = "afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"
 
     lateinit var cordaService : CordaService
 
@@ -59,6 +76,7 @@ class CordaServiceTest {
     fun setup() {
         cordaService = CordaService()
         cordaService.cordaRPClientWrapper = cordaRPClientWrapper
+        cordaService.endpointsApi = mock()
     }
 
     @Test
@@ -107,16 +125,18 @@ class CordaServiceTest {
 
     @Test
     fun `getAttachment returns null for unknown attachment`() {
-        val hash = SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf")
+        val hash = SecureHash.parse(VALID_HEX)
 
         `when`(cordaRPCOps.attachmentExists(hash)).thenReturn(false)
 
         val att = cordaService.getAttachment(hash)
+
+        assertNull(att)
     }
 
     @Test
     fun `getAttachment returns correct data for correct attachment`(){
-        val hash = SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf")
+        val hash = SecureHash.parse(VALID_HEX)
 
         `when`(cordaRPCOps.attachmentExists(hash)).thenReturn(true)
         `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(consentMetadataAsJson(), "blob"))
@@ -129,7 +149,7 @@ class CordaServiceTest {
 
     @Test
     fun `getAttachment throws IllegalState for missing metadata`(){
-        val hash = SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf")
+        val hash = SecureHash.parse(VALID_HEX)
 
         `when`(cordaRPCOps.attachmentExists(hash)).thenReturn(true)
         `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(null, "blob"))
@@ -142,7 +162,7 @@ class CordaServiceTest {
 
     @Test
     fun `getAttachment throws IllegalState for missing binary`(){
-        val hash = SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf")
+        val hash = SecureHash.parse(VALID_HEX)
 
         `when`(cordaRPCOps.attachmentExists(hash)).thenReturn(true)
         `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(consentMetadataAsJson(), null))
@@ -151,6 +171,183 @@ class CordaServiceTest {
         assertFailsWith<IllegalStateException> {
             cordaService.getAttachment(hash)
         }
+    }
+
+    @Test
+    fun `contractToStateEvent returns event for valid data`() {
+        val consentRequestState = consentRequestState()
+
+        `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(true)
+        `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob"))
+
+        val event = cordaService.contractStateToEvent(consentRequestState())
+
+        assertNotNull(event)
+        assertEquals(EventName.EventDistributedConsentRequestReceived, event.name)
+        assertEquals("externalId", event.externalId)
+        assertNotNull( event.consentId)
+        assertEquals("eyJleHRlcm5hbElkIjoiZXh0ZXJuYWxJZCIsIm1ldGFkYXRhIjp7ImRvbWFpbiI6WyJtZWRpY2FsIl0sInNlY3VyZUtleSI6eyJhbGciOiJhbGciLCJpdiI6Iml2In0sIm9yZ2FuaXNhdGlvblNlY3VyZUtleXMiOltdLCJwZXJpb2QiOnsidmFsaWRGcm9tIjoiMjAxOS0wNy0yNlQwMDowMDowMCswMjowMCIsInZhbGlkVG8iOm51bGx9fSwiYXR0YWNobWVudCI6IllteHZZZz09In0=", event.payload)
+    }
+
+    @Test
+    fun `contractToStateEvent raises for missing attachment`() {
+        val consentRequestState = consentRequestState()
+
+        `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(false)
+
+        assertFailsWith<IllegalStateException> {
+            cordaService.contractStateToEvent(consentRequestState())
+        }
+    }
+
+    @Test
+    fun `newConsentRequestState returns FlowHandle on valid NewConsentRequestState`() {
+        val newConsentRequestState = newConsentRequestState()
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.startFlow(
+                ConsentRequestFlows::NewConsentRequest,
+                "externalId",
+                setOf(SecureHash.allOnesHash),
+                setOf("legalEntity"),
+                setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+
+        val handle = cordaService.newConsentRequestState(newConsentRequestState)
+
+        assertNotNull(handle)
+    }
+
+    @Test
+    fun `newConsentRequestState returns FlowHandle on valid NewConsentRequestState with duplicate attachment upload`() {
+        val newConsentRequestState = newConsentRequestState()
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(DuplicateAttachmentException(SecureHash.allOnesHash.toString()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.startFlow(
+                ConsentRequestFlows::NewConsentRequest,
+                "externalId",
+                setOf(SecureHash.allOnesHash),
+                setOf("legalEntity"),
+                setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+
+        val handle = cordaService.newConsentRequestState(newConsentRequestState)
+
+        assertNotNull(handle)
+    }
+
+
+    @Test
+    fun `acceptConsentRequestState returns FlowHandle on valid partyAttachmentSignature`() {
+        val uuid = "1111-2222-33334444-5555-6666"
+        val attachment = VALID_HEX
+        val partyAttachmentSignature = PartyAttachmentSignature(
+                legalEntity = "legalEntity",
+                attachment = attachment,
+                signature = SignatureWithKey(
+                        publicKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwm7FBfggHaAfapO7TdFv\n0OwS+Ip9Wi7gyhddjmdZBZDzfYMUPr4+0utGM3Ry8JtCfxmsHL3ZmvG04GV1doeC\nLjLywm6OFfoEQCpliRiCyarpd2MrxKWjkSwOl9MJdVm3xpb7BWJdXkKEwoU4lBk8\ncZPay32juPzAV5eb6UCnq53PZ5O0H80J02oPLpBs2D6ASjUQpRf2xP0bvaP2W92P\nZYzJwrSA3zdxPmrMVApOoIZL7OHBE+y0I9ZUt+zmxD8TzRdN9Etf9wjLD7psu9aL\n/XHIHR0xMkYV8cr/nCbJ6H0PbDd3yIQvYPjLEVS5LeieN+DzIlYO6Y7kpws6k0rx\newIDAQAB\n-----END PUBLIC KEY-----\n",
+                        data = "afaf"
+                )
+        )
+
+        `when`(cordaRPCOps.startFlow(
+                ConsentRequestFlows::AcceptConsentRequest,
+                UniqueIdentifier(id = UUID.fromString(uuid)),
+                listOf(BridgeToCordappType.convert(partyAttachmentSignature))
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+
+        val handle = cordaService.acceptConsentRequestState(uuid, partyAttachmentSignature)
+
+        assertNotNull(handle)
+    }
+    @Test
+    fun `finalizeConsentRequestState returns FlowHandle on valid partyAttachmentSignature`() {
+        val uuid = "1111-2222-33334444-5555-6666"
+
+        `when`(cordaRPCOps.startFlow(
+                ConsentRequestFlows::FinalizeConsentRequest,
+                UniqueIdentifier(id = UUID.fromString(uuid))
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+
+        val handle = cordaService.finalizeConsentRequestState(uuid)
+
+        assertNotNull(handle)
+    }
+
+    @Test
+    fun `newConsentRequestState raises on missing endpoints`() {
+        val newConsentRequestState = newConsentRequestState()
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(emptyArray())
+
+        assertFailsWith<IllegalArgumentException> {
+            cordaService.newConsentRequestState(newConsentRequestState)
+        }
+    }
+
+    private fun endpoint() : Endpoint {
+        return Endpoint(
+                endpointType = "urn:nuts:endpoint:consent",
+                identifier = "urn:ietf:rfc:1779:O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local",
+                status = Endpoint.Status.active,
+                version = "1.0",
+                URL = "tcp://::1:7886"
+        )
+    }
+
+    private fun newConsentRequestState() : NewConsentRequestState {
+        val att = zip(consentMetadataAsJson(), "blob")
+
+        val outputStream = ByteArrayOutputStream()
+        val b64 = Base64.getEncoder().wrap(outputStream)
+
+        att.use { input ->
+            b64.use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        return NewConsentRequestState(
+                externalId = "externalId",
+                attachment = String(outputStream.toByteArray()),
+                metadata = Metadata(
+                        domain = listOf(nl.nuts.consent.bridge.model.Domain.medical),
+                        period = nl.nuts.consent.bridge.model.Period(validFrom = OffsetDateTime.now()),
+                        organisationSecureKeys = listOf(
+                                ASymmetricKey(
+                                        legalEntity = "legalEntity",
+                                        alg = "alg",
+                                        cipherText = "afaf"
+                                )
+                        ),
+                        secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv")
+                )
+        )
+    }
+
+    private fun consentRequestState() : ConsentRequestState {
+        val att = zip(consentMetadataAsJson(), "blob")
+
+        val outputStream = ByteArrayOutputStream()
+        val b64 = Base64.getEncoder().wrap(outputStream)
+
+        att.use { input ->
+            b64.use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        return ConsentRequestState(
+                externalId = "externalId",
+                attachments = setOf(SecureHash.allOnesHash),
+                legalEntities = setOf("legalEntity"),
+                signatures = emptyList(),
+                parties = setOf(mock())
+
+        )
     }
 
     private fun zip(metadata: String?, data: String?) : InputStream {

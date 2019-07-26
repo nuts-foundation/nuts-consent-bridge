@@ -23,35 +23,36 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
-import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
+import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType
-import nl.nuts.consent.bridge.model.*
+import nl.nuts.consent.bridge.model.NewConsentRequestState
+import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.apis.EndpointsApi
-import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentRequestState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
-import java.io.*
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
+import java.nio.file.FileAlreadyExistsException
 import java.util.*
-import java.util.jar.JarEntry
-import java.util.jar.JarInputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -121,12 +122,12 @@ class CordaService {
 
     fun contractStateToEvent(state: ConsentRequestState) : Event {
 
-        val attachment= getAttachment(state.attachments.first())!!
+        val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
 
 
         val ncrs =  NewConsentRequestState(
                 externalId = state.consentStateUUID.externalId!!,
-                metadata = CordappToBridgeType.convert<Metadata>(attachment.metadata),
+                metadata = CordappToBridgeType.convert(attachment.metadata),
                 attachment = Base64.getEncoder().encodeToString(attachment.data)
         )
 
@@ -185,10 +186,10 @@ class CordaService {
 
     fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): FlowHandle<SignedTransaction> {
         logger.debug("newConsentRequestState() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
-        val proxy = cordaRPClientWrapper.proxy()
+        val proxy = cordaRPClientWrapper.proxy()!!
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
-        val targetMetadata = BridgeToCordappType.convert<ConsentMetadata>(newConsentRequestState.metadata)
+        val targetMetadata = BridgeToCordappType.convert(newConsentRequestState.metadata)
         val metadataBytes = Serialization.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
 
@@ -213,13 +214,22 @@ class CordaService {
         }
 
         // upload attachment
-        val hash = proxy!!.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
+        var hash : SecureHash
+        try {
+            hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
+        } catch (e : FileAlreadyExistsException) {
+            hash = SecureHash.parse(e.file)
+        }
 
         // gather orgIds from metadata
         val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
 
         // todo: magic string
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
+
+        if (endpoints.size < 1) {
+            throw IllegalArgumentException("No available endpoints for given organization ids in registry")
+        }
 
         // urn:ietf:rfc:1779:X to X
         val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }.toSet()
@@ -234,18 +244,18 @@ class CordaService {
     }
 
     fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): FlowHandle<SignedTransaction> {
-        val proxy = cordaRPClientWrapper.proxy()
+        val proxy = cordaRPClientWrapper.proxy()!!
 
-        return proxy!!.startFlow(
+        return proxy.startFlow(
                 ConsentRequestFlows::AcceptConsentRequest,
                 UniqueIdentifier(id = UUID.fromString(uuid)),
-                listOf(BridgeToCordappType.convert<AttachmentSignature>(partyAttachmentSignature)))
+                listOf(BridgeToCordappType.convert(partyAttachmentSignature)))
     }
 
     fun finalizeConsentRequestState(uuid: String): FlowHandle<SignedTransaction> {
-        val proxy = cordaRPClientWrapper.proxy()
+        val proxy = cordaRPClientWrapper.proxy()!!
 
-        return proxy!!.startFlow(
+        return proxy.startFlow(
                 ConsentRequestFlows::FinalizeConsentRequest,
                 UniqueIdentifier(id = UUID.fromString(uuid))
         )

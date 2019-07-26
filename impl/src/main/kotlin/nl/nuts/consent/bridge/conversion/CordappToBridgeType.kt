@@ -40,18 +40,18 @@ import nl.nuts.consent.bridge.model.Metadata as BridgeMetadata
 class CordappToBridgeType {
     companion object {
 
-        fun <T : nl.nuts.consent.bridge.model.Period> convert(source: Period): nl.nuts.consent.bridge.model.Period {
+        fun convert(source: Period): nl.nuts.consent.bridge.model.Period {
             return nl.nuts.consent.bridge.model.Period(
                     validFrom = source.validFrom.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime(),
                     validTo = source.validTo?.atStartOfDay(ZoneId.systemDefault())?.toOffsetDateTime()
             )
         }
 
-        fun <T : nl.nuts.consent.bridge.model.Domain> convert(source: Domain): nl.nuts.consent.bridge.model.Domain {
+        fun convert(source: Domain): nl.nuts.consent.bridge.model.Domain {
             return nl.nuts.consent.bridge.model.Domain.valueOf(source.toString())
         }
 
-        fun <T : SymmetricKey> convert(source: nl.nuts.consent.model.SymmetricKey): SymmetricKey {
+        fun convert(source: nl.nuts.consent.model.SymmetricKey): SymmetricKey {
             return SymmetricKey(
                     alg = source.alg,
                     iv = source.iv
@@ -59,7 +59,7 @@ class CordappToBridgeType {
         }
 
 
-        fun <T : nl.nuts.consent.bridge.model.ASymmetricKey> convert(source: ASymmetricKey): nl.nuts.consent.bridge.model.ASymmetricKey {
+        fun convert(source: ASymmetricKey): nl.nuts.consent.bridge.model.ASymmetricKey {
             return nl.nuts.consent.bridge.model.ASymmetricKey(
                     legalEntity = source.legalEntity,
                     alg = source.alg,
@@ -67,16 +67,16 @@ class CordappToBridgeType {
             )
         }
 
-        fun <T : BridgeMetadata> convert(source: ConsentMetadata): BridgeMetadata {
+        fun convert(source: ConsentMetadata): BridgeMetadata {
             return BridgeMetadata(
-                    domain = source.domain.map { convert<nl.nuts.consent.bridge.model.Domain>(it) },
-                    period = convert<nl.nuts.consent.bridge.model.Period>(source.period),
-                    secureKey = convert<SymmetricKey>(source.secureKey),
-                    organisationSecureKeys = source.organisationSecureKeys.map { convert<nl.nuts.consent.bridge.model.ASymmetricKey>(it) }
+                    domain = source.domain.map { convert(it) },
+                    period = convert(source.period),
+                    secureKey = convert(source.secureKey),
+                    organisationSecureKeys = source.organisationSecureKeys.map { convert(it) }
             )
         }
 
-        fun <T : SignatureWithKey> convert(source: DigitalSignature.WithKey): SignatureWithKey {
+        fun convert(source: DigitalSignature.WithKey): SignatureWithKey {
             val stringWriter = StringWriter()
             val writer = PemWriter(stringWriter)
             writer.writeObject(PemObject("PUBLIC KEY", source.by.encoded))
@@ -91,20 +91,20 @@ class CordappToBridgeType {
             return PartyAttachmentSignature(
                     legalEntity = source.legalEntityURI,
                     attachment = source.attachmentHash.toString(),
-                    signature = convert<SignatureWithKey>(source.signature)
+                    signature = convert(source.signature)
             )
         }
 
-        fun <T : ConsentId> convert(source: UniqueIdentifier): ConsentId {
+        fun convert(source: UniqueIdentifier): ConsentId {
             return ConsentId(
                     externalId = source.externalId,
                     UUID = source.id.toString()
             )
         }
 
-        fun <T : nl.nuts.consent.bridge.model.ConsentRequestState> convert(source: ConsentRequestState): nl.nuts.consent.bridge.model.ConsentRequestState {
+        fun convert(source: ConsentRequestState): nl.nuts.consent.bridge.model.ConsentRequestState {
             return nl.nuts.consent.bridge.model.ConsentRequestState(
-                    consentId = convert<ConsentId>(source.consentStateUUID),
+                    consentId = convert(source.consentStateUUID),
                     attachments = source.attachments.map { it.toString() },
                     legalEntities = source.legalEntities.toList(),
                     signatures = source.signatures.map { convert<PartyAttachmentSignature>(it) }

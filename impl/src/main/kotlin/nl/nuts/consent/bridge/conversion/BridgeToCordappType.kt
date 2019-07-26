@@ -36,16 +36,16 @@ import java.util.*
 class BridgeToCordappType {
     companion object {
 
-        fun <T : ConsentMetadata> convert(source: Metadata): ConsentMetadata {
+        fun convert(source: Metadata): ConsentMetadata {
             return ConsentMetadata(
-                    domain = source.domain.map { convert<Domain>(it)!! },
-                    secureKey = convert<SymmetricKey>(source.secureKey)!!,
-                    organisationSecureKeys = source.organisationSecureKeys.map { convert<ASymmetricKey>(it)!! },
-                    period = convert<Period>(source.period)!!
+                    domain = source.domain.map { convert(it) },
+                    secureKey = convert(source.secureKey),
+                    organisationSecureKeys = source.organisationSecureKeys.map { convert(it) },
+                    period = convert(source.period)
             )
         }
 
-        fun <T : ASymmetricKey> convert(source: nl.nuts.consent.bridge.model.ASymmetricKey): ASymmetricKey {
+        fun convert(source: nl.nuts.consent.bridge.model.ASymmetricKey): ASymmetricKey {
             if (source.alg == null || source.cipherText == null ) {
                 throw IllegalArgumentException("alg and cipherText are required in ASymmetricKey")
             }
@@ -57,11 +57,11 @@ class BridgeToCordappType {
             )
         }
 
-        fun <T : Domain> convert(source: nl.nuts.consent.bridge.model.Domain) : Domain{
+        fun convert(source: nl.nuts.consent.bridge.model.Domain) : Domain{
             return Domain.valueOf(source.name)
         }
 
-        fun <T :Period> convert(source: nl.nuts.consent.bridge.model.Period) : Period{
+        fun convert(source: nl.nuts.consent.bridge.model.Period) : Period{
             return if (source.validTo == null) {
                 Period(validFrom = source.validFrom.toLocalDate())
             } else {
@@ -69,14 +69,14 @@ class BridgeToCordappType {
             }
         }
 
-        fun <T : SymmetricKey> convert(source: nl.nuts.consent.bridge.model.SymmetricKey) : SymmetricKey{
+        fun convert(source: nl.nuts.consent.bridge.model.SymmetricKey) : SymmetricKey{
             return SymmetricKey(
                     alg = source.alg,
                     iv = source.iv
             )
         }
 
-        fun <T :AttachmentSignature> convert(source: PartyAttachmentSignature) : AttachmentSignature{
+        fun convert(source: PartyAttachmentSignature) : AttachmentSignature{
             try {
                 val reader = PemReader(StringReader(source.signature.publicKey))
                 val pemObject = reader.readPemObject() ?: throw IllegalArgumentException("Exception on parsing PartyAttachmentSignature.signature.publicKey")

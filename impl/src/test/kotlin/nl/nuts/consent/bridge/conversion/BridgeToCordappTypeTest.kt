@@ -51,7 +51,7 @@ class BridgeToCordappTypeTest {
 
     @Test
     fun `Period is converted correctly`() {
-        val cPeriod = BridgeToCordappType.convert<nl.nuts.consent.model.Period>(testPeriod)
+        val cPeriod = BridgeToCordappType.convert(testPeriod)
         assertEquals(LocalDate.now(), cPeriod.validFrom)
         assertEquals(LocalDate.now(), cPeriod.validTo)
     }
@@ -59,20 +59,20 @@ class BridgeToCordappTypeTest {
     @Test
     fun `Period without validTo is converted correctly`() {
         val testPeriod = Period(validFrom = OffsetDateTime.now())
-        val cPeriod = BridgeToCordappType.convert<nl.nuts.consent.model.Period>(testPeriod)
+        val cPeriod = BridgeToCordappType.convert(testPeriod)
         assertEquals(LocalDate.now(), cPeriod.validFrom)
         assertNull(cPeriod.validTo)
     }
 
     @Test
     fun `Domain is converted correctly`() {
-        val cDomain = BridgeToCordappType.convert<nl.nuts.consent.model.Domain>(testDomain)
+        val cDomain = BridgeToCordappType.convert(testDomain)
         assertEquals("medical", cDomain.name)
     }
 
     @Test
     fun `Symmetrickey is converted correctly`() {
-        val csk = BridgeToCordappType.convert<nl.nuts.consent.model.SymmetricKey>(testSymmetricKey)
+        val csk = BridgeToCordappType.convert(testSymmetricKey)
         assertEquals(testSymmetricKey.iv, csk.iv)
         assertEquals(testSymmetricKey.alg, csk.alg)
 
@@ -80,7 +80,7 @@ class BridgeToCordappTypeTest {
 
     @Test
     fun `ASymmetrickey is converted correctly`() {
-        val csk = BridgeToCordappType.convert<nl.nuts.consent.model.ASymmetricKey>(testAsymmetricKey)
+        val csk = BridgeToCordappType.convert(testAsymmetricKey)
         assertEquals(testAsymmetricKey.cipherText, csk.cipherText)
         assertEquals(testAsymmetricKey.legalEntity, csk.legalEntity)
         assertEquals(testAsymmetricKey.alg, csk.alg)
@@ -88,7 +88,7 @@ class BridgeToCordappTypeTest {
 
     @Test
     fun `Metadata is converted correctly`() {
-        val m = BridgeToCordappType.convert<nl.nuts.consent.model.ConsentMetadata>(testMetadata)
+        val m = BridgeToCordappType.convert(testMetadata)
         assertEquals(LocalDate.now(), m.period.validFrom)
         assertEquals("medical", m.domain.first().name)
         assertEquals(testSymmetricKey.iv, m.secureKey.iv)
