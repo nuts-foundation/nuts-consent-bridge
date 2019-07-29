@@ -19,6 +19,7 @@
 package nl.nuts.consent.bridge.nats
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import java.lang.IllegalArgumentException
 import javax.validation.constraints.NotNull
 
 data class Event(
@@ -63,4 +64,15 @@ enum class EventName(val value: String) {
     EventConsentDistributed("consent distributed"),
     EventCompleted("completed"),
     EventErrored("social");
+
+    companion object {
+        fun fromString(s : String) : EventName {
+            for (en in EventName.values()) {
+                if (en.value == s) {
+                    return en
+                }
+            }
+            throw IllegalArgumentException("Unknown value: $s")
+        }
+    }
 }

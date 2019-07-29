@@ -153,10 +153,6 @@ class CordaStateChangeListenerController {
     @Autowired
     lateinit var cordaService: CordaService
 
-    @Qualifier("mvcConversionService")
-    @Autowired
-    lateinit var conversionService: ConversionService
-
     @Autowired
     lateinit var eventstoreProperties: EventStoreProperties
     lateinit var eventApi: EventApi
@@ -215,7 +211,7 @@ class CordaStateChangeListenerController {
                 consentId = source.consentId.toString(),
                 retryCount = source.retryCount,
                 error = source.error,
-                name = EventName.valueOf(source.name.value)
+                name = EventName.fromString(source.name.value)
         )
     }
 }
