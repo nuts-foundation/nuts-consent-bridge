@@ -34,6 +34,9 @@
         <Logger name="net.corda" level="warn" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
+        <Logger name="net.corda.testing" level="debug" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
         <Logger name="org.hibernate" level="error" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>

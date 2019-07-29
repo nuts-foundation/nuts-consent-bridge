@@ -218,7 +218,5 @@ class CordaStateChangeListenerController {
 
 typealias Callback<S> = (StateAndRef<S>) -> Unit
 object Callbacks {
-    fun <S : ContractState> noOpCallback(state:StateAndRef<S>) {
-
-    }
+    fun <S : ContractState> noOpCallback(state:StateAndRef<S>) = Unit
 }

@@ -22,17 +22,17 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.driver.DriverParameters
-import net.corda.testing.driver.NodeHandle
-import net.corda.testing.driver.driver
+import net.corda.testing.driver.*
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.junit.*
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertEquals
@@ -58,21 +58,24 @@ class CordaStateChangeListenerIntegrationTest {
         var connection: CordaRPCConnection? = null
         var validProperties : ConsentBridgeRPCProperties? = null
         var node: NodeHandle? = null
-        var starter: Thread? = null
+
+        val waitForTests = CountDownLatch(1)
+        val waitForDriver = CountDownLatch(1)
 
         @BeforeClass
         @JvmStatic fun runNodes() {
-            starter = Thread {
+            Thread {
                 // blocking call
-                driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
-                        startNodesInProcess = true, waitForAllNodesToFinish = true)) {
+                driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"), startNodesInProcess = true
+                        , portAllocation = PortAllocation.Incremental(11000))) {
                     val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateChangeListenerConnectionIntegrationTest.rpcUser))
                     node = nodeF.get()
                     val address = node!!.rpcAddress
                     validProperties = ConsentBridgeRPCProperties(address.host, address.port, CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, 1)
+                    waitForTests.await()
+                    waitForDriver.countDown()
                 }
-            }
-            starter!!.start()
+            }.start()
 
             blockUntilSet(60000L) {
                 node
@@ -81,14 +84,14 @@ class CordaStateChangeListenerIntegrationTest {
 
         @AfterClass
         @JvmStatic fun tearDown() {
-            node?.close()
-            starter?.join(10000L)
+            waitForTests.countDown()
+            waitForDriver.await()
         }
     }
 
     private var listener : CordaStateChangeListener<DummyState>? = null
 
-            @Before
+    @Before
     fun setup() {
         val client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
         connection = client.start(CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, null, null)

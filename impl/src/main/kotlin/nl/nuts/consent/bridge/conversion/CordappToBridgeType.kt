@@ -87,7 +87,7 @@ class CordappToBridgeType {
             )
         }
 
-        fun <T : PartyAttachmentSignature> convert(source: AttachmentSignature): PartyAttachmentSignature {
+        fun convert(source: AttachmentSignature): PartyAttachmentSignature {
             return PartyAttachmentSignature(
                     legalEntity = source.legalEntityURI,
                     attachment = source.attachmentHash.toString(),
