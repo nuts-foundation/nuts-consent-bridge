@@ -55,5 +55,8 @@
         <Logger name="io.netty" level="info" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
+        <Logger name="co.paralleluniverse" level="fatal" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
     </Loggers>
 </Configuration>
