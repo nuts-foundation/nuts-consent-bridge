@@ -22,95 +22,94 @@ import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
-import net.corda.node.internal.NodeWithInfo
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.NodeHandle
+import net.corda.testing.driver.driver
 import net.corda.testing.node.User
-import net.corda.testing.node.internal.NodeBasedTest
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.apache.activemq.artemis.api.core.ActiveMQSecurityException
 import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
-class CordaStateChangeListenerConnectionIntegrationTest  : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class CordaStateChangeListenerConnectionIntegrationTest {
     companion object {
         val PASSWORD = "test"
         val USER = "user1"
         val rpcUser = User(USER, PASSWORD, permissions = setOf(Permissions.all()))
     }
 
-    private lateinit var node: NodeWithInfo
-    private lateinit var identity: Party
+    var node: NodeHandle? = null
 
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
-
-    @Before
-    override fun setUp() {
-        super.setUp()
-        node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        identity = notaryNodes.first().info.identityFromX500Name(DUMMY_NOTARY_NAME)
-
-        // different RPC client for starting flow
-        client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
-        connection = client.start(USER, PASSWORD, null, null)
-
-    }
 
     @After
     fun done() {
         connection?.close()
     }
 
+    fun runWithNode(func: () -> Unit) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"), startNodesInProcess = true)) {
+            val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))
+            node = nodeF.get()
+            client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
+            connection = client.start(USER, PASSWORD, null, null)
+            func()
+        }
+    }
+
     @Test
     fun `callbacks survive node stop and start`() {
         var producedState = AtomicReference<StateAndRef<DummyState>>()
-        val address = node.node.configuration.rpcOptions.address
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)),  {
-            producedState.set(it)
-        })
-        listener.start(DummyState::class.java)
-
-        // restart node
-        node.dispose()
-        node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser), configOverrides = mapOf("rpcSettings.address" to address.toString()))
-
-        connection = client.start(USER, PASSWORD, null, null)
-        val nodeInfo = connection!!.proxy.nodeInfo()
-        require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
-
-        // todo: this means that the reconnect should have an offset of failureTime - ~60 seconds for the update feed
-        Thread.sleep(10000)
-
-        // start flow after restart of node
-        connection!!.proxy.startFlow(DummyFlow::ProduceFlow).returnValue.get()
-
-        CordaStateChangeListenerIntegrationTest.blockUntilSet {
-            producedState.get()
+        var listener: CordaStateChangeListener<DummyState>? = null
+        runWithNode {
+            val address = node!!.rpcAddress
+            listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)), {
+                producedState.set(it)
+            })
+            listener!!.start(DummyState::class.java)
         }
 
-        // should still have been captured
-        assertNotNull(producedState.get())
+        runWithNode {
+            connection = client.start(USER, PASSWORD, null, null)
+            val nodeInfo = connection!!.proxy.nodeInfo()
+            require(nodeInfo.legalIdentitiesAndCerts.isNotEmpty())
 
-        // cleanup
-        listener.stop()
-        connection!!.close()
+            // todo: this means that the reconnect should have an offset of failureTime - ~60 seconds for the update feed
+            Thread.sleep(10000)
+
+            // start flow after restart of node
+            connection!!.proxy.startFlow(DummyFlow::ProduceFlow).returnValue.get()
+
+            CordaStateChangeListenerIntegrationTest.blockUntilSet {
+                producedState.get()
+            }
+
+            // should still have been captured
+            assertNotNull(producedState.get())
+
+            // cleanup
+            listener!!.stop()
+            connection!!.close()
+        }
     }
 
     @Test
     fun `Incorrect credentials raises`() {
-        val address = node.node.configuration.rpcOptions.address
-        val callback = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, "not user", PASSWORD, 1)))
-        assertFailsWith<ActiveMQSecurityException> { callback.start(DummyState::class.java) }
+        runWithNode {
+            val address = node!!.rpcAddress
+            val callback = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, "not user", PASSWORD, 1)))
+            assertFailsWith<ActiveMQSecurityException> { callback.start(DummyState::class.java) }
+            callback.stop()
+        }
     }
 }

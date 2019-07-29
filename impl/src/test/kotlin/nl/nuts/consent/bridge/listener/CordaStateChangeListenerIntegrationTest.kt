@@ -21,23 +21,16 @@ package nl.nuts.consent.bridge.listener
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
-import net.corda.core.identity.Party
 import net.corda.core.messaging.startFlow
-import net.corda.node.internal.NodeWithInfo
-import net.corda.node.services.Permissions.Companion.all
 import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.core.DUMMY_NOTARY_NAME
-import net.corda.testing.node.User
-import net.corda.testing.node.internal.NodeBasedTest
+import net.corda.testing.driver.DriverParameters
+import net.corda.testing.driver.driver
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
-import org.junit.After
-import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -47,11 +40,10 @@ import kotlin.test.assertNotNull
 /**
  * These tests are quite slow....
  */
-class CordaStateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.consent.bridge.rpc.test"), notaries = listOf(DUMMY_NOTARY_NAME)) {
+class CordaStateChangeListenerIntegrationTest {
     companion object {
         val PASSWORD = "test"
         val USER = "user1"
-        val rpcUser = User(USER, PASSWORD, permissions = setOf(all()))
 
         fun blockUntilSet(check: () -> Any?) : Any? {
             val begin = System.currentTimeMillis()
@@ -66,111 +58,112 @@ class CordaStateChangeListenerIntegrationTest : NodeBasedTest(listOf("nl.nuts.co
         }
     }
 
-    private lateinit var node: NodeWithInfo
-    private lateinit var identity: Party
-
-    private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
 
-    private lateinit var validProperties : ConsentBridgeRPCProperties
+    private var validProperties : ConsentBridgeRPCProperties? = null
 
-    @Before
-    override fun setUp() {
-        super.setUp()
-        node = startNode(ALICE_NAME, rpcUsers = listOf(rpcUser))
-        identity = notaryNodes.first().info.identityFromX500Name(DUMMY_NOTARY_NAME)
+    fun runWithNode(func: () -> Unit) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"), startNodesInProcess = true)) {
+            val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateChangeListenerConnectionIntegrationTest.rpcUser))
+            val node = nodeF.get()
+            val client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
+            connection = client.start(CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, null, null)
 
-        // different RPC client for starting flow
-        client = CordaRPCClient(node.node.configuration.rpcOptions.address, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
-        connection = client.start(USER, PASSWORD, null, null)
+            val address = node!!.rpcAddress
+            validProperties = ConsentBridgeRPCProperties(address.host, address.port, CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, 1)
 
-        val address = node.node.configuration.rpcOptions.address
-        validProperties = ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD)
-    }
+            func()
 
-    @After
-    fun done() {
-        connection?.close()
+            connection!!.close()
+        }
     }
 
     @Test
     fun `onProduces is not called for a new state when callback was stopped`() {
-        var count = AtomicInteger(0)
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
-            count.incrementAndGet()
-        })
-        listener.stop()
-        listener.start(DummyState::class.java)
+        runWithNode {
+            var count = AtomicInteger(0)
+            val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties()), {
+                count.incrementAndGet()
+            })
+            listener.stop()
+            listener.start(DummyState::class.java)
 
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+            connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        assertEquals(0, count.get())
+            assertEquals(0, count.get())
+        }
     }
 
     @Test
     fun `onProduces is called for a new state`() {
-        var count = AtomicInteger(0)
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
-            count.incrementAndGet()
-        })
-        listener.start(DummyState::class.java)
+        runWithNode {
+            var count = AtomicInteger(0)
+            val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties!!), {
+                count.incrementAndGet()
+            })
+            listener.start(DummyState::class.java)
 
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+            connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        assertEquals(1, count.get())
+            assertEquals(1, count.get())
 
-        listener.stop()
+            listener.stop()
+        }
     }
 
     @Test
     fun `onProduces returns refAndState`() {
-        var producedState = AtomicReference<StateAndRef<DummyState>>()
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
-            producedState.set(it)
-        })
-        listener.start(DummyState::class.java)
+        runWithNode {
+            var producedState = AtomicReference<StateAndRef<DummyState>>()
+            val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties!!), {
+                producedState.set(it)
+            })
+            listener.start(DummyState::class.java)
 
-        // produce 1 state
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+            // produce 1 state
+            connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        blockUntilSet {
-            producedState.get()
+            blockUntilSet {
+                producedState.get()
+            }
+            assertNotNull(producedState.get())
+
+            // cleanup
+            listener.stop()
         }
-        assertNotNull(producedState.get())
-
-        // cleanup
-        listener.stop()
     }
 
     @Test
     fun `onConsumes returns refAndState`() {
-        var producedState = AtomicReference<StateAndRef<DummyState>>()
-        var consumedState = AtomicReference<StateAndRef<DummyState>>()
-        val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties), {
-            producedState.set(it)
-        },{
-            consumedState.set(it)
-        })
-        listener.start(DummyState::class.java)
+        runWithNode {
+            var producedState = AtomicReference<StateAndRef<DummyState>>()
+            var consumedState = AtomicReference<StateAndRef<DummyState>>()
+            val listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties!!), {
+                producedState.set(it)
+            }, {
+                consumedState.set(it)
+            })
+            listener.start(DummyState::class.java)
 
-        // produce 1 state
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+            // produce 1 state
+            connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
 
-        blockUntilSet {
-            producedState.get()
+            blockUntilSet {
+                producedState.get()
+            }
+            assertNotNull(producedState.get())
+
+            // consume 1 state
+            val signedTransaction = connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
+            assertNotNull(signedTransaction)
+
+            blockUntilSet {
+                consumedState.get()
+            }
+            assertNotNull(consumedState.get())
+
+            // cleanup
+            listener.stop()
         }
-        assertNotNull(producedState.get())
-
-        // consume 1 state
-        val signedTransaction = connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
-        assertNotNull(signedTransaction)
-
-        blockUntilSet {
-            consumedState.get()
-        }
-        assertNotNull(consumedState.get())
-
-        // cleanup
-        listener.stop()
     }
 }

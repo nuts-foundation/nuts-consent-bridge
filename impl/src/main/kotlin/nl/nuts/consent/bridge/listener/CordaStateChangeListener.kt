@@ -164,29 +164,7 @@ class CordaStateChangeListenerController {
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
-        cordaStateChangeListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), {
-            logger.debug("Received produced state event from Corda: ${it.state.data}")
-
-            val state = it.state.data
-            val event = cordaService.contractStateToEvent(state)
-
-            // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
-            // the contents of the new event will be a NewConsentRequestState object as json/base64
-            var knownEvent: Event? = null
-            try {
-                knownEvent = remoteEvent(event.externalId)
-            } catch (e: ClientException) {
-                // nop
-            }
-
-            if (knownEvent != null) {
-                event.UUID = knownEvent.UUID
-            }
-            event.name = EventName.EventDistributedConsentRequestReceived
-
-            val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
-            nutsEventPublisher.publish("consentRequest", jsonBytes)
-        })
+        cordaStateChangeListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::publishStateEvent)
 
         cordaStateChangeListener.start(ConsentRequestState::class.java)
     }
@@ -198,6 +176,30 @@ class CordaStateChangeListenerController {
         cordaStateChangeListener.stop()
 
         logger.info("Corda state change listener stopped")
+    }
+
+    fun publishStateEvent(stateAndRef: StateAndRef<ConsentRequestState>) {
+        logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
+
+        val state = stateAndRef.state.data
+        val event = cordaService.contractStateToEvent(state)
+
+        // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
+        // the contents of the new event will be a NewConsentRequestState object as json/base64
+        var knownEvent: Event? = null
+        try {
+            knownEvent = remoteEvent(event.externalId)
+        } catch (e: ClientException) {
+            // nop
+        }
+
+        if (knownEvent != null) {
+            event.UUID = knownEvent.UUID
+        }
+        event.name = EventName.EventDistributedConsentRequestReceived
+
+        val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
+        nutsEventPublisher.publish("consentRequest", jsonBytes)
     }
 
     private fun remoteEvent(externalId: String): Event {
