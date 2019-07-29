@@ -32,12 +32,14 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
+@ActiveProfiles("api")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @RunWith(SpringJUnit4ClassRunner::class)
 class ConsentApiTest {

@@ -29,7 +29,8 @@ data class ConsentBridgeRPCProperties(
         var user:String = "admin",
         var password:String = "nuts",
         var retryIntervalSeconds:Int = 5,
-        var retryCount:Int = 0)
+        var retryCount:Int = 0,
+        var enabled:Boolean = false)
 
 @Configuration
 @ConfigurationProperties("nuts.consent.nats")

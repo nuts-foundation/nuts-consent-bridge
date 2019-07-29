@@ -27,6 +27,7 @@ import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
+import java.lang.IllegalStateException
 
 /**
  * This is a one-sided flow. No counter parties are needed, BUT it still requires a Notary
@@ -85,5 +86,14 @@ object DummyFlow {
             return partSignedTx
         }
 
+    }
+
+    @InitiatingFlow
+    @StartableByRPC
+    class ErrorFlow : FlowLogic<SignedTransaction>() {
+        @Suspendable
+        override fun call(): SignedTransaction {
+            throw IllegalStateException("error")
+        }
     }
 }

@@ -114,6 +114,7 @@ allprojects {
         jvmArgs "-javaagent:${project.rootDir}/lib/quasar-0.7.x.jar",
                 "-Dco.paralleluniverse.fibers.verifyInstrumentation=false"
         environment SPRING_PROFILES_ACTIVE: environment.SPRING_PROFILES_ACTIVE ?: "test"
+        enableAssertions = false
     }
 }
 

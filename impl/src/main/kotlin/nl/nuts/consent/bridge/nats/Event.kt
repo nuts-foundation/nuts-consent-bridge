@@ -40,7 +40,7 @@ data class Event(
 
         @JsonProperty("consentId") var consentId: String? = null,
         @JsonProperty("initiatorLegalEntity") val initiatorLegalEntity: String? = null,
-        @JsonProperty("error") val error: String? = null,
+        @JsonProperty("error") var error: String? = null,
         @JsonProperty("transactionId") var transactionId: String? = null
 ) {
     override fun toString() : String {

@@ -28,7 +28,6 @@ import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.SignedTransaction
-import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
@@ -38,6 +37,7 @@ import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.nats.EventStateStore
 import nl.nuts.consent.bridge.registry.apis.EndpointsApi
 import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.model.ConsentMetadata

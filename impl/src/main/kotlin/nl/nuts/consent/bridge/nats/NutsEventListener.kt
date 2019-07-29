@@ -52,6 +52,9 @@ class NutsEventListener {
     @Autowired
     lateinit var cordaService : CordaService
 
+    @Autowired
+    lateinit var eventStateStore: EventStateStore
+
     lateinit var cf: StreamingConnectionFactory
     lateinit var connection: StreamingConnection
     lateinit var subscription: Subscription
@@ -101,15 +104,28 @@ class NutsEventListener {
                 e.name = EventName.EventConsentRequestInFlight
                 e.transactionId = handle.id.uuid.toString()
 
+                eventStateStore.put(handle.id.uuid, e)
                 nutsEventPublisher.publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(e))
             }
             EventName.EventConsentRequestInFlight -> {
-                // todo
-                logger.debug("Starting to listen for transaction update")
+                // when doing replay
+                val uuid = UUID.fromString(e.transactionId)
+                val existingEvent = eventStateStore.get(uuid)
+                if (existingEvent == null) {
+                    eventStateStore.put(uuid, e)
+                }
+
+                logger.debug("Starting to listen for transaction update for id: ${e.transactionId}")
             }
             EventName.EventInFinalFlight -> {
-                // todo
-                logger.debug("Starting to listen for transaction update")
+                // when doing replay
+                val uuid = UUID.fromString(e.transactionId)
+                val existingEvent = eventStateStore.get(uuid)
+                if (existingEvent == null) {
+                    eventStateStore.put(uuid, e)
+                }
+
+                logger.debug("Starting to listen for transaction update for id: ${e.transactionId}")
             }
             EventName.EventAllSignaturesPresent -> {
                 if (e.initiatorLegalEntity != null) {
@@ -118,6 +134,7 @@ class NutsEventListener {
 
                     e.name = EventName.EventInFinalFlight
                     e.transactionId = handle.id.uuid.toString()
+                    eventStateStore.put(handle.id.uuid, e)
                 }
             }
             EventName.EventConsentRequestNacked -> {
@@ -131,6 +148,7 @@ class NutsEventListener {
                 e.name = EventName.EventConsentRequestInFlight
                 e.transactionId = handle.id.uuid.toString()
 
+                eventStateStore.put(handle.id.uuid, e)
                 nutsEventPublisher.publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(e))
             } else -> {}
         }

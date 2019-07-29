@@ -22,6 +22,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
+import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.EventStoreProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.events.apis.EventApi
@@ -29,14 +30,13 @@ import nl.nuts.consent.bridge.events.infrastructure.ClientException
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
+import nl.nuts.consent.bridge.rpc.CordaRPCClientConfiguration
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.state.ConsentRequestState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.core.convert.ConversionService
 import org.springframework.stereotype.Service
 import rx.Subscription
 import java.time.Instant
@@ -45,14 +45,14 @@ import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
 /**
- * Generic class for registering callbacks for State changes in the Vault.
- * The idea is that one instance is used per client per State. If multiple instances are used for the same state, duplicate events will be published.
+ * Class for listening to State changes in the Vault.
+ * The idea is that one instance is used per State. If multiple instances are used for the same state, duplicate events will be published.
  * Each instance uses a single Corda RPC connection. These are limited, so starting up instances from threads might not be the wisest.
  */
 class CordaStateChangeListener<S : ContractState>(
         val cordaRPClientWrapper: CordaRPClientWrapper,
-        val producedCallback:Callback<S> = Callbacks::noOpCallback,
-        val consumedCallback:Callback<S> = Callbacks::noOpCallback) {
+        val producedCallback:StateCallback<S> = StateCallbacks::noOpCallback,
+        val consumedCallback:StateCallback<S> = StateCallbacks::noOpCallback) {
 
     val logger:Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -149,6 +149,8 @@ class CordaStateChangeListenerController {
     @Autowired
     lateinit var nutsEventPublisher: NutsEventPublisher
 
+    @Autowired
+    lateinit var consentBridgeRPCProperties: ConsentBridgeRPCProperties
 
     @Autowired
     lateinit var cordaService: CordaService
@@ -162,7 +164,9 @@ class CordaStateChangeListenerController {
         eventApi = EventApi(eventstoreProperties.url)
         cordaStateChangeListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::publishStateEvent)
 
-        cordaStateChangeListener.start(ConsentRequestState::class.java)
+        if (consentBridgeRPCProperties.enabled) {
+            cordaStateChangeListener.start(ConsentRequestState::class.java)
+        }
     }
 
     @PreDestroy
@@ -216,7 +220,7 @@ class CordaStateChangeListenerController {
     }
 }
 
-typealias Callback<S> = (StateAndRef<S>) -> Unit
-object Callbacks {
+typealias StateCallback<S> = (StateAndRef<S>) -> Unit
+object StateCallbacks {
     fun <S : ContractState> noOpCallback(state:StateAndRef<S>) = Unit
 }

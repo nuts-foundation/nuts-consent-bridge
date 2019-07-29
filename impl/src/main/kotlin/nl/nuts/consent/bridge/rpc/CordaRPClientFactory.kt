@@ -88,7 +88,7 @@ class CordaRPClientWrapper : AutoCloseable {
         close()
     }
 
-    fun proxy() : CordaRPCOps? {
+    @Synchronized fun proxy() : CordaRPCOps? {
         if (shutdown) {
             throw IllegalStateException("Request for proxy when shutdown is in progress")
         }
