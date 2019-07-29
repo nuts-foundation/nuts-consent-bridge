@@ -107,7 +107,7 @@ class CordappToBridgeType {
                     consentId = convert(source.consentStateUUID),
                     attachments = source.attachments.map { it.toString() },
                     legalEntities = source.legalEntities.toList(),
-                    signatures = source.signatures.map { convert<PartyAttachmentSignature>(it) }
+                    signatures = source.signatures.map { convert(it) }
             )
         }
     }
