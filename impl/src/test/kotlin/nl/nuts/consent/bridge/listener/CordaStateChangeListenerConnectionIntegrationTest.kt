@@ -51,9 +51,11 @@ class CordaStateChangeListenerConnectionIntegrationTest {
 
     private lateinit var client: CordaRPCClient
     private var connection: CordaRPCConnection? = null
+    private var listener: CordaStateChangeListener<DummyState>? = null
 
     @After
     fun done() {
+        listener?.stop()
         connection?.close()
     }
 
@@ -70,7 +72,6 @@ class CordaStateChangeListenerConnectionIntegrationTest {
     @Test
     fun `callbacks survive node stop and start`() {
         var producedState = AtomicReference<StateAndRef<DummyState>>()
-        var listener: CordaStateChangeListener<DummyState>? = null
         runWithNode {
             val address = node!!.rpcAddress
             listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)), {
@@ -96,10 +97,6 @@ class CordaStateChangeListenerConnectionIntegrationTest {
 
             // should still have been captured
             assertNotNull(producedState.get())
-
-            // cleanup
-            listener!!.stop()
-            connection!!.close()
         }
     }
 

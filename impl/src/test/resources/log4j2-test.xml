@@ -52,7 +52,7 @@
         <Logger name="org.springframework" level="info" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
-        <Logger name="io.netty" level="info" additivity="false">
+        <Logger name="io.netty" level="error" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
         <Logger name="co.paralleluniverse" level="fatal" additivity="false">
