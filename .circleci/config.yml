@@ -12,6 +12,13 @@ jobs:
       TERM: dumb
 
     steps:
+      - run:
+          name: install nats
+          command: |
+            curl -L https://github.com/nats-io/nats-streaming-server/releases/download/v0.15.1/nats-streaming-server-v0.15.1-linux-amd64.zip -o nats-streaming-server.zip
+            unzip nats-streaming-server.zip -d tmp
+            tmp/nats-streaming-server-v0.15.1-linux-amd64/nats-streaming-server &
+
       - checkout
 
       - restore_cache:
