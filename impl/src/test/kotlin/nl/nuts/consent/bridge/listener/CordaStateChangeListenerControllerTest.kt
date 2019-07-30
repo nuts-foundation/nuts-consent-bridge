@@ -73,7 +73,7 @@ class CordaStateChangeListenerControllerTest {
         `when`(cordaService.consentRequestStateToEvent(any())).thenReturn(e)
         `when`(eventApi.getEventByExternalId("externalId")).thenThrow(ClientException())
 
-        cordaStateChangeListenerController.publishRequestStateEvent(StateAndRef(state, ref = mock()))
+        cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
 
         verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
@@ -89,7 +89,7 @@ class CordaStateChangeListenerControllerTest {
         `when`(cordaService.consentRequestStateToEvent(any())).thenReturn(e)
         `when`(eventApi.getEventByExternalId("externalId")).thenReturn(n)
 
-        cordaStateChangeListenerController.publishRequestStateEvent(StateAndRef(state, ref = mock()))
+        cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
         e.UUID = n.uuid.toString()
 
@@ -105,7 +105,7 @@ class CordaStateChangeListenerControllerTest {
         `when`(cordaService.consentStateToEvent(any())).thenReturn(e)
         `when`(eventApi.getEventByExternalId("externalId")).thenThrow(ClientException())
 
-        cordaStateChangeListenerController.publishStateEvent(StateAndRef(state, ref = mock()))
+        cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
 
         verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
@@ -120,7 +120,7 @@ class CordaStateChangeListenerControllerTest {
         `when`(cordaService.consentStateToEvent(any())).thenReturn(e)
         `when`(eventApi.getEventByExternalId("externalId")).thenReturn(n)
 
-        cordaStateChangeListenerController.publishStateEvent(StateAndRef(state, ref = mock()))
+        cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
 
         e.UUID = n.uuid.toString()
 

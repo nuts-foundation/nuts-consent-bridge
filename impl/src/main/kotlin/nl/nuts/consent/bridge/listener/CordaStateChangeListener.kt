@@ -163,8 +163,8 @@ class CordaStateChangeListenerController {
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
-        requestStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::publishRequestStateEvent)
-        consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::publishStateEvent)
+        requestStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::handleRequestStateProduced)
+        consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::handleStateProducedEvent)
 
         if (consentBridgeRPCProperties.enabled) {
             requestStateListener.start(ConsentRequestState::class.java)
@@ -181,7 +181,7 @@ class CordaStateChangeListenerController {
         logger.info("Corda state change listeners stopped")
     }
 
-    fun publishRequestStateEvent(stateAndRef: StateAndRef<ConsentRequestState>) {
+    fun handleRequestStateProduced(stateAndRef: StateAndRef<ConsentRequestState>) {
         logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
@@ -205,7 +205,7 @@ class CordaStateChangeListenerController {
         nutsEventPublisher.publish("consentRequest", jsonBytes)
     }
 
-    fun publishStateEvent(stateAndRef: StateAndRef<ConsentState>) {
+    fun handleStateProducedEvent(stateAndRef: StateAndRef<ConsentState>) {
         logger.debug("Received final consent state event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
