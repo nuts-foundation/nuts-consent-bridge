@@ -12,11 +12,11 @@ jobs:
       TERM: dumb
 
     steps:
+      - checkout
+      
       - run: curl -L https://github.com/nats-io/nats-streaming-server/releases/download/v0.15.1/nats-streaming-server-v0.15.1-linux-amd64.zip -o nats-streaming-server.zip
       - run: unzip nats-streaming-server.zip -d tmp
       - run: tmp/nats-streaming-server-v0.15.1-linux-amd64/nats-streaming-server &
-
-      - checkout
 
       - restore_cache:
           keys:
