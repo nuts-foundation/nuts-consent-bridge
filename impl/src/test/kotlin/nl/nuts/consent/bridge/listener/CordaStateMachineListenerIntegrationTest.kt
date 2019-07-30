@@ -99,7 +99,7 @@ class CordaStateMachineListenerIntegrationTest {
                 }
             }.start()
 
-            blockUntilSet(60000L) {
+            blockUntilSet(90000L) {
                 node
             }
         }
