@@ -1,0 +1,4 @@
+ignore:
+  - "generated/**/*"
+  - "generated-event-store-client/**/*"
+  - "generated-registry-client/**/*"
