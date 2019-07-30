@@ -30,10 +30,10 @@ import nl.nuts.consent.bridge.events.infrastructure.ClientException
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
-import nl.nuts.consent.bridge.rpc.CordaRPCClientConfiguration
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -144,7 +144,8 @@ class CordaStateChangeListener<S : ContractState>(
 class CordaStateChangeListenerController {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
-    lateinit var cordaStateChangeListener: CordaStateChangeListener<ConsentRequestState>
+    lateinit var requestStateListener: CordaStateChangeListener<ConsentRequestState>
+    lateinit var consentStateListener: CordaStateChangeListener<ConsentState>
 
     @Autowired
     lateinit var nutsEventPublisher: NutsEventPublisher
@@ -162,27 +163,29 @@ class CordaStateChangeListenerController {
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
-        cordaStateChangeListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::publishStateEvent)
+        requestStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::publishRequestStateEvent)
+        consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::publishStateEvent)
 
         if (consentBridgeRPCProperties.enabled) {
-            cordaStateChangeListener.start(ConsentRequestState::class.java)
+            requestStateListener.start(ConsentRequestState::class.java)
         }
     }
 
     @PreDestroy
     fun destroy() {
-        logger.debug("Stopping corda state change listener")
+        logger.debug("Stopping corda state change listeners")
 
-        cordaStateChangeListener.stop()
+        requestStateListener.stop()
+        consentStateListener.stop()
 
-        logger.info("Corda state change listener stopped")
+        logger.info("Corda state change listeners stopped")
     }
 
-    fun publishStateEvent(stateAndRef: StateAndRef<ConsentRequestState>) {
+    fun publishRequestStateEvent(stateAndRef: StateAndRef<ConsentRequestState>) {
         logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
-        val event = cordaService.contractStateToEvent(state)
+        val event = cordaService.consentRequestStateToEvent(state)
 
         // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
         // the contents of the new event will be a NewConsentRequestState object as json/base64
@@ -197,6 +200,31 @@ class CordaStateChangeListenerController {
             event.UUID = knownEvent.UUID
         }
         event.name = EventName.EventDistributedConsentRequestReceived
+
+        val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
+        nutsEventPublisher.publish("consentRequest", jsonBytes)
+    }
+
+    fun publishStateEvent(stateAndRef: StateAndRef<ConsentState>) {
+        logger.debug("Received final consent state event from Corda: ${stateAndRef.state.data}")
+
+        val state = stateAndRef.state.data
+
+        val event = cordaService.consentStateToEvent(state)
+
+        // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
+        // the contents of the new event will be a NewConsentRequestState object as json/base64
+        var knownEvent: Event? = null
+        try {
+            knownEvent = remoteEvent(event.externalId)
+        } catch (e: ClientException) {
+            // nop
+        }
+
+        if (knownEvent != null) {
+            event.UUID = knownEvent.UUID
+        }
+        event.name = EventName.EventConsentDistributed
 
         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
         nutsEventPublisher.publish("consentRequest", jsonBytes)

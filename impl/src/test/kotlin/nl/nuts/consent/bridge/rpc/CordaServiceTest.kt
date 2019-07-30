@@ -29,7 +29,6 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.startFlow
@@ -181,7 +180,7 @@ class CordaServiceTest {
         `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(true)
         `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob"))
 
-        val event = cordaService.contractStateToEvent(consentRequestState())
+        val event = cordaService.consentRequestStateToEvent(consentRequestState())
 
         assertNotNull(event)
 
@@ -203,7 +202,7 @@ class CordaServiceTest {
         `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(false)
 
         assertFailsWith<IllegalStateException> {
-            cordaService.contractStateToEvent(consentRequestState())
+            cordaService.consentRequestStateToEvent(consentRequestState())
         }
     }
 

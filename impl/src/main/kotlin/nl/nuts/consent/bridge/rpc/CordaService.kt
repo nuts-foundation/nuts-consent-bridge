@@ -24,6 +24,7 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
@@ -44,6 +45,7 @@ import nl.nuts.consent.bridge.registry.apis.EndpointsApi
 import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -122,7 +124,7 @@ class CordaService {
         return stateAndRef.state.data
     }
 
-    fun contractStateToEvent(state: ConsentRequestState) : Event {
+    fun consentRequestStateToEvent(state: ConsentRequestState) : Event {
 
         val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
 
@@ -144,6 +146,28 @@ class CordaService {
                 externalId = state.consentStateUUID.externalId!!,
                 consentId = state.consentStateUUID.id.toString(),
                 payload = crsBase64
+        )
+    }
+
+    fun consentStateToEvent(state: ConsentState) : Event {
+        val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+
+        val cs = nl.nuts.consent.bridge.model.ConsentState(
+                consentId = CordappToBridgeType.convert(state.consentStateUUID),
+                metadata = CordappToBridgeType.convert(attachment.metadata),
+                cipherText = Base64.getEncoder().encodeToString(attachment.data)
+        )
+
+        val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)
+        val csBase64 = Base64.getEncoder().encodeToString(csBytes)
+
+        return Event(
+                UUID = UUID.randomUUID().toString(),
+                name = EventName.EventConsentDistributed,
+                retryCount = 0,
+                externalId = state.consentStateUUID.externalId!!,
+                consentId = state.consentStateUUID.id.toString(),
+                payload = csBase64
         )
     }
 

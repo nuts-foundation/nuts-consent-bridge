@@ -24,6 +24,7 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
+import net.corda.core.contracts.UniqueIdentifier
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType
 import nl.nuts.consent.bridge.events.apis.EventApi
@@ -38,6 +39,7 @@ import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentState
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
@@ -63,28 +65,59 @@ class CordaStateChangeListenerControllerTest {
     }
 
     @Test
-    fun `publishStateEvent publishes new encountered event`() {
+    fun `publishRequestStateEvent publishes new encountered event`() {
         val s = consentRequestState()
-        val e = contractStateToEvent(s)
+        val e = consentRequestStateToEvent(s)
         val state: TransactionState<ConsentRequestState> = mock()
         `when`(state.data).thenReturn(s)
-        `when`(cordaService.contractStateToEvent(any())).thenReturn(e)
+        `when`(cordaService.consentRequestStateToEvent(any())).thenReturn(e)
         `when`(eventApi.getEventByExternalId("externalId")).thenThrow(ClientException())
 
-        cordaStateChangeListenerController.publishStateEvent(StateAndRef(state, ref = mock()))
+        cordaStateChangeListenerController.publishRequestStateEvent(StateAndRef(state, ref = mock()))
 
 
         verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
 
     @Test
-    fun `publishStateEvent reuses existing event when found`() {
+    fun `publishRequestStateEvent reuses existing event when found`() {
         val s = consentRequestState()
-        val e = contractStateToEvent(s)
+        val e = consentRequestStateToEvent(s)
         val state: TransactionState<ConsentRequestState> = mock()
         val n = storeEvent()
         `when`(state.data).thenReturn(s)
-        `when`(cordaService.contractStateToEvent(any())).thenReturn(e)
+        `when`(cordaService.consentRequestStateToEvent(any())).thenReturn(e)
+        `when`(eventApi.getEventByExternalId("externalId")).thenReturn(n)
+
+        cordaStateChangeListenerController.publishRequestStateEvent(StateAndRef(state, ref = mock()))
+
+        e.UUID = n.uuid.toString()
+
+        verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
+    }
+
+    @Test
+    fun `publishStateEvent publishes new encountered event`() {
+        val s = consentState()
+        val e = consentStateToEvent(s)
+        val state: TransactionState<ConsentState> = mock()
+        `when`(state.data).thenReturn(s)
+        `when`(cordaService.consentStateToEvent(any())).thenReturn(e)
+        `when`(eventApi.getEventByExternalId("externalId")).thenThrow(ClientException())
+
+        cordaStateChangeListenerController.publishStateEvent(StateAndRef(state, ref = mock()))
+
+        verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
+    }
+
+    @Test
+    fun `publishStateEvent reuses existing event when found`() {
+        val s = consentState()
+        val e = consentStateToEvent(s)
+        val state: TransactionState<ConsentState> = mock()
+        val n = storeEvent()
+        `when`(state.data).thenReturn(s)
+        `when`(cordaService.consentStateToEvent(any())).thenReturn(e)
         `when`(eventApi.getEventByExternalId("externalId")).thenReturn(n)
 
         cordaStateChangeListenerController.publishStateEvent(StateAndRef(state, ref = mock()))
@@ -114,8 +147,15 @@ class CordaStateChangeListenerControllerTest {
         )
     }
 
+    private fun consentState() : ConsentState {
+        return ConsentState(
+                consentStateUUID = UniqueIdentifier(externalId = "externalId"),
+                attachments = emptySet(),
+                parties = emptySet()
+        )
+    }
 
-    private fun contractStateToEvent(state: ConsentRequestState) : Event {
+    private fun consentRequestStateToEvent(state: ConsentRequestState) : Event {
 
         val ncrs =  NewConsentRequestState(
                 externalId = state.consentStateUUID.externalId!!,
@@ -138,6 +178,32 @@ class CordaStateChangeListenerControllerTest {
                 externalId = state.consentStateUUID.externalId!!,
                 consentId = state.consentStateUUID.id.toString(),
                 payload = ncrsBase64
+        )
+    }
+
+    private fun consentStateToEvent(state: ConsentState) : Event {
+
+        val cs =  nl.nuts.consent.bridge.model.ConsentState(
+                consentId = CordappToBridgeType.convert(state.consentStateUUID),
+                metadata = Metadata1(
+                        domain = listOf(Domain.medical),
+                        secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                        organisationSecureKeys = emptyList(),
+                        period = Period(OffsetDateTime.now())
+                ),
+                cipherText = "af=="
+        )
+
+        val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)
+        val csBase64 = Base64.getEncoder().encodeToString(csBytes)
+
+        return Event(
+                UUID = UUID.randomUUID().toString(),
+                name = EventName.EventConsentDistributed,
+                retryCount = 0,
+                externalId = state.consentStateUUID.externalId!!,
+                consentId = state.consentStateUUID.id.toString(),
+                payload = csBase64
         )
     }
 }

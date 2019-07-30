@@ -135,6 +135,19 @@ components:
         cipherText:
           type: string
           description: "Base64 encoded cipher_text.bin (fhir)"
+    ConsentState:
+      required:
+        - consentId
+        - metadata
+        - cipherText
+      properties:
+        consentId:
+          $ref: '#/components/schemas/ConsentId'
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        cipherText:
+          type: string
+          description: "Base64 encoded cipher_text.bin (fhir)"
     Metadata:
       required:
         - domain
