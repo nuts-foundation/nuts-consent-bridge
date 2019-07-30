@@ -139,7 +139,9 @@ class CordaStateMachineListenerIntegrationTest {
         eventStateStore.put(handle.id.uuid, eventIn)
 
         // wait for it
-        handle.returnValue.get()
+        blockUntilNull {
+            eventStateStore.get(handle.id.uuid)
+        }
 
         // verify updated event
         verify(nutsEventPublisher).publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(eventOut))
