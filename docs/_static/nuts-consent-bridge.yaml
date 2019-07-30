@@ -112,6 +112,29 @@ components:
         attachment:
           type: string
           description: "Base64 encoded data"
+    FullConsentRequestState:
+      required:
+        - consentId
+        - metadata
+        - legalEntities
+        - signatures
+        - cipherText
+      properties:
+        consentId:
+          $ref: '#/components/schemas/ConsentId'
+        signatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartyAttachmentSignature'
+        legalEntities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        cipherText:
+          type: string
+          description: "Base64 encoded cipher_text.bin (fhir)"
     Metadata:
       required:
         - domain
