@@ -18,6 +18,7 @@
 
 package nl.nuts.consent.bridge.rpc
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.eq
@@ -183,9 +184,16 @@ class CordaServiceTest {
         val event = cordaService.contractStateToEvent(consentRequestState())
 
         assertNotNull(event)
+
+        // check payload
+        val json = Base64.getDecoder().decode(event.payload)
+        val fcrs : FullConsentRequestState = Serialization.objectMapper().readValue(json)
+
         assertEquals(EventName.EventDistributedConsentRequestReceived, event.name)
         assertEquals("externalId", event.externalId)
         assertNotNull( event.consentId)
+        assertEquals(event.consentId, fcrs.consentId.UUID)
+        assertEquals(event.externalId, fcrs.consentId.externalId)
     }
 
     @Test

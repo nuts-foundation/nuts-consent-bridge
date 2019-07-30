@@ -33,6 +33,8 @@ import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType
+import nl.nuts.consent.bridge.model.ConsentId
+import nl.nuts.consent.bridge.model.FullConsentRequestState
 import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.bridge.nats.Event
@@ -124,15 +126,16 @@ class CordaService {
 
         val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
 
-
-        val ncrs =  NewConsentRequestState(
-                externalId = state.consentStateUUID.externalId!!,
+        val crs = FullConsentRequestState(
+                consentId = CordappToBridgeType.convert(state.consentStateUUID),
                 metadata = CordappToBridgeType.convert(attachment.metadata),
-                attachment = Base64.getEncoder().encodeToString(attachment.data)
+                cipherText = Base64.getEncoder().encodeToString(attachment.data),
+                signatures = state.signatures.map{ CordappToBridgeType.convert(it) },
+                legalEntities = state.legalEntities.toList()
         )
 
-        val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)
-        val ncrsBase64 = Base64.getEncoder().encodeToString(ncrsBytes)
+        val crsBytes = Serialization.objectMapper().writeValueAsBytes(crs)
+        val crsBase64 = Base64.getEncoder().encodeToString(crsBytes)
 
         return Event(
                 UUID = UUID.randomUUID().toString(),
@@ -140,7 +143,7 @@ class CordaService {
                 retryCount = 0,
                 externalId = state.consentStateUUID.externalId!!,
                 consentId = state.consentStateUUID.id.toString(),
-                payload = ncrsBase64
+                payload = crsBase64
         )
     }
 

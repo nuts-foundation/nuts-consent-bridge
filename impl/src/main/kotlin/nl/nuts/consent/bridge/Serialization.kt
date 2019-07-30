@@ -18,8 +18,12 @@
 
 package nl.nuts.consent.bridge
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.introspect.VisibilityChecker
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import net.corda.nodeapi.internal.config.toConfigValue
 import java.text.SimpleDateFormat
 
 class Serialization {
@@ -27,6 +31,14 @@ class Serialization {
         val _objectMapper: ObjectMapper by lazy {
             val objectMapper = ObjectMapper()
             objectMapper.registerModule(JavaTimeModule())
+            objectMapper.registerKotlinModule()
+
+            objectMapper.setVisibility(objectMapper.getSerializationConfig().getDefaultVisibilityChecker()
+                    .withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+                    .withGetterVisibility(JsonAutoDetect.Visibility.NONE)
+                    .withSetterVisibility(JsonAutoDetect.Visibility.NONE)
+                    .withCreatorVisibility(JsonAutoDetect.Visibility.NONE))
+
             objectMapper.dateFormat = SimpleDateFormat.getDateInstance()
             objectMapper
         }
