@@ -88,7 +88,7 @@ class CordaStateMachineListenerIntegrationTest {
         @JvmStatic fun runNodes() {
             Thread {
                 // blocking call
-                driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"), startNodesInProcess = true
+                driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test")
                         , portAllocation = PortAllocation.Incremental(12000))) {
                     val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateChangeListenerConnectionIntegrationTest.rpcUser))
                     node = nodeF.get()

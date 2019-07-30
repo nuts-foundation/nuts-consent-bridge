@@ -60,7 +60,7 @@ class CordaStateChangeListenerConnectionIntegrationTest {
     }
 
     fun runWithNode(func: () -> Unit) {
-        driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"), startNodesInProcess = true)) {
+        driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"))) {
             val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))
             node = nodeF.get()
             client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
