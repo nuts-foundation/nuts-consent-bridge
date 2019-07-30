@@ -77,7 +77,7 @@ class CordaStateChangeListenerIntegrationTest {
                 }
             }.start()
 
-            blockUntilSet(60000L) {
+            blockUntilSet(90000L) {
                 node
             }
         }
