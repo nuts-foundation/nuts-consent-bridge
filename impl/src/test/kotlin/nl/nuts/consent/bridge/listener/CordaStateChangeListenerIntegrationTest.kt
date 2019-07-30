@@ -104,22 +104,6 @@ class CordaStateChangeListenerIntegrationTest {
     }
 
     @Test
-    fun `onProduces is not called for a new state when callback was stopped`() {
-        val count = AtomicInteger(0)
-        listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(ConsentBridgeRPCProperties()), {
-            count.incrementAndGet()
-        })
-        listener!!.stop()
-        listener!!.start(DummyState::class.java)
-
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
-
-        Thread.sleep(10)
-
-        assertEquals(0, count.get())
-    }
-
-    @Test
     fun `onProduces is called for a new state`() {
         val producedState = AtomicReference<StateAndRef<DummyState>>()
         listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties!!), {
