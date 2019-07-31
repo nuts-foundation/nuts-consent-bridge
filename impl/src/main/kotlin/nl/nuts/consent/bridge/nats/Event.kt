@@ -18,6 +18,7 @@
 
 package nl.nuts.consent.bridge.nats
 
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import java.lang.IllegalArgumentException
 import javax.validation.constraints.NotNull
@@ -66,13 +67,9 @@ enum class EventName(val value: String) {
     EventErrored("social");
 
     companion object {
+        @JsonCreator @JvmStatic
         fun fromString(s : String) : EventName {
-            for (en in EventName.values()) {
-                if (en.value == s) {
-                    return en
-                }
-            }
-            throw IllegalArgumentException("Unknown value: $s")
+            return values().firstOrNull { it.value == s } ?: throw IllegalArgumentException("Unknown value: $s")
         }
     }
 }
