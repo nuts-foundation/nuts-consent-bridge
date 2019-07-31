@@ -115,7 +115,7 @@ class NutsEventListenerTest {
 
         return Event(
                 UUID = "1111-2222-33334444-5555-6666",
-                name = EventName.EventDistributedConsentRequestReceived,
+                name = EventName.EventConsentRequestConstructed,
                 retryCount = 0,
                 externalId = "uuid",
                 initiatorLegalEntity = "custodian",

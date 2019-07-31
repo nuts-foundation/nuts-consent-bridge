@@ -51,7 +51,7 @@ data class Event(
 
 enum class EventName(val value: String) {
 
-    ConsentRequestConstructed("consentRequest constructed"),
+    EventConsentRequestConstructed("consentRequest constructed"),
     EventConsentRequestInFlight("consentRequest in flight"),
     EventConsentRequestFlowErrored("consentRequest flow errored"),
     EventConsentRequestFlowSuccess("consentRequest flow success"),

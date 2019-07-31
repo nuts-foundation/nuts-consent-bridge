@@ -96,7 +96,7 @@ class NutsEventListener {
     private fun processEvent(e : Event) {
         // todo null checks -> error condition
         when (e.name) {
-            EventName.EventDistributedConsentRequestReceived -> {
+            EventName.EventConsentRequestConstructed -> {
                 val payload = Base64.getDecoder().decode(e.payload)
                 val newConsentRequestState = Serialization.objectMapper().readValue(payload, NewConsentRequestState::class.java)
                 val handle = cordaService.newConsentRequestState(newConsentRequestState)
