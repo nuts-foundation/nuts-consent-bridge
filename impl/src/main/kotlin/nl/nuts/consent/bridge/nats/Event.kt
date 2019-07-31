@@ -20,6 +20,7 @@ package nl.nuts.consent.bridge.nats
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonValue
 import java.lang.IllegalArgumentException
 import javax.validation.constraints.NotNull
 
@@ -71,5 +72,10 @@ enum class EventName(val value: String) {
         fun fromString(s : String) : EventName {
             return values().firstOrNull { it.value == s } ?: throw IllegalArgumentException("Unknown value: $s")
         }
+    }
+
+    @JsonValue
+    override fun toString() : String {
+        return value
     }
 }

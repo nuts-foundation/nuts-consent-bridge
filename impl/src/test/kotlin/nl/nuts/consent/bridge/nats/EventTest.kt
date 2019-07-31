@@ -22,6 +22,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import nl.nuts.consent.bridge.Serialization
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class EventTest {
     @Test
@@ -31,5 +32,19 @@ class EventTest {
         val e:Event = Serialization.objectMapper().readValue(json)
 
         assertEquals(EventName.EventConsentDistributed, e.name)
+    }
+
+    @Test
+    fun testEnumMarshall() {
+        val event = Event(
+                UUID = "",
+                externalId = "",
+                payload = "",
+                retryCount = 0,
+                name = EventName.EventConsentDistributed
+        )
+        val json = Serialization.objectMapper().writeValueAsString(event)
+
+        assertTrue(json.contains(EventName.EventConsentDistributed.value))
     }
 }

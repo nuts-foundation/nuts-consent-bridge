@@ -89,15 +89,16 @@ class CordaStateMachineListener(
                         pw.close()
                         os.close()
                         event.error = os.toString()
+
+                        // publish with new state
+                        val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
+                        eventPublisher.publish("consentRequest", jsonBytes)
                     })
                     update.result.doOnSuccess(Consumer {
                         // update event to suc6 status
-                        event.name = EventName.EventConsentRequestFlowSuccess
+                        // event.name = EventName.EventConsentRequestFlowSuccess
+                        // nop
                     })
-
-                    // publish with new state
-                    val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
-                    eventPublisher.publish("consentRequest", jsonBytes)
 
                     // finally remove
                     eventStateStore.remove(update.id.uuid)
