@@ -126,7 +126,7 @@ class CordaStateChangeListenerControllerTest {
 
     private fun storeEvent() : nl.nuts.consent.bridge.events.models.Event {
         return nl.nuts.consent.bridge.events.models.Event(
-            uuid = UUID.randomUUID(),
+            uuid = UUID.randomUUID().toString(),
                 externalId = "externalId",
                 name = nl.nuts.consent.bridge.events.models.Event.Name.consentRequestConstructed,
                 payload = "",

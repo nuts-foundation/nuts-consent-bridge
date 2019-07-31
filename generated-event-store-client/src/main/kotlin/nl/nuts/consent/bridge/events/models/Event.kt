@@ -27,7 +27,7 @@ import com.squareup.moshi.Json
  */
 data class Event (
     /* V4 UUID */
-    val uuid: java.util.UUID,
+    val uuid: kotlin.String,
     val name: Event.Name,
     /* 0 to X */
     val retryCount: kotlin.Int,
