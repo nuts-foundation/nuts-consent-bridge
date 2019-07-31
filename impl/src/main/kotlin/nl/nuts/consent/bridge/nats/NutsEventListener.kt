@@ -24,12 +24,9 @@ import io.nats.streaming.Subscription
 import io.nats.streaming.SubscriptionOptions
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
-import nl.nuts.consent.bridge.model.NewConsentRequestState
+import nl.nuts.consent.bridge.model.FullConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
-import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
-import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
-import nl.nuts.consent.state.ConsentRequestState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -98,8 +95,8 @@ class NutsEventListener {
         when (e.name) {
             EventName.EventConsentRequestConstructed -> {
                 val payload = Base64.getDecoder().decode(e.payload)
-                val newConsentRequestState = Serialization.objectMapper().readValue(payload, NewConsentRequestState::class.java)
-                val handle = cordaService.newConsentRequestState(newConsentRequestState)
+                val consentRequestState = Serialization.objectMapper().readValue(payload, FullConsentRequestState::class.java)
+                val handle = cordaService.newConsentRequestState(consentRequestState)
 
                 e.name = EventName.EventConsentRequestInFlight
                 e.transactionId = handle.id.uuid.toString()

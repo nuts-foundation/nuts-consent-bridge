@@ -25,7 +25,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConsentRequestState'
+                $ref: '#/components/schemas/FullConsentRequestState'
         '404':
           description: "The given ID can not be found"
   /api/attachment/{secureHash}:
@@ -53,28 +53,6 @@ paths:
           description: "The given hash can not be found"
 components:
   schemas:
-    ConsentRequestState:
-      required:
-        - consentId
-        - attachments
-        - legalEntities
-        - signatures
-      properties:
-        consentId:
-          $ref: '#/components/schemas/ConsentId'
-        attachments:
-          type: array
-          items:
-            type: string
-            description: Hexidecimal SecureHash values
-        signatures:
-          type: array
-          items:
-            $ref: '#/components/schemas/PartyAttachmentSignature'
-        legalEntities:
-          type: array
-          items:
-            $ref: '#/components/schemas/Identifier'
     PartyAttachmentSignature:
       required:
         - legalEntity
@@ -99,26 +77,10 @@ components:
         data:
           type: string
           description: "base64 encoded bytes"
-    NewConsentRequestState:
-      required:
-        - externalId
-        - metadata
-        - attachment
-      properties:
-        externalId:
-          type: string
-        metadata:
-          $ref: '#/components/schemas/Metadata'
-        attachment:
-          type: string
-          description: "Base64 encoded data"
     FullConsentRequestState:
       required:
         - consentId
-        - metadata
         - legalEntities
-        - signatures
-        - cipherText
       properties:
         consentId:
           $ref: '#/components/schemas/ConsentId'
@@ -135,19 +97,10 @@ components:
         cipherText:
           type: string
           description: "Base64 encoded cipher_text.bin (fhir)"
-    ConsentState:
-      required:
-        - consentId
-        - metadata
-        - cipherText
-      properties:
-        consentId:
-          $ref: '#/components/schemas/ConsentId'
-        metadata:
-          $ref: '#/components/schemas/Metadata'
-        cipherText:
-          type: string
-          description: "Base64 encoded cipher_text.bin (fhir)"
+        attachmentHashes:
+          type: array
+          items:
+            type: string
     Metadata:
       required:
         - domain

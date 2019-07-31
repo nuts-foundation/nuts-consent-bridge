@@ -15,6 +15,7 @@ import javax.validation.constraints.*
  * @param legalEntities 
  * @param metadata 
  * @param cipherText Base64 encoded cipher_text.bin (fhir)
+ * @param attachmentHashes 
  */
 data class FullConsentRequestState (
 
@@ -22,16 +23,15 @@ data class FullConsentRequestState (
         @JsonProperty("consentId") val consentId: ConsentId,
 
         @get:NotNull 
-        @JsonProperty("signatures") val signatures: List<PartyAttachmentSignature>,
-
-        @get:NotNull 
         @JsonProperty("legalEntities") val legalEntities: List<String>,
 
-        @get:NotNull 
-        @JsonProperty("metadata") val metadata: Metadata,
+        @JsonProperty("signatures") val signatures: List<PartyAttachmentSignature>? = null,
 
-        @get:NotNull 
-        @JsonProperty("cipherText") val cipherText: String
+        @JsonProperty("metadata") val metadata: Metadata? = null,
+
+        @JsonProperty("cipherText") val cipherText: String? = null,
+
+        @JsonProperty("attachmentHashes") val attachmentHashes: List<String>? = null
 ) {
 
 }

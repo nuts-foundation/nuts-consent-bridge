@@ -101,15 +101,16 @@ class NutsEventListenerTest {
     }
 
     private fun newConsentRequestStateAsEvent() : Event {
-        val newConsentRequestState = NewConsentRequestState(
-                externalId = "externalId",
-                attachment = "",
+        val newConsentRequestState = FullConsentRequestState(
+                consentId = ConsentId(externalId = "externalId"),
+                cipherText = "",
                 metadata = nl.nuts.consent.bridge.model.Metadata(
                     domain = listOf(Domain.medical),
                         period = Period(validFrom = OffsetDateTime.now()),
                         organisationSecureKeys = emptyList(),
                         secureKey = SymmetricKey(alg = "alg", iv = "iv")
-                )
+                ),
+                legalEntities = emptyList()
         )
         val emptyJson = Serialization.objectMapper().writeValueAsString(newConsentRequestState)
 

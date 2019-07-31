@@ -304,7 +304,7 @@ class CordaServiceTest {
         )
     }
 
-    private fun newConsentRequestState() : NewConsentRequestState {
+    private fun newConsentRequestState() : FullConsentRequestState {
         val att = zip(consentMetadataAsJson(), "blob")
 
         val outputStream = ByteArrayOutputStream()
@@ -316,9 +316,9 @@ class CordaServiceTest {
             }
         }
 
-        return NewConsentRequestState(
-                externalId = "externalId",
-                attachment = String(outputStream.toByteArray()),
+        return FullConsentRequestState(
+                consentId = ConsentId(externalId = "externalId"),
+                cipherText = String(outputStream.toByteArray()),
                 metadata = Metadata(
                         domain = listOf(nl.nuts.consent.bridge.model.Domain.medical),
                         period = nl.nuts.consent.bridge.model.Period(validFrom = OffsetDateTime.now()),
@@ -330,7 +330,8 @@ class CordaServiceTest {
                                 )
                         ),
                         secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv")
-                )
+                ),
+                legalEntities = emptyList()
         )
     }
 

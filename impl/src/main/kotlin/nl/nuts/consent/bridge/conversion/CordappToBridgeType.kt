@@ -20,10 +20,7 @@ package nl.nuts.consent.bridge.conversion
 
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.DigitalSignature
-import nl.nuts.consent.bridge.model.ConsentId
-import nl.nuts.consent.bridge.model.PartyAttachmentSignature
-import nl.nuts.consent.bridge.model.SignatureWithKey
-import nl.nuts.consent.bridge.model.SymmetricKey
+import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.model.ASymmetricKey
 import nl.nuts.consent.model.ConsentMetadata
@@ -102,10 +99,10 @@ class CordappToBridgeType {
             )
         }
 
-        fun convert(source: ConsentRequestState): nl.nuts.consent.bridge.model.ConsentRequestState {
-            return nl.nuts.consent.bridge.model.ConsentRequestState(
+        fun convert(source: ConsentRequestState): FullConsentRequestState {
+            return FullConsentRequestState(
                     consentId = convert(source.consentStateUUID),
-                    attachments = source.attachments.map { it.toString() },
+                    attachmentHashes = source.attachments.map { it.toString() },
                     legalEntities = source.legalEntities.toList(),
                     signatures = source.signatures.map { convert(it) }
             )

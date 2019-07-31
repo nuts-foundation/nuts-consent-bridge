@@ -127,27 +127,6 @@ class CordaStateMachineListenerIntegrationTest {
     }
 
     @Test
-    fun `event is published on state machine completion`() {
-        val nutsEventPublisher : NutsEventPublisher = mock()
-        val uuid:UUID = UUID.randomUUID()
-        val eventIn = event(EventName.EventConsentRequestInFlight, uuid)
-        val eventOut = event(EventName.EventConsentRequestFlowSuccess, uuid)
-        listener = CordaStateMachineListener(CordaRPClientWrapper(validProperties!!), nutsEventPublisher, eventStateStore)
-        listener!!.start()
-
-        val handle = connection!!.proxy.startFlow(DummyFlow::ProduceFlow)
-        eventStateStore.put(handle.id.uuid, eventIn)
-
-        // wait for it
-        blockUntilNull {
-            eventStateStore.get(handle.id.uuid)
-        }
-
-        // verify updated event
-        verify(nutsEventPublisher).publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(eventOut))
-    }
-
-    @Test
     fun `event is published on state machine error`() {
         val nutsEventPublisher : NutsEventPublisher = mock()
         val uuid:UUID = UUID.randomUUID()

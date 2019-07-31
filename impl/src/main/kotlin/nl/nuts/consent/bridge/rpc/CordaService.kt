@@ -24,7 +24,6 @@ import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.AttachmentQueryCriteria
 import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.Sort
@@ -34,13 +33,10 @@ import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType
-import nl.nuts.consent.bridge.model.ConsentId
 import nl.nuts.consent.bridge.model.FullConsentRequestState
-import nl.nuts.consent.bridge.model.NewConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
-import nl.nuts.consent.bridge.nats.EventStateStore
 import nl.nuts.consent.bridge.registry.apis.EndpointsApi
 import nl.nuts.consent.flow.ConsentRequestFlows
 import nl.nuts.consent.model.ConsentMetadata
@@ -133,7 +129,8 @@ class CordaService {
                 metadata = CordappToBridgeType.convert(attachment.metadata),
                 cipherText = Base64.getEncoder().encodeToString(attachment.data),
                 signatures = state.signatures.map{ CordappToBridgeType.convert(it) },
-                legalEntities = state.legalEntities.toList()
+                legalEntities = state.legalEntities.toList(),
+                attachmentHashes = listOf(state.attachments.first().toString())
         )
 
         val crsBytes = Serialization.objectMapper().writeValueAsBytes(crs)
@@ -211,19 +208,19 @@ class CordaService {
         return Attachment(metadata!!, attachment!!)
     }
 
-    fun newConsentRequestState(newConsentRequestState: NewConsentRequestState): FlowHandle<SignedTransaction> {
+    fun newConsentRequestState(newConsentRequestState: FullConsentRequestState): FlowHandle<SignedTransaction> {
         logger.debug("newConsentRequestState() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
         val proxy = cordaRPClientWrapper.proxy()!!
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
-        val targetMetadata = BridgeToCordappType.convert(newConsentRequestState.metadata)
+        val targetMetadata = BridgeToCordappType.convert(newConsentRequestState.metadata!!)
         val metadataBytes = Serialization.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
 
         // attachment hash name component
         var attachmentBytes: ByteArray?
         try {
-            attachmentBytes = Base64.getDecoder().decode(newConsentRequestState.attachment)
+            attachmentBytes = Base64.getDecoder().decode(newConsentRequestState.cipherText)
         } catch(e:IllegalArgumentException) {
             throw IllegalArgumentException("given attachment is not using valid base64 encoding: ${e.message}")
         }
@@ -249,7 +246,7 @@ class CordaService {
         }
 
         // gather orgIds from metadata
-        val orgIds = newConsentRequestState.metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
+        val orgIds = newConsentRequestState.metadata!!.organisationSecureKeys.map { it.legalEntity }.toSet()
 
         // todo: magic string
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
@@ -264,7 +261,7 @@ class CordaService {
         // start flow
         return proxy.startFlow(
                 ConsentRequestFlows::NewConsentRequest,
-                newConsentRequestState.externalId,
+                newConsentRequestState.consentId.externalId!!,
                 setOf(hash),
                 orgIds,
                 nodeNames)

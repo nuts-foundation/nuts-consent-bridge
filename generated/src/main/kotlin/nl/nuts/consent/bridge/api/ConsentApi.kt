@@ -1,6 +1,6 @@
 package nl.nuts.consent.bridge.api
 
-import nl.nuts.consent.bridge.model.ConsentRequestState
+import nl.nuts.consent.bridge.model.FullConsentRequestState
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -42,7 +42,7 @@ class ConsentApiController(@Autowired(required = true) val service: ConsentApiSe
             value = ["/api/consent_request_state/{uuid}"],
             produces = ["application/json"], 
             method = [RequestMethod.GET])
-    fun getConsentRequestStateById( @PathVariable("uuid") uuid: String): ResponseEntity<ConsentRequestState> {
+    fun getConsentRequestStateById( @PathVariable("uuid") uuid: String): ResponseEntity<FullConsentRequestState> {
         return ResponseEntity(service.getConsentRequestStateById(uuid), HttpStatus.OK)
     }
 }

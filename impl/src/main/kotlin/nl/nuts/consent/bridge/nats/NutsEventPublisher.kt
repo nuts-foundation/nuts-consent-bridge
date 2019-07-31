@@ -18,6 +18,7 @@
 
 package nl.nuts.consent.bridge.nats
 
+import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import org.slf4j.Logger
@@ -37,24 +38,26 @@ class NutsEventPublisher {
 
     lateinit var cf: StreamingConnectionFactory
 
+    lateinit var connection: StreamingConnection
+
     @PostConstruct
     fun init() {
         cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "nutsEventPublisher-${Integer.toHexString(Random().nextInt())}")
         cf.natsUrl = consentBridgeNatsProperties.address
+
+        connection = cf.createConnection()
     }
 
     // todo fatal errors
     fun publish(subject:String, data: ByteArray) {
-        // this is an uncached connection, check overhead
-        val sc = cf.createConnection()
-        sc.publish(subject, data)
+        connection.publish(subject, data)
     }
 
     @PreDestroy
     fun destroy() {
         logger.debug("Stopping publisher")
 
-
+        connection.close()
 
         logger.info("Publisher stopped")
     }

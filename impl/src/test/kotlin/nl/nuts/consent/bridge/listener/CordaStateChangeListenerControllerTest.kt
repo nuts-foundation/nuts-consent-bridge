@@ -30,10 +30,7 @@ import nl.nuts.consent.bridge.conversion.CordappToBridgeType
 import nl.nuts.consent.bridge.events.apis.EventApi
 import nl.nuts.consent.bridge.events.infrastructure.ClientException
 import nl.nuts.consent.bridge.listener.CordaStateChangeListenerController
-import nl.nuts.consent.bridge.model.Domain
-import nl.nuts.consent.bridge.model.NewConsentRequestState
-import nl.nuts.consent.bridge.model.Period
-import nl.nuts.consent.bridge.model.SymmetricKey
+import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
@@ -133,7 +130,8 @@ class CordaStateChangeListenerControllerTest {
                 externalId = "externalId",
                 name = nl.nuts.consent.bridge.events.models.Event.Name.consentRequestConstructed,
                 payload = "",
-                retryCount = 0
+                retryCount = 0,
+                initiatorLegalEntity = "legalEntity"
         )
     }
 
@@ -157,15 +155,18 @@ class CordaStateChangeListenerControllerTest {
 
     private fun consentRequestStateToEvent(state: ConsentRequestState) : Event {
 
-        val ncrs =  NewConsentRequestState(
-                externalId = state.consentStateUUID.externalId!!,
+        val ncrs =  FullConsentRequestState(
+                consentId = ConsentId(externalId = state.consentStateUUID.externalId!!),
                 metadata = Metadata1(
                     domain = listOf(Domain.medical),
                         secureKey = SymmetricKey(alg = "alg", iv = "iv"),
                         organisationSecureKeys = emptyList(),
                         period = Period(OffsetDateTime.now())
                 ),
-                attachment = "af=="
+                cipherText = "af==",
+                legalEntities = emptyList(),
+                attachmentHashes = emptyList(),
+                signatures = emptyList()
         )
 
         val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)

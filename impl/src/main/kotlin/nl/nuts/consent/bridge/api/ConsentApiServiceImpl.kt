@@ -20,7 +20,7 @@ package nl.nuts.consent.bridge.api
 
 import net.corda.core.crypto.SecureHash
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType.Companion.convert
-import nl.nuts.consent.bridge.model.ConsentRequestState
+import nl.nuts.consent.bridge.model.FullConsentRequestState
 import nl.nuts.consent.bridge.rpc.CordaService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -47,7 +47,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         return attachment.data
     }
 
-    override fun getConsentRequestStateById(uuid: String): ConsentRequestState {
+    override fun getConsentRequestStateById(uuid: String): FullConsentRequestState {
         logger.debug("getConsentRequestStateById({})", uuid)
 
         return convert(cordaService.consentRequestStateByUUID(uuid))

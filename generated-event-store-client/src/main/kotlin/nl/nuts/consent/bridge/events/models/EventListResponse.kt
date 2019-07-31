@@ -1,6 +1,6 @@
 /**
 * Nuts event store spec
-* API specification for event store. The event store records the state of the in-flight events. 
+* API specification for event store. The event store records the events of the in-flight transactions. 
 *
 * OpenAPI spec version: 0.1.0
 * 

@@ -1,6 +1,6 @@
 /**
 * Nuts event store spec
-* API specification for event store. The event store records the state of the in-flight events. 
+* API specification for event store. The event store records the events of the in-flight transactions. 
 *
 * OpenAPI spec version: 0.1.0
 * 
@@ -18,7 +18,7 @@ import com.squareup.moshi.Json
  * @param uuid V4 UUID
  * @param name 
  * @param retryCount 0 to X
- * @param externalId ID calculated by crypto using BSN and private key of custodian
+ * @param externalId ID calculated by crypto using BSN and private key of initiatorLegalEntity
  * @param consentId V4 UUID assigned by Corda to a record
  * @param transactionId V4 UUID assigned by Corda to a transaction
  * @param initiatorLegalEntity Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
@@ -31,16 +31,16 @@ data class Event (
     val name: Event.Name,
     /* 0 to X */
     val retryCount: kotlin.Int,
-    /* ID calculated by crypto using BSN and private key of custodian */
+    /* ID calculated by crypto using BSN and private key of initiatorLegalEntity */
     val externalId: kotlin.String,
+    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
+    val initiatorLegalEntity: kotlin.String,
     /* NewConsentRequestState JSON as accepted by consent-bridge (:ref:`nuts-consent-bridge-api`) */
     val payload: kotlin.String,
     /* V4 UUID assigned by Corda to a record */
     val consentId: java.util.UUID? = null,
     /* V4 UUID assigned by Corda to a transaction */
     val transactionId: java.util.UUID? = null,
-    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
-    val initiatorLegalEntity: kotlin.String? = null,
     /* error reason in case of a functional error */
     val error: kotlin.String? = null
 ) {
