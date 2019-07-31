@@ -65,7 +65,7 @@ enum class EventName(val value: String) {
     EventAttachmentSigned("attachment signed"),
     EventConsentDistributed("consent distributed"),
     EventCompleted("completed"),
-    EventErrored("social");
+    EventErrored("error");
 
     companion object {
         @JsonCreator @JvmStatic

@@ -24,6 +24,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import java.util.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
@@ -38,7 +39,7 @@ class NutsEventPublisher {
 
     @PostConstruct
     fun init() {
-        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "nutsEventPublisher")
+        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "nutsEventPublisher-${Integer.toHexString(Random().nextInt())}")
         cf.natsUrl = consentBridgeNatsProperties.address
     }
 
