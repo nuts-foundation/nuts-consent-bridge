@@ -38,9 +38,9 @@ data class Event (
     /* NewConsentRequestState JSON as accepted by consent-bridge (:ref:`nuts-consent-bridge-api`) */
     val payload: kotlin.String,
     /* V4 UUID assigned by Corda to a record */
-    val consentId: java.util.UUID? = null,
+    val consentId: kotlin.String? = null,
     /* V4 UUID assigned by Corda to a transaction */
-    val transactionId: java.util.UUID? = null,
+    val transactionId: kotlin.String? = null,
     /* error reason in case of a functional error */
     val error: kotlin.String? = null
 ) {
