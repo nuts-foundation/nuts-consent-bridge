@@ -139,13 +139,22 @@ class CordaServiceTest {
         val hash = SecureHash.parse(VALID_HEX)
 
         `when`(cordaRPCOps.attachmentExists(hash)).thenReturn(true)
-        `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(consentMetadataAsJson(), "blob"))
+        val bytes = ByteArray(8)
+        bytes[0] = 1
+        bytes[1] = 5
+        bytes[2] = 20
+        bytes[3] = 127
+        bytes[4] = -1
+        bytes[5] = -5
+        bytes[6] = -20
+        bytes[7] = -127
+        `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(consentMetadataAsJson(), bytes))
 
         val att = cordaService.getAttachment(hash)
 
         assertNotNull(att)
         assertTrue(att!!.metadata.domain.contains(Domain.medical))
-        assertEquals("YmxvYg==", Base64.getEncoder().encodeToString(att.data))
+        assertEquals("AQUUf//77IE=", Base64.getEncoder().encodeToString(att.data))
     }
 
     @Test
@@ -153,7 +162,7 @@ class CordaServiceTest {
         val hash = SecureHash.parse(VALID_HEX)
 
         `when`(cordaRPCOps.attachmentExists(hash)).thenReturn(true)
-        `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(null, "blob"))
+        `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(null, "blob".toByteArray()))
 
 
         assertFailsWith<IllegalStateException> {
@@ -179,7 +188,7 @@ class CordaServiceTest {
         val consentRequestState = consentRequestState()
 
         `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(true)
-        `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob"))
+        `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob".toByteArray()))
 
         val event = cordaService.consentRequestStateToEvent(consentRequestState())
 
@@ -306,7 +315,7 @@ class CordaServiceTest {
     }
 
     private fun newConsentRequestState() : FullConsentRequestState {
-        val att = zip(consentMetadataAsJson(), "blob")
+        val att = zip(consentMetadataAsJson(), "blob".toByteArray())
 
         val outputStream = ByteArrayOutputStream()
         val b64 = Base64.getEncoder().wrap(outputStream)
@@ -337,7 +346,7 @@ class CordaServiceTest {
     }
 
     private fun consentRequestState() : ConsentRequestState {
-        val att = zip(consentMetadataAsJson(), "blob")
+        val att = zip(consentMetadataAsJson(), "blob".toByteArray())
 
         val outputStream = ByteArrayOutputStream()
         val b64 = Base64.getEncoder().wrap(outputStream)
@@ -358,7 +367,7 @@ class CordaServiceTest {
         )
     }
 
-    private fun zip(metadata: String?, data: String?) : InputStream {
+    private fun zip(metadata: String?, data: ByteArray?) : InputStream {
         val baos = ByteArrayOutputStream(8096)
         val out = ZipOutputStream(baos)
 
@@ -371,7 +380,7 @@ class CordaServiceTest {
         if (data != null) {
             val entry = ZipEntry("data.bin")
             out.putNextEntry(entry)
-            out.write(data.toByteArray())
+            out.write(data)
         }
 
         out.close()
