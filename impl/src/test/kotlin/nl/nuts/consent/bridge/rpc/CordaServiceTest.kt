@@ -145,6 +145,7 @@ class CordaServiceTest {
 
         assertNotNull(att)
         assertTrue(att!!.metadata.domain.contains(Domain.medical))
+        assertEquals("YmxvYg==", Base64.getEncoder().encodeToString(att.data))
     }
 
     @Test

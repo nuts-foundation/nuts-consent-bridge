@@ -188,12 +188,27 @@ class CordaService {
                 }
 
                 if (entry.name.endsWith(".json")) {
-                    val reader = zipInputStream.bufferedReader(Charset.forName("UTF8"))
+                    val reader = zipInputStream.bufferedReader()
                     val content = reader.readText()
                     metadata = Serialization.objectMapper().readValue(content, ConsentMetadata::class.java)
                 } else if (entry.name.endsWith(".bin")) {
-                    val reader = zipInputStream.bufferedReader()
-                    attachment = reader.readText().toByteArray()
+                    val reader = zipInputStream.buffered()
+                    val buffer = ByteArray(4096)
+                    attachment = ByteArray(0)
+                    var read = 0
+
+                    do {
+                        read = reader.read(buffer)
+                        if (read != -1) {
+                            val newAtt = ByteArray(attachment!!.size + read)
+                            System.arraycopy(attachment, 0, newAtt, 0, attachment!!.size)
+                            System.arraycopy(buffer, 0, newAtt, attachment!!.size, read)
+                            attachment = newAtt
+                        }
+                    } while (read != -1)
+
+                    logger.debug("Retrieved cipherText from Corda containing:")
+                    logger.debug(Base64.getEncoder().encodeToString(attachment))
                 }
             } while (entry != null)
         }
@@ -221,6 +236,7 @@ class CordaService {
         var attachmentBytes: ByteArray?
         try {
             attachmentBytes = Base64.getDecoder().decode(newConsentRequestState.cipherText)
+
         } catch(e:IllegalArgumentException) {
             throw IllegalArgumentException("given attachment is not using valid base64 encoding: ${e.message}")
         }
@@ -235,6 +251,9 @@ class CordaService {
 
             it.putNextEntry(ZipEntry("cipher_text-${attachmentHash}.bin"))
             it.write(attachmentBytes)
+
+            logger.debug("wrote following bytes to zip: ")
+            logger.debug(Base64.getEncoder().encodeToString(attachmentBytes))
         }
 
         // upload attachment
