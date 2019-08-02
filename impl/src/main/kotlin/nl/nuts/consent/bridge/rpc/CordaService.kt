@@ -58,6 +58,8 @@ import java.util.zip.ZipOutputStream
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
+const val RPC_PROXY_ERROR = "Could not get a proxy to Corda RPC"
+
 /**
  * Service for all Corda related logic. Primarily uses the CordaRPC functionality.
  */
@@ -114,7 +116,7 @@ class CordaService {
     @Throws(NotFoundException::class)
     fun consentRequestStateByUUID(uuid: String) : ConsentRequestState {
         // not autoclose, but reuse instance
-        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
         val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
                 linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
@@ -210,7 +212,7 @@ class CordaService {
      * @throws IllegalStateException if no Corda RPC connection is available
      */
     fun getAttachment(secureHash: SecureHash) : Attachment? {
-        val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
+        val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
         if(!proxy.attachmentExists(secureHash)) {
             return null
         }
@@ -233,19 +235,7 @@ class CordaService {
                     val content = reader.readText()
                     metadata = Serialization.objectMapper().readValue(content, ConsentMetadata::class.java)
                 } else if (entry.name.endsWith(".bin")) {
-                    val reader = zipInputStream.buffered()
-                    val buffer = ByteArray(4096)
-                    var read = 0
-
-                    do {
-                        read = reader.read(buffer)
-                        if (read != -1) {
-                            val newAtt = ByteArray(attachment.size + read)
-                            System.arraycopy(attachment, 0, newAtt, 0, attachment.size)
-                            System.arraycopy(buffer, 0, newAtt, attachment.size, read)
-                            attachment = newAtt
-                        }
-                    } while (read != -1)
+                    attachment = readZipBytes(zipInputStream.buffered())
 
                     logger.trace("Retrieved cipherText from Corda containing:")
                     logger.trace(Base64.getEncoder().encodeToString(attachment))
@@ -261,6 +251,24 @@ class CordaService {
         return Attachment(m, attachment)
     }
 
+    private fun readZipBytes(reader : BufferedInputStream) : ByteArray {
+        var attachment = ByteArray(0)
+        val buffer = ByteArray(4096)
+        var read = 0
+
+        do {
+            read = reader.read(buffer)
+            if (read != -1) {
+                val newAtt = ByteArray(attachment.size + read)
+                System.arraycopy(attachment, 0, newAtt, 0, attachment.size)
+                System.arraycopy(buffer, 0, newAtt, attachment.size, read)
+                attachment = newAtt
+            }
+        } while (read != -1)
+
+        return attachment
+    }
+
     /**
      * Start the Corda flow for creating a new consentRequest state.
      * @param newConsentRequestState the consentRequestState to be created
@@ -269,11 +277,43 @@ class CordaService {
      */
     fun newConsentRequestState(newConsentRequestState: FullConsentRequestState): FlowHandle<SignedTransaction> {
         logger.debug("newConsentRequestState() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
-        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
         val metadata = newConsentRequestState.metadata ?: throw IllegalArgumentException("consentRequestState.metadata can not be empty")
         val externalId = newConsentRequestState.consentId.externalId ?: throw IllegalArgumentException("consentRequestState.consentId.externalId can not be empty")
+
+        // create zip file with metadata file and attachment
+        val zipBytes = createZip(newConsentRequestState)
+
+        // upload attachment
+        var hash  = uploadAttachment(zipBytes)
+
+        // gather orgIds from metadata
+        val orgIds = metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
+
+        // todo: magic string
+        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
+
+        if (endpoints.isEmpty()) {
+            throw IllegalArgumentException("No available endpoints for given organization ids in registry")
+        }
+
+        // urn:ietf:rfc:1779:X to X
+        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }.toSet()
+
+        // start flow
+        return proxy.startFlow(
+                ConsentRequestFlows::NewConsentRequest,
+                externalId,
+                setOf(hash),
+                orgIds,
+                nodeNames)
+    }
+
+    private fun createZip(newConsentRequestState: FullConsentRequestState) : ByteArray {
+        // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
+        val metadata = newConsentRequestState.metadata ?: throw IllegalArgumentException("consentRequestState.metadata can not be empty")
         val targetMetadata = BridgeToCordappType.convert(metadata)
         val metadataBytes = Serialization.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
@@ -302,34 +342,18 @@ class CordaService {
             logger.trace(Base64.getEncoder().encodeToString(attachmentBytes))
         }
 
-        // upload attachment
+        return targetStream.toByteArray()
+    }
+
+    private fun uploadAttachment(data: ByteArray) : SecureHash {
         var hash : SecureHash
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
         try {
-            hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(targetStream.toByteArray())))
+            hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
         } catch (e : FileAlreadyExistsException) {
             hash = SecureHash.parse(e.file)
         }
-
-        // gather orgIds from metadata
-        val orgIds = metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
-
-        // todo: magic string
-        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
-
-        if (endpoints.isEmpty()) {
-            throw IllegalArgumentException("No available endpoints for given organization ids in registry")
-        }
-
-        // urn:ietf:rfc:1779:X to X
-        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }.toSet()
-
-        // start flow
-        return proxy.startFlow(
-                ConsentRequestFlows::NewConsentRequest,
-                externalId,
-                setOf(hash),
-                orgIds,
-                nodeNames)
+        return hash
     }
 
     /**
@@ -340,7 +364,7 @@ class CordaService {
      * @throws IllegalStateException when an RPC connection could not be made
      */
     fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): FlowHandle<SignedTransaction> {
-        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
         return proxy.startFlow(
                 ConsentRequestFlows::AcceptConsentRequest,
@@ -356,7 +380,7 @@ class CordaService {
      * @throws IllegalStateException when an RPC connection could not be made
      */
     fun finalizeConsentRequestState(uuid: String): FlowHandle<SignedTransaction> {
-        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
         return proxy.startFlow(
                 ConsentRequestFlows::FinalizeConsentRequest,
