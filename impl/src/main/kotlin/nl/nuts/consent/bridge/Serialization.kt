@@ -31,6 +31,7 @@ import java.text.SimpleDateFormat
  */
 class Serialization {
     companion object {
+
         val _objectMapper: ObjectMapper by lazy {
             val objectMapper = ObjectMapper()
             objectMapper.registerModule(JavaTimeModule())
@@ -46,6 +47,9 @@ class Serialization {
             objectMapper
         }
 
+        /**
+         * return lazy loaded objectMapper
+         */
         fun objectMapper(): ObjectMapper {
             return _objectMapper
         }
