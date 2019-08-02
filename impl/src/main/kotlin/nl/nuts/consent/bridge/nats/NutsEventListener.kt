@@ -80,7 +80,7 @@ class NutsEventListener {
 
         subscription = connection.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
             try {
-                logger.debug("Received event with data ${String(it.data)}")
+                logger.trace("Received event with data ${String(it.data)}")
                 val e = Serialization.objectMapper().readValue(it.data, Event::class.java)
                 processEvent(e)
             } catch (e : IOException) {
@@ -134,6 +134,8 @@ class NutsEventListener {
     }
 
     private fun processEventConsentRequestConstructed(e:Event) {
+        logger.debug("Processing consentRequest constructed event with data ${Serialization.objectMapper().writeValueAsString(e)}")
+
         val payload = Base64.getDecoder().decode(e.payload)
         val consentRequestState = Serialization.objectMapper().readValue(payload, FullConsentRequestState::class.java)
         val handle = cordaService.newConsentRequestState(consentRequestState)
@@ -146,6 +148,7 @@ class NutsEventListener {
     }
 
     private fun processEventConsentRequestInFlight(e:Event) {
+        logger.debug("Processing consentRequest in flight event with data ${Serialization.objectMapper().writeValueAsString(e)}")
         // when doing replay
         val uuid = UUID.fromString(e.transactionId)
         val existingEvent = eventStateStore.get(uuid)
@@ -157,6 +160,7 @@ class NutsEventListener {
     }
 
     private fun processEventInFinalFlight(e:Event) {
+        logger.debug("Processing consentRequest in final flight event with data ${Serialization.objectMapper().writeValueAsString(e)}")
         // when doing replay
         val uuid = UUID.fromString(e.transactionId)
         val existingEvent = eventStateStore.get(uuid)
@@ -169,6 +173,8 @@ class NutsEventListener {
 
     private fun processEventAllSignaturesPresent(e: Event) {
         if (e.initiatorLegalEntity != null) {
+            logger.debug("Processing consentRequest all signatures present event with data ${Serialization.objectMapper().writeValueAsString(e)}")
+
             val cId = e.consentId ?: throw IllegalStateException("missing consentId in event: ${e.UUID}")
             // this node is the initiator, finalize flow
             val handle = cordaService.finalizeConsentRequestState(cId)
@@ -182,6 +188,7 @@ class NutsEventListener {
     }
 
     private fun processEventAttachmentSigned(e: Event) {
+        logger.debug("Processing attachment signed event with data ${Serialization.objectMapper().writeValueAsString(e)}")
         val payload = Base64.getDecoder().decode(e.payload)
         val attachmentSignature = Serialization.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
         val cId = e.consentId ?: throw IllegalStateException("missing consentId in event: ${e.UUID}")
