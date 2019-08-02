@@ -207,8 +207,8 @@ class CordaService {
                         }
                     } while (read != -1)
 
-                    logger.debug("Retrieved cipherText from Corda containing:")
-                    logger.debug(Base64.getEncoder().encodeToString(attachment))
+                    logger.trace("Retrieved cipherText from Corda containing:")
+                    logger.trace(Base64.getEncoder().encodeToString(attachment))
                 }
             } while (entry != null)
         }
@@ -252,8 +252,8 @@ class CordaService {
             it.putNextEntry(ZipEntry("cipher_text-${attachmentHash}.bin"))
             it.write(attachmentBytes)
 
-            logger.debug("wrote following bytes to zip: ")
-            logger.debug(Base64.getEncoder().encodeToString(attachmentBytes))
+            logger.trace("wrote following bytes to zip: ")
+            logger.trace(Base64.getEncoder().encodeToString(attachmentBytes))
         }
 
         // upload attachment
