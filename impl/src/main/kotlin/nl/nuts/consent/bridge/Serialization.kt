@@ -26,6 +26,9 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import net.corda.nodeapi.internal.config.toConfigValue
 import java.text.SimpleDateFormat
 
+/**
+ * Singleton for storing Json Objectmapper used by various classes
+ */
 class Serialization {
     companion object {
         val _objectMapper: ObjectMapper by lazy {

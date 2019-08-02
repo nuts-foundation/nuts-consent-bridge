@@ -37,6 +37,12 @@ class ConsentApiServiceImpl : ConsentApiService {
     @Autowired
     lateinit var cordaService : CordaService
 
+    /**
+     * Get the attachment by its secure hash
+     * @param secureHash Sha256 of attachment bytes, used as Id
+     *
+     * @return OctetStream of bytes
+     */
     // todo: change spec to reflect string is in hexadecimal notation
     override fun getAttachmentBySecureHash(secureHash: String): ByteArray {
         logger.debug("getAttachmentBySecureHash({})", secureHash)
@@ -47,6 +53,13 @@ class ConsentApiServiceImpl : ConsentApiService {
         return attachment.data
     }
 
+    /**
+     * Get the consentRequest state by the UUID
+     *
+     * @param uuid (UUID part of the UniqueIdentifier)
+     *
+     * @return FullConsentRequestState with consentId, attachmentHashes, legalEntities and signatures
+     */
     override fun getConsentRequestStateById(uuid: String): FullConsentRequestState {
         logger.debug("getConsentRequestStateById({})", uuid)
 
