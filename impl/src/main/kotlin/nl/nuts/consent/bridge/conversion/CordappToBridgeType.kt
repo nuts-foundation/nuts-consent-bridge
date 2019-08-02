@@ -117,6 +117,8 @@ class CordappToBridgeType {
             val stringWriter = StringWriter()
             val writer = PemWriter(stringWriter)
             writer.writeObject(PemObject("PUBLIC KEY", source.by.encoded))
+            writer.close()
+            stringWriter.close()
 
             return SignatureWithKey(
                     publicKey = stringWriter.toString(),
