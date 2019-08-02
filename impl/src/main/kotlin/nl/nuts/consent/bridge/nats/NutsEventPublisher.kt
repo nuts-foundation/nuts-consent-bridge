@@ -29,6 +29,9 @@ import java.util.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
+/**
+ * wrapper class for Nats event publishing, handles connection
+ */
 @Service
 class NutsEventPublisher {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -40,6 +43,11 @@ class NutsEventPublisher {
 
     lateinit var connection: StreamingConnection
 
+    /**
+     * Initializes the connection to the Nats streaming server
+     *
+     * It uses the standard Options. Server config is loaded via Spring properties: nuts.consent.nats.*.
+     */
     @PostConstruct
     fun init() {
         cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "nutsEventPublisher-${Integer.toHexString(Random().nextInt())}")
@@ -48,11 +56,20 @@ class NutsEventPublisher {
         connection = cf.createConnection()
     }
 
+    /**
+     * Publishes the given data to the given channel
+     *
+     * @param subject Nats subject/channel
+     * @param data bytes to publish
+     */
     // todo fatal errors
     fun publish(subject:String, data: ByteArray) {
         connection.publish(subject, data)
     }
 
+    /**
+     * Closes the Nats connection
+     */
     @PreDestroy
     fun destroy() {
         logger.debug("Stopping publisher")

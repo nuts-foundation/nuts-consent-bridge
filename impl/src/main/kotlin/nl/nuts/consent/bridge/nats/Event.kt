@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonValue
 import java.lang.IllegalArgumentException
 import javax.validation.constraints.NotNull
 
+/**
+ * Kotlin version of the nuts service space event as defined by nuts-event-octopus
+ */
 data class Event(
         @get:NotNull
         @JsonProperty("uuid") var UUID: String,
@@ -50,6 +53,9 @@ data class Event(
     }
 }
 
+/**
+ * Event name enum
+ */
 enum class EventName(val value: String) {
 
     EventConsentRequestConstructed("consentRequest constructed"),
@@ -68,12 +74,21 @@ enum class EventName(val value: String) {
     EventErrored("error");
 
     companion object {
+        /**
+         * enum value creation via string, used for json deserialization
+         * @param s enum string value
+         * @return enum value
+         * @throws IllegalAccessException for unknown value
+         */
         @JsonCreator @JvmStatic
         fun fromString(s : String) : EventName {
             return values().firstOrNull { it.value == s } ?: throw IllegalArgumentException("Unknown value: $s")
         }
     }
 
+    /**
+     * String representation of enum value, used for json serialization
+     */
     @JsonValue
     override fun toString() : String {
         return value

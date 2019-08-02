@@ -59,6 +59,13 @@ class NutsEventListener {
     @Autowired
     lateinit var nutsEventPublisher: NutsEventPublisher
 
+    /**
+     * Initializes the connection to the Nats streaming server and creates a subscription to channel with subject: "consentRequest"
+     *
+     * It uses the standard SubscriptionOptions. Server config is loaded via Spring properties: nuts.consent.nats.*.
+     *
+     * The subscription receives all events but only processes: ["consentRequest constructed", "consentRequest in flight", "consentRequest in flight for final state", "all signatures present", "attachment signed"]
+     */
     @PostConstruct
     fun init() {
         logger.debug("Connecting listener to Nats on ${consentBridgeNatsProperties.address} with ClusterID: ${consentBridgeNatsProperties.cluster}")
@@ -80,6 +87,9 @@ class NutsEventListener {
         logger.info("NutsEventListener connection to Nats server established")
     }
 
+    /**
+     * stop subscription and close Nats connection
+     */
     @PreDestroy
     fun destroy() {
         logger.debug("Disconnecting listener from Nats")

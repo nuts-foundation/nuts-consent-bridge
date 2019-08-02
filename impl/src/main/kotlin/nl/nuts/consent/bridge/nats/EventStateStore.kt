@@ -24,21 +24,44 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  *
- * Simple service for sharing event/state machine state
+ * Simple service for sharing event/state machine state across listeners/publishers.
+ * Uses a concurrent HashMap as underlying store.
  */
 @Service
 class EventStateStore {
     private val eventSet = ConcurrentHashMap<UUID, Event>()
 
+    /**
+     * add a event to the store
+     *
+     * @param uuid Event unique id
+     * @param event
+     *
+     * @return the event
+     */
     fun put(uuid: UUID, event: Event) : Event {
         eventSet[uuid] = event
         return event
     }
 
+    /**
+     * retrieve event from store by its uuid
+     *
+     * @param uuid Event unique id
+     *
+     * @return stored event or null
+     */
     fun get(uuid: UUID) : Event? {
         return eventSet[uuid]
     }
 
+    /**
+     * remove event from store by its uuid
+     *
+     * @param uuid Event unique id
+     *
+     * @return the event when removed or null when not
+     */
     fun remove(uuid: UUID) : Event? {
         return eventSet.remove(uuid)
     }
