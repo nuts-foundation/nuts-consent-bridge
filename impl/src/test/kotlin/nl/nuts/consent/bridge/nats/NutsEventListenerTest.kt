@@ -70,7 +70,7 @@ class NutsEventListenerTest {
     fun `events are ignored when for other modules`() {
         //when
         val e = Serialization.objectMapper().writeValueAsBytes(event(EventName.EventCompleted))
-        connection.publish("consentRequest", e)
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
 
         // then
     }
@@ -79,7 +79,7 @@ class NutsEventListenerTest {
     fun `requested state is forwarded to consentService`() {
         //when
         val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
-        connection.publish("consentRequest", e)
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
 
         Thread.sleep(1000)
 

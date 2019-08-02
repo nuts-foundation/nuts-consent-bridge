@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonValue
 import java.lang.IllegalArgumentException
 import javax.validation.constraints.NotNull
 
+const val NATS_CONSENT_REQUEST_SUBJECT = "consentRequest"
+
 /**
  * Kotlin version of the nuts service space event as defined by nuts-event-octopus
  */

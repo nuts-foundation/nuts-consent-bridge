@@ -23,6 +23,7 @@ import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
@@ -98,7 +99,7 @@ class CordaStateMachineListener(
 
                         // publish with new state
                         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
-                        eventPublisher.publish("consentRequest", jsonBytes)
+                        eventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
                     })
                     update.result.doOnSuccess(Consumer {
                         // update event to suc6 status

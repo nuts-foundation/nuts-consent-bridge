@@ -33,6 +33,7 @@ import nl.nuts.consent.bridge.listener.CordaStateChangeListenerController
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.state.ConsentRequestState
@@ -73,7 +74,7 @@ class CordaStateChangeListenerControllerTest {
         cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
 
-        verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
+        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
 
     @Test
@@ -90,7 +91,7 @@ class CordaStateChangeListenerControllerTest {
 
         e.UUID = n.uuid.toString()
 
-        verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
+        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
 
     @Test
@@ -104,7 +105,7 @@ class CordaStateChangeListenerControllerTest {
 
         cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
 
-        verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
+        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
 
     @Test
@@ -121,7 +122,7 @@ class CordaStateChangeListenerControllerTest {
 
         e.UUID = n.uuid.toString()
 
-        verify(nutsEventPublisher).publish(eq("consentRequest"), eq(Serialization.objectMapper().writeValueAsBytes(e)))
+        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
 
     private fun storeEvent() : nl.nuts.consent.bridge.events.models.Event {

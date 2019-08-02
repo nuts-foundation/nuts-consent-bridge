@@ -34,10 +34,7 @@ import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.Serialization
-import nl.nuts.consent.bridge.nats.Event
-import nl.nuts.consent.bridge.nats.EventName
-import nl.nuts.consent.bridge.nats.EventStateStore
-import nl.nuts.consent.bridge.nats.NutsEventPublisher
+import nl.nuts.consent.bridge.nats.*
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
@@ -145,7 +142,7 @@ class CordaStateMachineListenerIntegrationTest {
         }
 
         // verify updated event
-        verify(nutsEventPublisher).publish(eq("consentRequest"), com.nhaarman.mockito_kotlin.check {
+        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), com.nhaarman.mockito_kotlin.check {
             assertThat(Serialization.objectMapper().readValue(it, Event::class.java).error!!, contains(Regex.fromLiteral("error")))
             assertThat(Serialization.objectMapper().readValue(it, Event::class.java).name, equalTo(EventName.EventConsentRequestFlowErrored))
         })

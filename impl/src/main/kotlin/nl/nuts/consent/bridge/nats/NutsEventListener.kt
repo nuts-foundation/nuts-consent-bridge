@@ -74,7 +74,7 @@ class NutsEventListener {
         cf.natsUrl = consentBridgeNatsProperties.address
         connection = cf.createConnection()
 
-        subscription = connection.subscribe("consentRequest", {
+        subscription = connection.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
             try {
                 logger.debug("Received event with data ${String(it.data)}")
                 val e = Serialization.objectMapper().readValue(it.data, Event::class.java)
@@ -112,7 +112,7 @@ class NutsEventListener {
                 e.transactionId = handle.id.uuid.toString()
 
                 eventStateStore.put(handle.id.uuid, e)
-                nutsEventPublisher.publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(e))
+                nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
             }
             EventName.EventConsentRequestInFlight -> {
                 // when doing replay
@@ -156,7 +156,7 @@ class NutsEventListener {
                 e.transactionId = handle.id.uuid.toString()
 
                 eventStateStore.put(handle.id.uuid, e)
-                nutsEventPublisher.publish("consentRequest", Serialization.objectMapper().writeValueAsBytes(e))
+                nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
             } else -> {}
         }
     }

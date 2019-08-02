@@ -29,6 +29,7 @@ import nl.nuts.consent.bridge.events.apis.EventApi
 import nl.nuts.consent.bridge.events.infrastructure.ClientException
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
@@ -217,7 +218,7 @@ class CordaStateChangeListenerController {
         event.name = EventName.EventDistributedConsentRequestReceived
 
         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
-        nutsEventPublisher.publish("consentRequest", jsonBytes)
+        nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
     }
 
     /**
@@ -250,7 +251,7 @@ class CordaStateChangeListenerController {
         event.name = EventName.EventConsentDistributed
 
         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
-        nutsEventPublisher.publish("consentRequest", jsonBytes)
+        nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
     }
 
     private fun remoteEvent(externalId: String): Event {
