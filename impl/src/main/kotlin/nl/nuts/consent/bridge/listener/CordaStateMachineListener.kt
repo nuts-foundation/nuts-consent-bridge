@@ -87,8 +87,6 @@ class CordaStateMachineListener(
                 logger.debug("Processing ${update.id} state machine update")
                 if (update is StateMachineUpdate.Removed) {
                     update.result.doOnFailure(Consumer {
-                        event.name = EventName.EventConsentRequestFlowErrored
-
                         val os = ByteArrayOutputStream()
                         val pw = PrintWriter(os)
                         pw.println(it.message)
@@ -99,7 +97,7 @@ class CordaStateMachineListener(
 
                         // publish with new state
                         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
-                        eventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
+                        eventPublisher.publish("consentRequestErrored", jsonBytes)
                     })
                     update.result.doOnSuccess(Consumer {
                         // update event to suc6 status

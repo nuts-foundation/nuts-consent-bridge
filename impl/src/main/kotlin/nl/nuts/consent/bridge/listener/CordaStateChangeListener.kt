@@ -208,12 +208,15 @@ class CordaStateChangeListenerController {
         var knownEvent: Event? = null
         try {
             knownEvent = remoteEvent(event.externalId)
+            logger.debug("Found existing event for: ${event.externalId}")
         } catch (e: ClientException) {
-            // nop
+            logger.debug("Got new consentRequestState, generating new event")
         }
 
         if (knownEvent != null) {
             event.UUID = knownEvent.UUID
+            event.initiatorLegalEntity = knownEvent.initiatorLegalEntity
+            event.retryCount = knownEvent.retryCount
         }
         event.name = EventName.EventDistributedConsentRequestReceived
 

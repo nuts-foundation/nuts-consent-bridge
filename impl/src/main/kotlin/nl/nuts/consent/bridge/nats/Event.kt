@@ -37,7 +37,7 @@ data class Event(
         @JsonProperty("name") var name: EventName,
 
         @get:NotNull
-        @JsonProperty("retryCount") val retryCount: Int,
+        @JsonProperty("retryCount") var retryCount: Int,
 
         @get:NotNull
         @JsonProperty("externalId") val externalId: String,
@@ -46,7 +46,7 @@ data class Event(
         @JsonProperty("payload") val payload: String,
 
         @JsonProperty("consentId") var consentId: String? = null,
-        @JsonProperty("initiatorLegalEntity") val initiatorLegalEntity: String? = null,
+        @JsonProperty("initiatorLegalEntity") var initiatorLegalEntity: String? = null,
         @JsonProperty("error") var error: String? = null,
         @JsonProperty("transactionId") var transactionId: String? = null
 ) {
