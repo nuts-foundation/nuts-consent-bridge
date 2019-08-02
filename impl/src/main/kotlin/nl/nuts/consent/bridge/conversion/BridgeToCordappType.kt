@@ -33,9 +33,17 @@ import java.security.KeyFactory
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
 
+/**
+ * Utility class to convert consent-bridge types (from api) to consent-cordapp types
+ */
 class BridgeToCordappType {
     companion object {
 
+        /**
+         * Convert the metadata between formats
+         * @param source metadata
+         * @return cordapp ConsentMetadata
+         */
         fun convert(source: Metadata): ConsentMetadata {
             return ConsentMetadata(
                     domain = source.domain.map { convert(it) },
@@ -45,6 +53,13 @@ class BridgeToCordappType {
             )
         }
 
+        /**
+         * convert ASymmetricKey between formats
+         * Some of the consent-cordapp properties must be non-null
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
         fun convert(source: nl.nuts.consent.bridge.model.ASymmetricKey): ASymmetricKey {
             if (source.alg == null || source.cipherText == null ) {
                 throw IllegalArgumentException("alg and cipherText are required in ASymmetricKey")
@@ -57,10 +72,22 @@ class BridgeToCordappType {
             )
         }
 
+        /**
+         * convert Domain between formats
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
         fun convert(source: nl.nuts.consent.bridge.model.Domain) : Domain{
             return Domain.valueOf(source.name)
         }
 
+        /**
+         * convert Period between formats
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
         fun convert(source: nl.nuts.consent.bridge.model.Period) : Period{
             return if (source.validTo == null) {
                 Period(validFrom = source.validFrom.toLocalDate())
@@ -69,6 +96,12 @@ class BridgeToCordappType {
             }
         }
 
+        /**
+         * convert SymmetricKey between formats
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
         fun convert(source: nl.nuts.consent.bridge.model.SymmetricKey) : SymmetricKey{
             return SymmetricKey(
                     alg = source.alg,
@@ -76,6 +109,13 @@ class BridgeToCordappType {
             )
         }
 
+        /**
+         * convert PartyAttachmentSignature between formats.
+         * This also converts the bridge PEM format to the cordapp X509 format
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
         fun convert(source: PartyAttachmentSignature) : AttachmentSignature{
             try {
                 val reader = PemReader(StringReader(source.signature.publicKey))
@@ -90,7 +130,5 @@ class BridgeToCordappType {
                 throw IllegalArgumentException("Exception on converting PartyAttachmentSignature: ${e.message}", e)
             }
         }
-
-
     }
 }

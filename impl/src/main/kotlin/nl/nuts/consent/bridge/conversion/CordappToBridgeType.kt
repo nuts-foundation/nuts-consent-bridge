@@ -34,9 +34,18 @@ import java.time.ZoneId
 import java.util.*
 import nl.nuts.consent.bridge.model.Metadata as BridgeMetadata
 
+/**
+ * Utility class to convert consent-cordapp types to consent-bridge types
+ */
 class CordappToBridgeType {
     companion object {
 
+        /**
+         * Convert Period between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: Period): nl.nuts.consent.bridge.model.Period {
             return nl.nuts.consent.bridge.model.Period(
                     validFrom = source.validFrom.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime(),
@@ -44,10 +53,22 @@ class CordappToBridgeType {
             )
         }
 
+        /**
+         * Convert Domain between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: Domain): nl.nuts.consent.bridge.model.Domain {
             return nl.nuts.consent.bridge.model.Domain.valueOf(source.toString())
         }
 
+        /**
+         * Convert SymmetricKey between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: nl.nuts.consent.model.SymmetricKey): SymmetricKey {
             return SymmetricKey(
                     alg = source.alg,
@@ -55,7 +76,12 @@ class CordappToBridgeType {
             )
         }
 
-
+        /**
+         * Convert ASymmetricKey between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: ASymmetricKey): nl.nuts.consent.bridge.model.ASymmetricKey {
             return nl.nuts.consent.bridge.model.ASymmetricKey(
                     legalEntity = source.legalEntity,
@@ -64,6 +90,12 @@ class CordappToBridgeType {
             )
         }
 
+        /**
+         * Convert Metadata between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: ConsentMetadata): BridgeMetadata {
             return BridgeMetadata(
                     domain = source.domain.map { convert(it) },
@@ -73,6 +105,14 @@ class CordappToBridgeType {
             )
         }
 
+        /**
+         * Convert SignatureWithKey between formats
+         *
+         * Used as part of the (Party)AttachmentSignature
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: DigitalSignature.WithKey): SignatureWithKey {
             val stringWriter = StringWriter()
             val writer = PemWriter(stringWriter)
@@ -83,7 +123,12 @@ class CordappToBridgeType {
                     data = Base64.getEncoder().encodeToString(source.bytes)
             )
         }
-
+        /**
+         * Convert AttachmentSignature between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: AttachmentSignature): PartyAttachmentSignature {
             return PartyAttachmentSignature(
                     legalEntity = source.legalEntityURI,
@@ -92,6 +137,12 @@ class CordappToBridgeType {
             )
         }
 
+        /**
+         * Convert ConsentId/UniqueIdentifier between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: UniqueIdentifier): ConsentId {
             return ConsentId(
                     externalId = source.externalId,
@@ -99,6 +150,12 @@ class CordappToBridgeType {
             )
         }
 
+        /**
+         * Convert ConsentRequestState between formats
+         *
+         * @param source consent-cordapp model
+         * @return bridge model
+         */
         fun convert(source: ConsentRequestState): FullConsentRequestState {
             return FullConsentRequestState(
                     consentId = convert(source.consentStateUUID),
