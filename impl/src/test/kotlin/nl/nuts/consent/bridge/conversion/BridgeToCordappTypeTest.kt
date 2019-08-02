@@ -108,12 +108,14 @@ class BridgeToCordappTypeTest {
         assertTrue(digSign.isValid(secureHash.bytes))
     }
 
-    fun pemToPub(s:String) : PublicKey {
-        val reader = PemReader(StringReader(s))
-        val pemObject = reader.readPemObject() ?: throw IllegalArgumentException("Exception on parsing PartyAttachmentSignature.signature.publicKey")
+    companion object {
+        fun pemToPub(s: String): PublicKey {
+            val reader = PemReader(StringReader(s))
+            val pemObject = reader.readPemObject() ?: throw IllegalArgumentException("Exception on parsing PartyAttachmentSignature.signature.publicKey")
 
-        val keySpec = X509EncodedKeySpec(pemObject.content)
-        val factory = KeyFactory.getInstance("RSA")
-        return factory.generatePublic(keySpec)
+            val keySpec = X509EncodedKeySpec(pemObject.content)
+            val factory = KeyFactory.getInstance("RSA")
+            return factory.generatePublic(keySpec)
+        }
     }
 }
