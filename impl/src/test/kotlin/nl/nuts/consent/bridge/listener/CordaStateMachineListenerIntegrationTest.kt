@@ -144,7 +144,7 @@ class CordaStateMachineListenerIntegrationTest {
         // verify updated event
         verify(nutsEventPublisher).publish(eq("consentRequestErrored"), com.nhaarman.mockito_kotlin.check {
             assertThat(Serialization.objectMapper().readValue(it, Event::class.java).error!!, contains(Regex.fromLiteral("error")))
-            assertThat(Serialization.objectMapper().readValue(it, Event::class.java).name, equalTo(EventName.EventConsentRequestFlowErrored))
+            assertThat(Serialization.objectMapper().readValue(it, Event::class.java).name, equalTo(EventName.EventConsentRequestInFlight))
         })
     }
 
