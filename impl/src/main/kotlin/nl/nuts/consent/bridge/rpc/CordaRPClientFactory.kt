@@ -60,6 +60,9 @@ class CordaRPClientFactory : AbstractFactoryBean<CordaRPClientWrapper>() {
     }
 }
 
+/**
+ * Wrapper class for CordaRPC connections, enabling auto-reconnect
+ */
 class CordaRPClientWrapper : AutoCloseable {
 
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -81,6 +84,9 @@ class CordaRPClientWrapper : AutoCloseable {
         connection = null
     }
 
+    /**
+     * Not only close the connection but also indicate a new connection should not be made.
+     */
     fun term() {
         logger.info("Terminating RPC connection")
 
@@ -88,6 +94,10 @@ class CordaRPClientWrapper : AutoCloseable {
         close()
     }
 
+    /**
+     * get a handle to the CordaRPCOps object, also connects if needed
+     * @return handle to CordaRPCOps
+     */
     @Synchronized fun proxy() : CordaRPCOps? {
         if (shutdown) {
             throw IllegalStateException("Request for proxy when shutdown is in progress")
@@ -146,6 +156,9 @@ class CordaRPClientWrapper : AutoCloseable {
     }
 }
 
+/**
+ * Spring configuration for registering/creating CordaRPClientFactory and CordaRPClientWrapper beans.
+ */
 @Configuration
 class CordaRPCClientConfiguration {
     @Bean

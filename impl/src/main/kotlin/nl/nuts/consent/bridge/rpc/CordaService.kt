@@ -50,7 +50,6 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.nio.charset.Charset
 import java.nio.file.FileAlreadyExistsException
 import java.util.*
 import java.util.zip.ZipEntry
@@ -59,6 +58,9 @@ import java.util.zip.ZipOutputStream
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
+/**
+ * Service for all Corda related logic. Primarily uses the CordaRPC functionality.
+ */
 @Service
 class CordaService {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
@@ -72,12 +74,18 @@ class CordaService {
 
     lateinit var endpointsApi: EndpointsApi
 
+    /**
+     * Initialize the CordaRPC connection
+     */
     @PostConstruct
     fun init() {
         cordaRPClientWrapper = cordaRPClientFactory.getObject()
         endpointsApi = EndpointsApi(consentRegistryProperties.url)
     }
 
+    /**
+     * Close the Corda RPC connection
+     */
     @PreDestroy
     fun destroy() {
         logger.debug("Stopping corda service")
@@ -87,10 +95,22 @@ class CordaService {
         logger.info("Corda service stopped")
     }
 
+    /**
+     * Helper func to get a CordaRPC connection
+     */
     fun cordaRPClientWrapper() : CordaRPClientWrapper {
         return cordaRPClientWrapper
     }
 
+    /**
+     * Get a ConsentRequestState given its UUID
+     *
+     * @param uuid uuid part of the Corda UniqueIdentifier
+     *
+     * @return ConsentRequestState or NotFoundException when not found
+     * @throws NotFoundException for not found
+     * @throws IllegalStateException if more than 1 result is found
+     */
     @Throws(NotFoundException::class)
     fun consentRequestStateByUUID(uuid: String) : ConsentRequestState {
         // not autoclose, but reuse instance
@@ -120,6 +140,11 @@ class CordaService {
         return stateAndRef.state.data
     }
 
+    /**
+     * convert a Corda ConsentRequestState to the service space event that needs to be published.
+     * @param state ConsentRequestState
+     * @return event with name "distributed consentRequest received"
+     */
     fun consentRequestStateToEvent(state: ConsentRequestState) : Event {
 
         val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
@@ -146,6 +171,11 @@ class CordaService {
         )
     }
 
+    /**
+     * convert a Corda ConsentState to the service space event that needs to be published.
+     * @param state ConsentRequestState
+     * @return event with name "consent distributed"
+     */
     fun consentStateToEvent(state: ConsentState) : Event {
         val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
 
@@ -168,6 +198,10 @@ class CordaService {
         )
     }
 
+    /**
+     * Get an attachment bashed on its hash (Sha256)
+     * @param secureHash sha256 of attachment bytes
+     */
     fun getAttachment(secureHash: SecureHash) : Attachment? {
         val proxy =  cordaRPClientWrapper.proxy()!!
         if(!proxy.attachmentExists(secureHash)) {
@@ -223,6 +257,11 @@ class CordaService {
         return Attachment(metadata!!, attachment!!)
     }
 
+    /**
+     * Start the Corda flow for creating a new consentRequest state.
+     * @param newConsentRequestState the consentRequestState to be created
+     * @return a handle to the transaction. The transaction id is stored in events for tracking purposes
+     */
     fun newConsentRequestState(newConsentRequestState: FullConsentRequestState): FlowHandle<SignedTransaction> {
         logger.debug("newConsentRequestState() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
         val proxy = cordaRPClientWrapper.proxy()!!
@@ -286,6 +325,12 @@ class CordaService {
                 nodeNames)
     }
 
+    /**
+     * start a Corda acceptConsentRequest flow indicating a legalEntity acknowledged the content and added a signature
+     * @param uuid UUID part of uniqueIdentifier of consentRequest state in corda
+     * @param partyAttachmentSignature signature of a legalEntity plus public key
+     * @return a handle to the transaction. The transaction id is stored in events for tracking purposes
+     */
     fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy()!!
 
@@ -295,6 +340,12 @@ class CordaService {
                 listOf(BridgeToCordappType.convert(partyAttachmentSignature)))
     }
 
+    /**
+     * start a Corda finalizeConsentRequest flow indicating all legalEntities acknowledged the content. The consentRequestState is ready to convert to consentState
+     * @param uuid UUID part of uniqueIdentifier of consentRequest state in corda
+     * @param partyAttachmentSignature signature of a legalEntity plus public key
+     * @return a handle to the transaction. The transaction id is stored in events for tracking purposes
+     */
     fun finalizeConsentRequestState(uuid: String): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy()!!
 
@@ -304,6 +355,9 @@ class CordaService {
         )
     }
 
+    /**
+     * helper class, represents the attachment zip
+     */
     data class Attachment (
         val metadata: ConsentMetadata,
         val data: ByteArray
