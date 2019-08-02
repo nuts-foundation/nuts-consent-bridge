@@ -104,12 +104,12 @@ class CordaStateChangeListener<S : ContractState>(
             logger.debug("Observed ${update.type} state update")
 
             update.produced.forEach {
-                logger.debug("Observed produced state ${it.state.javaClass.name} within contract ${it.state.contract}")
+                logger.debug("Observed produced state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
 
                 producedCallback.invoke(it)
             }
             update.consumed.forEach {
-                logger.debug("Observed consumed state ${it.state.javaClass.name} within contract ${it.state.contract}")
+                logger.debug("Observed consumed state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
 
                 consumedCallback.invoke(it)
             }
@@ -125,6 +125,8 @@ class CordaStateChangeListener<S : ContractState>(
             // start again
             start(stateClass)
         })
+
+        logger.debug("Started CordaStateChangeListener subscription for $stateClass")
 
         // store in atomic reference, so that if the callback errors, the other thread can operate on it safely
         retryableStateUpdatesSubscription.set(subscription)

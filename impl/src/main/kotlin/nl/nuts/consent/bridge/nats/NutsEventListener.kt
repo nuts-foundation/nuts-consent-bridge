@@ -176,6 +176,8 @@ class NutsEventListener {
             e.name = EventName.EventInFinalFlight
             e.transactionId = handle.id.uuid.toString()
             eventStateStore.put(handle.id.uuid, e)
+
+            // todo publish inFlight
         }
     }
 
