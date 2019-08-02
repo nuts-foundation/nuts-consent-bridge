@@ -43,7 +43,7 @@ data class Event(
         @JsonProperty("externalId") val externalId: String,
 
         @get:NotNull
-        @JsonProperty("payload") val payload: String,
+        @JsonProperty("payload") var payload: String,
 
         @JsonProperty("consentId") var consentId: String? = null,
         @JsonProperty("initiatorLegalEntity") var initiatorLegalEntity: String? = null,

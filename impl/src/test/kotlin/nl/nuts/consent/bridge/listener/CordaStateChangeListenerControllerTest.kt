@@ -80,18 +80,26 @@ class CordaStateChangeListenerControllerTest {
     @Test
     fun `publishRequestStateEvent reuses existing event when found`() {
         val s = consentRequestState()
-        val e = consentRequestStateToEvent(s)
+        val eCheck = consentRequestStateToEvent(s)
+        val eMock = consentRequestStateToEvent(s)
+        eMock.payload = ""
         val state: TransactionState<ConsentRequestState> = mock()
-        val n = storeEvent()
+        val n = storeEvent(nl.nuts.consent.bridge.events.models.Event.Name.distributedConsentRequestReceived)
         `when`(state.data).thenReturn(s)
-        `when`(cordaService.consentRequestStateToEvent(any())).thenReturn(e)
+        `when`(cordaService.consentRequestStateToEvent(any())).thenReturn(eMock)
         `when`(eventApi.getEventByExternalId("externalId")).thenReturn(n)
 
         cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
-        e.UUID = n.uuid.toString()
+        // fields to copy
+        eCheck.UUID = n.uuid.toString()
+        eCheck.initiatorLegalEntity = n.initiatorLegalEntity
+        eCheck.retryCount = n.retryCount
 
-        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
+        // ignore for this test
+        eCheck.payload = ""
+
+        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(eCheck)))
     }
 
     @Test
@@ -125,11 +133,11 @@ class CordaStateChangeListenerControllerTest {
         verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
 
-    private fun storeEvent() : nl.nuts.consent.bridge.events.models.Event {
+    private fun storeEvent(name: nl.nuts.consent.bridge.events.models.Event.Name = nl.nuts.consent.bridge.events.models.Event.Name.consentRequestConstructed) : nl.nuts.consent.bridge.events.models.Event {
         return nl.nuts.consent.bridge.events.models.Event(
             uuid = UUID.randomUUID().toString(),
                 externalId = "externalId",
-                name = nl.nuts.consent.bridge.events.models.Event.Name.consentRequestConstructed,
+                name = name,
                 payload = "",
                 retryCount = 0,
                 initiatorLegalEntity = "legalEntity"

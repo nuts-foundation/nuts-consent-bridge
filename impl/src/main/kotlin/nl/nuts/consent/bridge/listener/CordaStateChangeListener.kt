@@ -208,6 +208,7 @@ class CordaStateChangeListenerController {
         var knownEvent: Event? = null
         try {
             knownEvent = remoteEvent(event.externalId)
+            logger.debug("REMOTE: ${Serialization.objectMapper().writeValueAsString(knownEvent)}")
             logger.debug("Found existing event for: ${event.externalId}")
         } catch (e: ClientException) {
             logger.debug("Got new consentRequestState, generating new event")
@@ -219,6 +220,8 @@ class CordaStateChangeListenerController {
             event.retryCount = knownEvent.retryCount
         }
         event.name = EventName.EventDistributedConsentRequestReceived
+
+        logger.debug("PUBLISHING: ${Serialization.objectMapper().writeValueAsString(event)}")
 
         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
         nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
