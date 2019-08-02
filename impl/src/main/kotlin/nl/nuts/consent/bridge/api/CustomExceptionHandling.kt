@@ -26,6 +26,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
 import java.io.IOException
+import java.lang.Exception
 import java.lang.IllegalStateException
 import javax.servlet.http.HttpServletResponse
 
@@ -36,6 +37,10 @@ import javax.servlet.http.HttpServletResponse
 class CustomExceptionHandling {
 
     val logger = LoggerFactory.getLogger(this.javaClass)
+
+    private fun serverErrorMessage(ex:Exception) : String {
+        return "Server error occurred: ${ex.message}"
+    }
 
     /**
      * IllegalArgumentExceptions map to 400 codes
@@ -56,7 +61,7 @@ class CustomExceptionHandling {
      */
     @ExceptionHandler(value = [ClientException::class])
     fun onApiClientException(ex: ClientException, response: HttpServletResponse) {
-        logger.error("Server error occurred: ${ex.message}", ex)
+        logger.error(serverErrorMessage(ex))
         return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
     }
 
@@ -65,7 +70,7 @@ class CustomExceptionHandling {
      */
     @ExceptionHandler(value = [ServerException::class])
     fun onApiServerException(ex: ServerException, response: HttpServletResponse) {
-        logger.error("Server error occurred: ${ex.message}", ex)
+        logger.error(serverErrorMessage(ex))
         return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
     }
 
@@ -74,7 +79,7 @@ class CustomExceptionHandling {
      */
     @ExceptionHandler(value = [nl.nuts.consent.bridge.registry.infrastructure.ClientException::class])
     fun onApiRegistryClientException(ex: ClientException, response: HttpServletResponse) {
-        logger.error("Server error occurred: ${ex.message}", ex)
+        logger.error(serverErrorMessage(ex))
         return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
     }
 
@@ -83,7 +88,7 @@ class CustomExceptionHandling {
      */
     @ExceptionHandler(value = [nl.nuts.consent.bridge.registry.infrastructure.ServerException::class])
     fun onApiRegisitryServerException(ex: ServerException, response: HttpServletResponse) {
-        logger.error("Server error occurred: ${ex.message}", ex)
+        logger.error(serverErrorMessage(ex))
         return response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.message)
     }
 

@@ -84,11 +84,11 @@ class NutsEventListener {
                 val e = Serialization.objectMapper().readValue(it.data, Event::class.java)
                 processEvent(e)
             } catch (e : IOException) {
-                logger.error("Error during event processing: $e")
+                logger.error(e.message, e)
             } catch (e : JsonParseException) {
-                logger.error("Error during event processing: $e")
+                logger.error(e.message, e)
             } catch (e : JsonMappingException) {
-                logger.error("Error during event processing: $e")
+                logger.error(e.message, e)
             }
             // todo: more exceptions?
         }, SubscriptionOptions.Builder().build())

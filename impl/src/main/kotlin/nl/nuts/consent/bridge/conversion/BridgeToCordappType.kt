@@ -59,15 +59,15 @@ class BridgeToCordappType {
          *
          * @param source bridge type
          * @return consent-cordapp type
+         * @throws IllegalArgumentException when alg or cipherText is null
          */
         fun convert(source: nl.nuts.consent.bridge.model.ASymmetricKey): ASymmetricKey {
-            if (source.alg == null || source.cipherText == null ) {
-                throw IllegalArgumentException("alg and cipherText are required in ASymmetricKey")
-            }
+            val ct = source.cipherText ?: throw IllegalArgumentException("cipherText is required in ASymmetricKey")
+            val a = source.alg ?: throw IllegalArgumentException("alg is required in ASymmetricKey")
 
             return ASymmetricKey(
-                    alg = source.alg!!,
-                    cipherText = source.cipherText!!,
+                    alg = a,
+                    cipherText = ct,
                     legalEntity = source.legalEntity
             )
         }

@@ -109,19 +109,19 @@ class CordaService {
      *
      * @return ConsentRequestState or NotFoundException when not found
      * @throws NotFoundException for not found
-     * @throws IllegalStateException if more than 1 result is found
+     * @throws IllegalStateException if more than 1 result is found or when an RPC connection could not be made
      */
     @Throws(NotFoundException::class)
     fun consentRequestStateByUUID(uuid: String) : ConsentRequestState {
         // not autoclose, but reuse instance
-        val proxy = cordaRPClientWrapper.proxy()
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
 
         val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
                 linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
                 status = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes = setOf(nl.nuts.consent.state.ConsentRequestState::class.java))
 
-        val page : Vault.Page<ConsentRequestState> = proxy!!.vaultQueryBy(
+        val page : Vault.Page<ConsentRequestState> = proxy.vaultQueryBy(
                 criteria = criteria,
                 paging = PageSpecification(),
                 sorting = Sort(emptySet()),
@@ -144,6 +144,7 @@ class CordaService {
      * convert a Corda ConsentRequestState to the service space event that needs to be published.
      * @param state ConsentRequestState
      * @return event with name "distributed consentRequest received"
+     * @throws IllegalStateException when externalId on event is empty
      */
     fun consentRequestStateToEvent(state: ConsentRequestState) : Event {
 
@@ -161,11 +162,13 @@ class CordaService {
         val crsBytes = Serialization.objectMapper().writeValueAsBytes(crs)
         val crsBase64 = Base64.getEncoder().encodeToString(crsBytes)
 
+        val eId = state.consentStateUUID.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
+
         return Event(
                 UUID = UUID.randomUUID().toString(),
                 name = EventName.EventDistributedConsentRequestReceived,
                 retryCount = 0,
-                externalId = state.consentStateUUID.externalId!!,
+                externalId = eId,
                 consentId = state.consentStateUUID.id.toString(),
                 payload = crsBase64
         )
@@ -175,6 +178,7 @@ class CordaService {
      * convert a Corda ConsentState to the service space event that needs to be published.
      * @param state ConsentRequestState
      * @return event with name "consent distributed"
+     * @throws IllegalStateException when externalId on event is empty
      */
     fun consentStateToEvent(state: ConsentState) : Event {
         val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
@@ -188,11 +192,13 @@ class CordaService {
         val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)
         val csBase64 = Base64.getEncoder().encodeToString(csBytes)
 
+        val eId = state.consentStateUUID.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
+
         return Event(
                 UUID = UUID.randomUUID().toString(),
                 name = EventName.EventConsentDistributed,
                 retryCount = 0,
-                externalId = state.consentStateUUID.externalId!!,
+                externalId = eId,
                 consentId = state.consentStateUUID.id.toString(),
                 payload = csBase64
         )
@@ -201,9 +207,10 @@ class CordaService {
     /**
      * Get an attachment bashed on its hash (Sha256)
      * @param secureHash sha256 of attachment bytes
+     * @throws IllegalStateException if no Corda RPC connection is available
      */
     fun getAttachment(secureHash: SecureHash) : Attachment? {
-        val proxy =  cordaRPClientWrapper.proxy()!!
+        val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
         if(!proxy.attachmentExists(secureHash)) {
             return null
         }
@@ -211,7 +218,7 @@ class CordaService {
         val zipInputStream = ZipInputStream(proxy.openAttachment(secureHash))
 
         var metadata: ConsentMetadata? = null
-        var attachment:ByteArray? = null
+        var attachment = ByteArray(0)
 
         zipInputStream.use {
             do {
@@ -228,15 +235,14 @@ class CordaService {
                 } else if (entry.name.endsWith(".bin")) {
                     val reader = zipInputStream.buffered()
                     val buffer = ByteArray(4096)
-                    attachment = ByteArray(0)
                     var read = 0
 
                     do {
                         read = reader.read(buffer)
                         if (read != -1) {
-                            val newAtt = ByteArray(attachment!!.size + read)
-                            System.arraycopy(attachment, 0, newAtt, 0, attachment!!.size)
-                            System.arraycopy(buffer, 0, newAtt, attachment!!.size, read)
+                            val newAtt = ByteArray(attachment.size + read)
+                            System.arraycopy(attachment, 0, newAtt, 0, attachment.size)
+                            System.arraycopy(buffer, 0, newAtt, attachment.size, read)
                             attachment = newAtt
                         }
                     } while (read != -1)
@@ -247,27 +253,28 @@ class CordaService {
             } while (entry != null)
         }
 
-        if (metadata == null) {
-            throw IllegalStateException("attachment does not contain a valid metadata file")
-        }
-        if (attachment == null) {
+        val m = metadata ?: throw IllegalStateException("attachment does not contain a valid metadata file")
+        if (attachment.isEmpty()) {
             throw IllegalStateException("attachment does not contain a valid binary file")
         }
 
-        return Attachment(metadata!!, attachment!!)
+        return Attachment(m, attachment)
     }
 
     /**
      * Start the Corda flow for creating a new consentRequest state.
      * @param newConsentRequestState the consentRequestState to be created
      * @return a handle to the transaction. The transaction id is stored in events for tracking purposes
+     * @throws IllegalStateException when an RPC connection could not be made
      */
     fun newConsentRequestState(newConsentRequestState: FullConsentRequestState): FlowHandle<SignedTransaction> {
         logger.debug("newConsentRequestState() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
-        val proxy = cordaRPClientWrapper.proxy()!!
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
 
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
-        val targetMetadata = BridgeToCordappType.convert(newConsentRequestState.metadata!!)
+        val metadata = newConsentRequestState.metadata ?: throw IllegalArgumentException("consentRequestState.metadata can not be empty")
+        val externalId = newConsentRequestState.consentId.externalId ?: throw IllegalArgumentException("consentRequestState.consentId.externalId can not be empty")
+        val targetMetadata = BridgeToCordappType.convert(metadata)
         val metadataBytes = Serialization.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
 
@@ -304,12 +311,12 @@ class CordaService {
         }
 
         // gather orgIds from metadata
-        val orgIds = newConsentRequestState.metadata!!.organisationSecureKeys.map { it.legalEntity }.toSet()
+        val orgIds = metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
 
         // todo: magic string
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
 
-        if (endpoints.size < 1) {
+        if (endpoints.isEmpty()) {
             throw IllegalArgumentException("No available endpoints for given organization ids in registry")
         }
 
@@ -319,7 +326,7 @@ class CordaService {
         // start flow
         return proxy.startFlow(
                 ConsentRequestFlows::NewConsentRequest,
-                newConsentRequestState.consentId.externalId!!,
+                externalId,
                 setOf(hash),
                 orgIds,
                 nodeNames)
@@ -330,9 +337,10 @@ class CordaService {
      * @param uuid UUID part of uniqueIdentifier of consentRequest state in corda
      * @param partyAttachmentSignature signature of a legalEntity plus public key
      * @return a handle to the transaction. The transaction id is stored in events for tracking purposes
+     * @throws IllegalStateException when an RPC connection could not be made
      */
     fun acceptConsentRequestState(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): FlowHandle<SignedTransaction> {
-        val proxy = cordaRPClientWrapper.proxy()!!
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
 
         return proxy.startFlow(
                 ConsentRequestFlows::AcceptConsentRequest,
@@ -345,9 +353,10 @@ class CordaService {
      * @param uuid UUID part of uniqueIdentifier of consentRequest state in corda
      * @param partyAttachmentSignature signature of a legalEntity plus public key
      * @return a handle to the transaction. The transaction id is stored in events for tracking purposes
+     * @throws IllegalStateException when an RPC connection could not be made
      */
     fun finalizeConsentRequestState(uuid: String): FlowHandle<SignedTransaction> {
-        val proxy = cordaRPClientWrapper.proxy()!!
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException("Could not get a proxy to Corda RPC")
 
         return proxy.startFlow(
                 ConsentRequestFlows::FinalizeConsentRequest,
