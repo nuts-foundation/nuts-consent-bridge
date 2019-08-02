@@ -160,6 +160,9 @@ class CordaStateChangeListenerController {
     lateinit var eventstoreProperties: EventStoreProperties
     lateinit var eventApi: EventApi
 
+    /**
+     * Initializes the eventAPI and starts both of the corda listeners (ConsentRequestState and ConsentState) if nuts.consent.rpc.enabled == true
+     */
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
@@ -168,9 +171,13 @@ class CordaStateChangeListenerController {
 
         if (consentBridgeRPCProperties.enabled) {
             requestStateListener.start(ConsentRequestState::class.java)
+            consentStateListener.start(ConsentState::class.java)
         }
     }
 
+    /**
+     * Stops both listeners
+     */
     @PreDestroy
     fun destroy() {
         logger.debug("Stopping corda state change listeners")
@@ -181,6 +188,14 @@ class CordaStateChangeListenerController {
         logger.info("Corda state change listeners stopped")
     }
 
+    /**
+     * Callback function when a ConsentRequestState has been produced. It tries to find an existing service space event based on the externalId.
+     * If found it re-uses the UUID from the event. If not it publishes a new event.
+     *
+     * it publishes "distributed consentRequest received" events
+     *
+     * @param stateAndRef the StateAndRef object from Corda.
+     */
     fun handleRequestStateProduced(stateAndRef: StateAndRef<ConsentRequestState>) {
         logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
 
@@ -205,6 +220,14 @@ class CordaStateChangeListenerController {
         nutsEventPublisher.publish("consentRequest", jsonBytes)
     }
 
+    /**
+     * Callback function when a ConsentState has been produced. It tries to find an existing service space event based on the externalId.
+     * If found it re-uses the UUID from the event. If not it publishes a new event.
+     *
+     * It publishes "consent distributed" events
+     *
+     * @param stateAndRef the StateAndRef object from Corda.
+     */
     fun handleStateProducedEvent(stateAndRef: StateAndRef<ConsentState>) {
         logger.debug("Received final consent state event from Corda: ${stateAndRef.state.data}")
 
@@ -248,7 +271,17 @@ class CordaStateChangeListenerController {
     }
 }
 
+/**
+ * Alias for callback function signature
+ */
 typealias StateCallback<S> = (StateAndRef<S>) -> Unit
+
+/**
+ * Default callbacks
+ */
 object StateCallbacks {
+    /**
+     * No-op callback, doing nothing when event is received (default)
+     */
     fun <S : ContractState> noOpCallback(state:StateAndRef<S>) = Unit
 }

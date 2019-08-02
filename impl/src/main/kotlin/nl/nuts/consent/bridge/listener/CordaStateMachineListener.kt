@@ -38,6 +38,12 @@ import java.util.function.Consumer
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
+/**
+ * Listener for handling Corda StateMachine updates.
+ *
+ * Listening to state machine updates (as opposed to state updates) is needed to inform the event store of errored states.
+ * This is purely for feedback/debug purposes: "where did my request go?"
+ */
 class CordaStateMachineListener(
         val cordaRPClientWrapper: CordaRPClientWrapper,
         val eventPublisher: NutsEventPublisher,
@@ -149,6 +155,9 @@ class CordaStateMachineListenerController {
     @Autowired
     lateinit var eventStateStore: EventStateStore
 
+    /**
+     * Starts the stateMachine listener if nuts.consent.rpc.enabled = true
+     */
     @PostConstruct
     fun init() {
         cordaStateMachineListener = CordaStateMachineListener(cordaService.cordaRPClientWrapper(), nutsEventPublisher, eventStateStore)
@@ -158,6 +167,9 @@ class CordaStateMachineListenerController {
         }
     }
 
+    /**
+     * Stops the stateMachine listener
+     */
     @PreDestroy
     fun destroy() {
         logger.debug("Stopping corda state machine listener")
