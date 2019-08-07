@@ -6,32 +6,6 @@ info:
   license:
     name: GPLv3
 paths:
-  /api/consent/event_stream:
-    post:
-      summary: Initialise a consent event steam
-      operationId: initEventStream
-      tags:
-        - consent
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EventStreamSetting"
-      responses:
-        '200':
-          description: OK response
-          content:
-            text/plain:
-              schema:
-                type: string
-        '400':
-          description: incorrect data
-          content:
-            text/plain:
-              example: epoch must be a positive value
-              schema:
-                type: string
   /api/consent_request_state/{uuid}:
     get:
       operationId: getConsentRequestStateById
@@ -51,7 +25,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConsentRequestState'
+                $ref: '#/components/schemas/FullConsentRequestState'
         '404':
           description: "The given ID can not be found"
   /api/attachment/{secureHash}:
@@ -77,134 +51,8 @@ paths:
                 format: byte
         '404':
           description: "The given hash can not be found"
-  /api/consent/consent_request:
-    post:
-      summary: "Create a new consent request state."
-      operationId: newConsentRequestState
-      tags:
-        - consent
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NewConsentRequestState'
-      responses:
-        '200':
-          description: "The response holds the given consentID and a stateMachineId. The stateMachineId can be used to query the status of the request before it is committed to the vault"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConsentRequestJobState"
-        '400':
-          description: "incorrect data"
-          content:
-            text/plain:
-              example:
-                invalid metadata
-  /api/consent/consent_request/{uuid}/accept:
-    post:
-      summary: "Accept a consent request state. This means a Care provider lets the Nuts node know
-        that the patient mentioned in the attachment is also a patient for that care provider."
-      operationId: acceptConsentRequestState
-      tags:
-        - consent
-      parameters:
-        - name: uuid
-          in: path
-          description: "The Unique ID of the consent request record"
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PartyAttachmentSignature"
-      responses:
-        '200':
-          description: "The response holds the given consentID and a stateMachineId. The stateMachineId can be used to query the status of the request before it is committed to the vault"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConsentRequestJobState"
-        '400':
-          description: incorrect data
-          content:
-            text/plain:
-              example:
-                "externalID not found"
-  /api/consent/consent_request/{uuid}/finalize:
-    post:
-      summary: "Finalize a consent request state. This means a Care provider lets the Nuts node know
-        that all checks have been done and that this request can be promoted to a consent record."
-      operationId: finalizeConsentRequestState
-      tags:
-        - consent
-      parameters:
-        - name: uuid
-          in: path
-          description: "The Unique ID of the consent request record"
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: "The response holds the given consentID and a stateMachineId. The stateMachineId can be used to query the status of the request before it is committed to the vault"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConsentRequestJobState"
-        '400':
-          description: incorrect data
-          content:
-            text/plain:
-              example:
-                "externalID not found"
 components:
   schemas:
-    EventStreamSetting:
-      required:
-        - topic
-        - epoch
-      properties:
-        topic:
-          type: string
-        epoch:
-          type: integer
-          format: int64
-    ConsentRequestState:
-      required:
-        - consentId
-        - attachments
-        - legalEntities
-        - signatures
-      properties:
-        consentId:
-          $ref: '#/components/schemas/ConsentId'
-        attachments:
-          type: array
-          items:
-            type: string
-            description: Hexidecimal SecureHash values
-        signatures:
-          type: array
-          items:
-            $ref: '#/components/schemas/PartyAttachmentSignature'
-        legalEntities:
-          type: array
-          items:
-            $ref: '#/components/schemas/Identifier'
-    ConsentRequestJobState:
-      required:
-        - consentId
-        - stateMachineId
-      properties:
-        consentId:
-          $ref: '#/components/schemas/ConsentId'
-        stateMachineId:
-          $ref: '#/components/schemas/StateMachineId'
     PartyAttachmentSignature:
       required:
         - legalEntity
@@ -229,19 +77,30 @@ components:
         data:
           type: string
           description: "base64 encoded bytes"
-    NewConsentRequestState:
+    FullConsentRequestState:
       required:
-        - externalId
-        - metadata
-        - attachment
+        - consentId
+        - legalEntities
       properties:
-        externalId:
-          type: string
+        consentId:
+          $ref: '#/components/schemas/ConsentId'
+        signatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartyAttachmentSignature'
+        legalEntities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identifier'
         metadata:
           $ref: '#/components/schemas/Metadata'
-        attachment:
+        cipherText:
           type: string
-          description: "Base64 encoded data"
+          description: "Base64 encoded cipher_text.bin (fhir)"
+        attachmentHashes:
+          type: array
+          items:
+            type: string
     Metadata:
       required:
         - domain

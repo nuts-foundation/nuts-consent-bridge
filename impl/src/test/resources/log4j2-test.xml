@@ -34,6 +34,9 @@
         <Logger name="net.corda" level="warn" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
+        <Logger name="net.corda.testing" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
         <Logger name="org.hibernate" level="error" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
@@ -50,6 +53,12 @@
             <AppenderRef ref="Console-Appender"/>
         </Logger>
         <Logger name="org.springframework" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="io.netty" level="error" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
+        <Logger name="co.paralleluniverse" level="fatal" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
     </Loggers>

@@ -1,10 +1,9 @@
-FROM openjdk:8-jdk-slim as builder
+FROM openjdk:8-alpine as builder
 LABEL maintainer="wout.slakhorst@nuts.nl"
 COPY / .
 RUN ./gradlew bootJar
 
-FROM openjdk:8-jdk-slim
-COPY --from=builder impl/build/libs/consent-bridge-0.5.0.jar /opt/nuts/consent-bridge-0.5.0.jar
-ENTRYPOINT ["/usr/local/openjdk-8/bin/java"]
-CMD ["-jar", "/opt/nuts/consent-bridge-0.5.0.jar", "--spring.config.location=file:/opt/nuts/application.properties"]
+FROM openjdk:8-alpine
+COPY --from=builder impl/build/libs/consent-bridge-0.6.1.jar /opt/nuts/consent-bridge-0.6.1.jar
 EXPOSE 8080 5563
+CMD ["java", "-jar", "/opt/nuts/consent-bridge-0.6.1.jar", "--spring.config.location=file:/opt/nuts/application.properties"]

@@ -27,7 +27,7 @@ buildscript {
         kotlinVersion = '1.2.71'
         cordaVersion = '4.1'
         cordaGradlePluginsVersion = '4.0.25'
-        springBootVersion = '2.1.3.RELEASE'
+        springBootVersion = '2.1.6.RELEASE'
         springBootGradlePluginVersion = '2.1.3.RELEASE'
         openApiPluginVersion = '3.3.4'
         nutsVersion = project.version
@@ -47,8 +47,8 @@ ext {
     jacksonVersion = '2.9.8'
     slf4jVersion = '1.7.25'
     log4jVersion = '2.9.1'
-    zeromqVersion = '0.5.0'
     wiremockVersion = '2.23.2'
+    stanVersion = '2.1.6'
 }
 
 allprojects {
@@ -114,6 +114,7 @@ allprojects {
         jvmArgs "-javaagent:${project.rootDir}/lib/quasar-0.7.x.jar",
                 "-Dco.paralleluniverse.fibers.verifyInstrumentation=false"
         environment SPRING_PROFILES_ACTIVE: environment.SPRING_PROFILES_ACTIVE ?: "test"
+        enableAssertions = false
     }
 }
 
@@ -170,11 +171,11 @@ task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.
     skipOverwrite = false
 }
 
-task generateClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
     generatorName = "kotlin"
     groupId = "${project.group}"
     id = "registry-client"
-    outputDir = "${project.rootDir}/generated-client"
+    outputDir = "${project.rootDir}/generated-registry-client"
     inputSpec = "../nuts-registry/docs/_static/nuts-registry.yaml"
     verbose = false
     generateApiDocumentation = false
@@ -183,7 +184,30 @@ task generateClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.
     generateApiTests = false
     withXml = false
     configOptions = [
-            packageName: "nl.nuts.consent.bridge",
+            packageName: "nl.nuts.consent.bridge.registry",
+            dateLibrary: "java8",
+            exceptionHandler: true,
+            gradleBuildFile: false,
+            supportingFiles: []
+    ]
+    skipOverwrite = false
+}
+
+
+task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+    generatorName = "kotlin"
+    groupId = "${project.group}"
+    id = "event-store-client"
+    outputDir = "${project.rootDir}/generated-event-store-client"
+    inputSpec = "../nuts-event-octopus/docs/_static/nuts-event-store.yaml"
+    verbose = false
+    generateApiDocumentation = false
+    generateModelDocumentation = false
+    generateModelTests = false
+    generateApiTests = false
+    withXml = false
+    configOptions = [
+            packageName: "nl.nuts.consent.bridge.events",
             dateLibrary: "java8",
             exceptionHandler: true,
             gradleBuildFile: false,
@@ -201,4 +225,4 @@ openApiGenerate {
 
 }
 
-task codegen(dependsOn: ['generateServerApiStub', 'generateClientApiCode'])
+task codegen(dependsOn: ['generateServerApiStub', 'generateRegistryClientApiCode', 'generateEventStoreClientApiCode'])

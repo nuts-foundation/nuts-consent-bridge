@@ -21,6 +21,9 @@ package nl.nuts.consent.bridge
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Configuration
 
+/**
+ * Configuration data class for Corda RPC settings
+ */
 @Configuration
 @ConfigurationProperties("nuts.consent.rpc")
 data class ConsentBridgeRPCProperties(
@@ -28,15 +31,31 @@ data class ConsentBridgeRPCProperties(
         var port:Int = 7887,
         var user:String = "admin",
         var password:String = "nuts",
-        var retryIntervalSeconds:Int = 5)
+        var retryIntervalSeconds:Int = 5,
+        var retryCount:Int = 0,
+        var enabled:Boolean = false)
 
+/**
+ * Configuration data class for Nats settings
+ */
 @Configuration
-@ConfigurationProperties("nuts.consent.zmq")
-data class ConsentBridgeZMQProperties(
-        var publisherAddress:String = "tcp://localhost:5563",
-        var maxClients:Int = 4)
+@ConfigurationProperties("nuts.consent.nats")
+data class ConsentBridgeNatsProperties(
+        var address:String = "nats://localhost:4222",
+        var cluster:String = "test-cluster")
 
+/**
+ * Configuration data class for registry API settings
+ */
 @Configuration
 @ConfigurationProperties("nuts.consent.registry")
 data class ConsentRegistryProperties(
+        var url: String = "http://localhost:8088")
+
+/**
+ * Configuration data class for event store API settings
+ */
+@Configuration
+@ConfigurationProperties("nuts.consent.events")
+data class EventStoreProperties(
         var url: String = "http://localhost:8088")

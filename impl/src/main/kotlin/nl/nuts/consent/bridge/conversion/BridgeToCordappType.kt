@@ -33,78 +33,102 @@ import java.security.KeyFactory
 import java.security.spec.X509EncodedKeySpec
 import java.util.*
 
-@Component
-class ConsentMetadataToCordappType : Converter<Metadata, ConsentMetadata> {
-    override fun convert(source: Metadata): ConsentMetadata? {
-        return ConsentMetadata(
-                domain = source.domain.map { DomainToCordappType().convert(it)!! },
-                secureKey = SymmetricKeyToCordappType().convert(source.secureKey)!!,
-                organisationSecureKeys = source.organisationSecureKeys.map { ASymmetricKeyToCordappType().convert(it)!! },
-                period = PeriodToCordappType().convert(source.period)!!
-        )
-    }
-}
+/**
+ * Utility class to convert consent-bridge types (from api) to consent-cordapp types
+ */
+class BridgeToCordappType {
+    companion object {
 
-@Component
-class ASymmetricKeyToCordappType : Converter<nl.nuts.consent.bridge.model.ASymmetricKey, ASymmetricKey> {
-    override fun convert(source: nl.nuts.consent.bridge.model.ASymmetricKey): ASymmetricKey? {
-
-        if (source.alg == null || source.cipherText == null ) {
-            throw IllegalArgumentException("alg and cipherText are required in ASymmetricKey")
+        /**
+         * Convert the metadata between formats
+         * @param source metadata
+         * @return cordapp ConsentMetadata
+         */
+        fun convert(source: Metadata): ConsentMetadata {
+            return ConsentMetadata(
+                    domain = source.domain.map { convert(it) },
+                    secureKey = convert(source.secureKey),
+                    organisationSecureKeys = source.organisationSecureKeys.map { convert(it) },
+                    period = convert(source.period)
+            )
         }
 
-        return ASymmetricKey(
-                alg = source.alg!!,
-                cipherText = source.cipherText!!,
-                legalEntity = source.legalEntity
-        )
-    }
-}
+        /**
+         * convert ASymmetricKey between formats
+         * Some of the consent-cordapp properties must be non-null
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         * @throws IllegalArgumentException when alg or cipherText is null
+         */
+        fun convert(source: nl.nuts.consent.bridge.model.ASymmetricKey): ASymmetricKey {
+            val ct = source.cipherText ?: throw IllegalArgumentException("cipherText is required in ASymmetricKey")
+            val a = source.alg ?: throw IllegalArgumentException("alg is required in ASymmetricKey")
 
-@Component
-class DomainToCordappType : Converter<nl.nuts.consent.bridge.model.Domain, Domain> {
-    override fun convert(source: nl.nuts.consent.bridge.model.Domain): Domain? {
-
-        return Domain.valueOf(source.name)
-    }
-}
-
-@Component
-class PeriodToCordappType : Converter<nl.nuts.consent.bridge.model.Period, Period> {
-    override fun convert(source: nl.nuts.consent.bridge.model.Period): Period? {
-
-        return if (source.validTo == null) {
-            Period(validFrom = source.validFrom.toLocalDate())
-        } else {
-            Period(validFrom = source.validFrom.toLocalDate(), validTo = source.validTo!!.toLocalDate())
+            return ASymmetricKey(
+                    alg = a,
+                    cipherText = ct,
+                    legalEntity = source.legalEntity
+            )
         }
-    }
-}
 
-@Component
-class SymmetricKeyToCordappType : Converter<nl.nuts.consent.bridge.model.SymmetricKey, SymmetricKey> {
-    override fun convert(source: nl.nuts.consent.bridge.model.SymmetricKey): SymmetricKey? {
-        return SymmetricKey(
-                alg = source.alg,
-                iv = source.iv
-        )
-    }
-}
+        /**
+         * convert Domain between formats
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
+        fun convert(source: nl.nuts.consent.bridge.model.Domain) : Domain{
+            return Domain.valueOf(source.name)
+        }
 
-@Component
-class PartyAttachmentSignatureToCordappType : Converter<PartyAttachmentSignature, AttachmentSignature> {
-    override fun convert(source: PartyAttachmentSignature): AttachmentSignature? {
-        try {
-            val reader = PemReader(StringReader(source.signature.publicKey))
-            val pemObject = reader.readPemObject() ?: throw IllegalArgumentException("Exception on parsing PartyAttachmentSignature.signature.publicKey")
+        /**
+         * convert Period between formats
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
+        fun convert(source: nl.nuts.consent.bridge.model.Period) : Period{
+            return if (source.validTo == null) {
+                Period(validFrom = source.validFrom.toLocalDate())
+            } else {
+                Period(validFrom = source.validFrom.toLocalDate(), validTo = source.validTo!!.toLocalDate())
+            }
+        }
 
-            val keySpec = X509EncodedKeySpec(pemObject.content)
-            val factory = KeyFactory.getInstance("RSA")
-            val pk = factory.generatePublic(keySpec)
+        /**
+         * convert SymmetricKey between formats
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
+        fun convert(source: nl.nuts.consent.bridge.model.SymmetricKey) : SymmetricKey{
+            return SymmetricKey(
+                    alg = source.alg,
+                    iv = source.iv
+            )
+        }
 
-            return AttachmentSignature(source.legalEntity, SecureHash.parse(source.attachment), DigitalSignature.WithKey(pk, Base64.getDecoder().decode(source.signature.data)))
-        } catch(e : IOException) {
-            throw IllegalArgumentException("Exception on converting PartyAttachmentSignature: ${e.message}", e)
+        /**
+         * convert PartyAttachmentSignature between formats.
+         * This also converts the bridge PEM format to the cordapp X509 format
+         *
+         * @param source bridge type
+         * @return consent-cordapp type
+         */
+        fun convert(source: PartyAttachmentSignature) : AttachmentSignature{
+            try {
+                val reader = PemReader(StringReader(source.signature.publicKey))
+                val pemObject = reader.readPemObject() ?: throw IllegalArgumentException("Exception on parsing PartyAttachmentSignature.signature.publicKey")
+
+                val keySpec = X509EncodedKeySpec(pemObject.content)
+                val factory = KeyFactory.getInstance("RSA")
+                val pk = factory.generatePublic(keySpec)
+
+                return AttachmentSignature(source.legalEntity, SecureHash.parse(source.attachment), DigitalSignature.WithKey(pk, Base64.getDecoder().decode(source.signature.data)))
+            } catch(e : IOException) {
+                throw IllegalArgumentException("Exception on converting PartyAttachmentSignature: ${e.message}", e)
+            }
         }
     }
 }
