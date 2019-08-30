@@ -192,12 +192,21 @@ class CordaService {
      * @throws IllegalStateException when externalId on event is empty
      */
     fun consentStateToEvent(state: ConsentState) : Event {
-        val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+
+        val consentRecords = mutableListOf<ConsentRecord>()
+
+        state.attachments.forEach { att ->
+            val attachment= getAttachment(att) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+            consentRecords.add(ConsentRecord(
+                    metadata = CordappToBridgeType.convert(attachment.metadata),
+                    cipherText = Base64.getEncoder().encodeToString(attachment.data),
+                    attachmentHash = att.toString()
+            ))
+        }
 
         val cs = nl.nuts.consent.bridge.model.ConsentState(
                 consentId = CordappToBridgeType.convert(state.consentStateUUID),
-                metadata = CordappToBridgeType.convert(attachment.metadata),
-                cipherText = Base64.getEncoder().encodeToString(attachment.data)
+                consentRecords = consentRecords
         )
 
         val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)
@@ -263,7 +272,7 @@ class CordaService {
     private fun readZipBytes(reader : BufferedInputStream) : ByteArray {
         var attachment = ByteArray(0)
         val buffer = ByteArray(4096)
-        var read = 0
+        var read: Int
 
         do {
             read = reader.read(buffer)

@@ -106,6 +106,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PartyAttachmentSignature'
+    ConsentState:
+      required:
+        - consentId
+        - consentRecords
+      properties:
+        consentId:
+          $ref: '#/components/schemas/ConsentId'
+        consentRecords:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentRecord'
     Metadata:
       required:
         - domain

@@ -3,15 +3,14 @@ package nl.nuts.consent.bridge.model
 import java.util.Objects
 import com.fasterxml.jackson.annotation.JsonProperty
 import nl.nuts.consent.bridge.model.ConsentId
-import nl.nuts.consent.bridge.model.Metadata
+import nl.nuts.consent.bridge.model.ConsentRecord
 import javax.validation.Valid
 import javax.validation.constraints.*
 
 /**
  * 
  * @param consentId 
- * @param metadata 
- * @param cipherText Base64 encoded cipher_text.bin (fhir)
+ * @param consentRecords 
  */
 data class ConsentState (
 
@@ -19,10 +18,7 @@ data class ConsentState (
         @JsonProperty("consentId") val consentId: ConsentId,
 
         @get:NotNull 
-        @JsonProperty("metadata") val metadata: Metadata,
-
-        @get:NotNull 
-        @JsonProperty("cipherText") val cipherText: String
+        @JsonProperty("consentRecords") val consentRecords: List<ConsentRecord>
 ) {
 
 }

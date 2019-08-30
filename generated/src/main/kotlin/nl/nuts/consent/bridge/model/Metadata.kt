@@ -1,7 +1,13 @@
 package nl.nuts.consent.bridge.model
 
+import java.util.Objects
 import com.fasterxml.jackson.annotation.JsonProperty
-import javax.validation.constraints.NotNull
+import nl.nuts.consent.bridge.model.ASymmetricKey
+import nl.nuts.consent.bridge.model.Domain
+import nl.nuts.consent.bridge.model.Period
+import nl.nuts.consent.bridge.model.SymmetricKey
+import javax.validation.Valid
+import javax.validation.constraints.*
 
 /**
  * 

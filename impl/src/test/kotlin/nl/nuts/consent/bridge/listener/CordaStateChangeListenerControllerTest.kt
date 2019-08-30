@@ -195,15 +195,19 @@ class CordaStateChangeListenerControllerTest {
 
     private fun consentStateToEvent(state: ConsentState) : Event {
 
-        val cs =  nl.nuts.consent.bridge.model.ConsentState(
+        val cs = ConsentState(
                 consentId = CordappToBridgeType.convert(state.consentStateUUID),
-                metadata = Metadata1(
-                        domain = listOf(Domain.medical),
-                        secureKey = SymmetricKey(alg = "alg", iv = "iv"),
-                        organisationSecureKeys = emptyList(),
-                        period = Period(OffsetDateTime.now())
-                ),
-                cipherText = "af=="
+                consentRecords = listOf(
+                        ConsentRecord(
+                                metadata = Metadata1(
+                                        domain = listOf(Domain.medical),
+                                        secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                                        organisationSecureKeys = emptyList(),
+                                        period = Period(OffsetDateTime.now())
+                                ),
+                                cipherText = "af=="
+                        )
+                )
         )
 
         val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)

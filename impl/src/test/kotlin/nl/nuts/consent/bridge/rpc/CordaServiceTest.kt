@@ -185,8 +185,6 @@ class CordaServiceTest {
 
     @Test
     fun `contractToStateEvent returns event for valid data`() {
-        val consentRequestState = consentRequestState()
-
         `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(true)
         `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob".toByteArray()))
 
@@ -207,8 +205,6 @@ class CordaServiceTest {
 
     @Test
     fun `contractToStateEvent raises for missing attachment`() {
-        val consentRequestState = consentRequestState()
-
         `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(false)
 
         assertFailsWith<IllegalStateException> {
