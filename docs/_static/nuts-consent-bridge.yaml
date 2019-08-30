@@ -84,23 +84,39 @@ components:
       properties:
         consentId:
           $ref: '#/components/schemas/ConsentId'
-        signatures:
+        consentRecords:
           type: array
           items:
-            $ref: '#/components/schemas/PartyAttachmentSignature'
+            $ref: '#/components/schemas/ConsentRecord'
         legalEntities:
           type: array
           items:
             $ref: '#/components/schemas/Identifier'
+    ConsentRecord:
+      properties:
         metadata:
           $ref: '#/components/schemas/Metadata'
         cipherText:
           type: string
           description: "Base64 encoded cipher_text.bin (fhir)"
-        attachmentHashes:
+        attachmentHash:
+          type: string
+          description: "SHA256 of cipherText bytes"
+        signatures:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/PartyAttachmentSignature'
+    ConsentState:
+      required:
+        - consentId
+        - consentRecords
+      properties:
+        consentId:
+          $ref: '#/components/schemas/ConsentId'
+        consentRecords:
+          type: array
+          items:
+            $ref: '#/components/schemas/ConsentRecord'
     Metadata:
       required:
         - domain

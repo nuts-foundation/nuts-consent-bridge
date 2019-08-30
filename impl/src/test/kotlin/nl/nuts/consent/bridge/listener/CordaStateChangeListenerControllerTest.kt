@@ -166,16 +166,18 @@ class CordaStateChangeListenerControllerTest {
 
         val ncrs =  FullConsentRequestState(
                 consentId = ConsentId(externalId = state.consentStateUUID.externalId!!),
-                metadata = Metadata1(
-                    domain = listOf(Domain.medical),
-                        secureKey = SymmetricKey(alg = "alg", iv = "iv"),
-                        organisationSecureKeys = emptyList(),
-                        period = Period(OffsetDateTime.now())
-                ),
-                cipherText = "af==",
                 legalEntities = emptyList(),
-                attachmentHashes = emptyList(),
-                signatures = emptyList()
+                consentRecords = listOf(ConsentRecord(
+                        metadata = Metadata1(
+                                domain = listOf(Domain.medical),
+                                secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                                organisationSecureKeys = emptyList(),
+                                period = Period(OffsetDateTime.now())
+                        ),
+                        attachmentHash = "",
+                        cipherText = "af==",
+                        signatures = emptyList()
+                ))
         )
 
         val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)
@@ -193,15 +195,19 @@ class CordaStateChangeListenerControllerTest {
 
     private fun consentStateToEvent(state: ConsentState) : Event {
 
-        val cs =  nl.nuts.consent.bridge.model.ConsentState(
+        val cs = ConsentState(
                 consentId = CordappToBridgeType.convert(state.consentStateUUID),
-                metadata = Metadata1(
-                        domain = listOf(Domain.medical),
-                        secureKey = SymmetricKey(alg = "alg", iv = "iv"),
-                        organisationSecureKeys = emptyList(),
-                        period = Period(OffsetDateTime.now())
-                ),
-                cipherText = "af=="
+                consentRecords = listOf(
+                        ConsentRecord(
+                                metadata = Metadata1(
+                                        domain = listOf(Domain.medical),
+                                        secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                                        organisationSecureKeys = emptyList(),
+                                        period = Period(OffsetDateTime.now())
+                                ),
+                                cipherText = "af=="
+                        )
+                )
         )
 
         val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)

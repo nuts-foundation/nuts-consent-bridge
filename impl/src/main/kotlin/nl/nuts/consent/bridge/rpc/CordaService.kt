@@ -33,6 +33,7 @@ import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType
+import nl.nuts.consent.bridge.model.ConsentRecord
 import nl.nuts.consent.bridge.model.FullConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.bridge.nats.Event
@@ -150,15 +151,23 @@ class CordaService {
      */
     fun consentRequestStateToEvent(state: ConsentRequestState) : Event {
 
-        val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+        val consentRecords = mutableListOf<ConsentRecord>()
+
+        state.attachments.forEach { att ->
+            val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+            val hash = att.toString()
+            consentRecords.add(ConsentRecord(
+                    metadata = CordappToBridgeType.convert(attachment.metadata),
+                    cipherText = Base64.getEncoder().encodeToString(attachment.data),
+                    attachmentHash = hash,
+                    signatures = state.signatures.filter { sig -> sig.attachmentHash.toString() == hash }.map { CordappToBridgeType.convert(it) }
+            ))
+        }
 
         val crs = FullConsentRequestState(
                 consentId = CordappToBridgeType.convert(state.consentStateUUID),
-                metadata = CordappToBridgeType.convert(attachment.metadata),
-                cipherText = Base64.getEncoder().encodeToString(attachment.data),
-                signatures = state.signatures.map{ CordappToBridgeType.convert(it) },
                 legalEntities = state.legalEntities.toList(),
-                attachmentHashes = listOf(state.attachments.first().toString())
+                consentRecords = consentRecords
         )
 
         val crsBytes = Serialization.objectMapper().writeValueAsBytes(crs)
@@ -183,12 +192,21 @@ class CordaService {
      * @throws IllegalStateException when externalId on event is empty
      */
     fun consentStateToEvent(state: ConsentState) : Event {
-        val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+
+        val consentRecords = mutableListOf<ConsentRecord>()
+
+        state.attachments.forEach { att ->
+            val attachment= getAttachment(att) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+            consentRecords.add(ConsentRecord(
+                    metadata = CordappToBridgeType.convert(attachment.metadata),
+                    cipherText = Base64.getEncoder().encodeToString(attachment.data),
+                    attachmentHash = att.toString()
+            ))
+        }
 
         val cs = nl.nuts.consent.bridge.model.ConsentState(
                 consentId = CordappToBridgeType.convert(state.consentStateUUID),
-                metadata = CordappToBridgeType.convert(attachment.metadata),
-                cipherText = Base64.getEncoder().encodeToString(attachment.data)
+                consentRecords = consentRecords
         )
 
         val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)
@@ -254,7 +272,7 @@ class CordaService {
     private fun readZipBytes(reader : BufferedInputStream) : ByteArray {
         var attachment = ByteArray(0)
         val buffer = ByteArray(4096)
-        var read = 0
+        var read: Int
 
         do {
             read = reader.read(buffer)
@@ -279,20 +297,34 @@ class CordaService {
         logger.debug("newConsentRequestState() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
-        val metadata = newConsentRequestState.metadata ?: throw IllegalArgumentException("consentRequestState.metadata can not be empty")
         val externalId = newConsentRequestState.consentId.externalId ?: throw IllegalArgumentException("consentRequestState.consentId.externalId can not be empty")
+        val hashes = mutableSetOf<SecureHash>()
 
-        // create zip file with metadata file and attachment
-        val zipBytes = createZip(newConsentRequestState)
+        // upload all attachments
+        newConsentRequestState.consentRecords?.forEach { cr ->
+            // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
+            val metadata = cr.metadata ?: throw IllegalArgumentException("consentRecord.metadata can not be empty")
+            val cipherText = cr.cipherText ?: throw IllegalArgumentException("consentRecord.cipherText can not be empty")
 
-        // upload attachment
-        var hash  = uploadAttachment(zipBytes)
+            // gather orgIds from metadata
+            val orgIds = metadata.organisationSecureKeys.map { it.legalEntity }
 
-        // gather orgIds from metadata
-        val orgIds = metadata.organisationSecureKeys.map { it.legalEntity }.toSet()
+            if (!newConsentRequestState.legalEntities.toTypedArray().contentDeepEquals(orgIds.toTypedArray())) {
+                throw java.lang.IllegalArgumentException("list of legalEntities not consistent over consent records and request record")
+            }
+
+            // create zip file with metadata file and attachment
+            val zipBytes = createZip(metadata, cipherText)
+
+            // upload attachment
+            hashes.add(uploadAttachment(zipBytes))
+
+        }
+
+        // todo orgIds for all attachments must be the same!
 
         // todo: magic string
+        val orgIds = newConsentRequestState.legalEntities
         val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
 
         if (endpoints.isEmpty()) {
@@ -306,14 +338,13 @@ class CordaService {
         return proxy.startFlow(
                 ConsentRequestFlows::NewConsentRequest,
                 externalId,
-                setOf(hash),
-                orgIds,
+                hashes,
+                orgIds.toSet(),
                 nodeNames)
     }
 
-    private fun createZip(newConsentRequestState: FullConsentRequestState) : ByteArray {
+    private fun createZip(metadata: nl.nuts.consent.bridge.model.Metadata, cipherText: String) : ByteArray {
         // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
-        val metadata = newConsentRequestState.metadata ?: throw IllegalArgumentException("consentRequestState.metadata can not be empty")
         val targetMetadata = BridgeToCordappType.convert(metadata)
         val metadataBytes = Serialization.objectMapper().writeValueAsBytes(targetMetadata)
         val metadataHash = SecureHash.sha256(metadataBytes)
@@ -321,7 +352,7 @@ class CordaService {
         // attachment hash name component
         var attachmentBytes: ByteArray?
         try {
-            attachmentBytes = Base64.getDecoder().decode(newConsentRequestState.cipherText)
+            attachmentBytes = Base64.getDecoder().decode(cipherText)
 
         } catch(e:IllegalArgumentException) {
             throw IllegalArgumentException("given attachment is not using valid base64 encoding: ${e.message}")
