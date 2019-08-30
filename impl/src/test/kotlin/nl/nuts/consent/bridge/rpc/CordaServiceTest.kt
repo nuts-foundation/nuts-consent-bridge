@@ -217,6 +217,15 @@ class CordaServiceTest {
     }
 
     @Test
+    fun `newConsentRequestState raises for inconsistent legalEntitites`() {
+        val newConsentRequestState = newConsentRequestState(emptyList())
+
+        assertFailsWith<IllegalArgumentException> {
+            cordaService.newConsentRequestState(newConsentRequestState)
+        }
+    }
+
+    @Test
     fun `newConsentRequestState returns FlowHandle on valid NewConsentRequestState`() {
         val newConsentRequestState = newConsentRequestState()
 
@@ -314,7 +323,7 @@ class CordaServiceTest {
         )
     }
 
-    private fun newConsentRequestState() : FullConsentRequestState {
+    private fun newConsentRequestState(legalEntities: List<String>) : FullConsentRequestState {
         val att = zip(consentMetadataAsJson(), "blob".toByteArray())
 
         val outputStream = ByteArrayOutputStream()
@@ -328,21 +337,28 @@ class CordaServiceTest {
 
         return FullConsentRequestState(
                 consentId = ConsentId(externalId = "externalId"),
-                cipherText = String(outputStream.toByteArray()),
-                metadata = Metadata(
-                        domain = listOf(nl.nuts.consent.bridge.model.Domain.medical),
-                        period = nl.nuts.consent.bridge.model.Period(validFrom = OffsetDateTime.now()),
-                        organisationSecureKeys = listOf(
-                                ASymmetricKey(
-                                        legalEntity = "legalEntity",
-                                        alg = "alg",
-                                        cipherText = "afaf"
-                                )
+                consentRecords = listOf(ConsentRecord(
+                        cipherText = String(outputStream.toByteArray()),
+                        metadata = Metadata(
+                                domain = listOf(nl.nuts.consent.bridge.model.Domain.medical),
+                                period = nl.nuts.consent.bridge.model.Period(validFrom = OffsetDateTime.now()),
+                                organisationSecureKeys = listOf(
+                                        ASymmetricKey(
+                                                legalEntity = "legalEntity",
+                                                alg = "alg",
+                                                cipherText = "afaf"
+                                        )
+                                ),
+                                secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv")
                         ),
-                        secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv")
-                ),
-                legalEntities = emptyList()
+                        signatures = emptyList()
+                )),
+                legalEntities = legalEntities
         )
+    }
+
+    private fun newConsentRequestState() : FullConsentRequestState {
+        return newConsentRequestState(listOf("legalEntity"))
     }
 
     private fun consentRequestState() : ConsentRequestState {

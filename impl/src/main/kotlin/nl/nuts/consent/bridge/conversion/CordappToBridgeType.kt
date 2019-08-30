@@ -155,15 +155,26 @@ class CordappToBridgeType {
         /**
          * Convert ConsentRequestState between formats
          *
+         * This will exclude the cipherText and metadata!
+         *
          * @param source consent-cordapp model
          * @return bridge model
          */
         fun convert(source: ConsentRequestState): FullConsentRequestState {
+            val consentRecords = mutableListOf<ConsentRecord>()
+
+            source.attachments.forEach { att ->
+                val hash = att.toString()
+                consentRecords.add(ConsentRecord(
+                        attachmentHash = hash,
+                        signatures = source.signatures.filter { sig -> sig.attachmentHash.toString() == hash }.map { CordappToBridgeType.convert(it) }
+                ))
+            }
+
             return FullConsentRequestState(
                     consentId = convert(source.consentStateUUID),
-                    attachmentHashes = source.attachments.map { it.toString() },
                     legalEntities = source.legalEntities.toList(),
-                    signatures = source.signatures.map { convert(it) }
+                    consentRecords = consentRecords
             )
         }
     }

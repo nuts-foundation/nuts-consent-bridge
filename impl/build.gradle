@@ -24,6 +24,7 @@ archivesBaseName="consent-bridge"
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter:${springBootVersion}")
     implementation "io.nats:java-nats-streaming:$stanVersion"
+    implementation "io.nats:jnats:$natsVersion"
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion"
 
     implementation project(':generated')

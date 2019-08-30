@@ -166,16 +166,18 @@ class CordaStateChangeListenerControllerTest {
 
         val ncrs =  FullConsentRequestState(
                 consentId = ConsentId(externalId = state.consentStateUUID.externalId!!),
-                metadata = Metadata1(
-                    domain = listOf(Domain.medical),
-                        secureKey = SymmetricKey(alg = "alg", iv = "iv"),
-                        organisationSecureKeys = emptyList(),
-                        period = Period(OffsetDateTime.now())
-                ),
-                cipherText = "af==",
                 legalEntities = emptyList(),
-                attachmentHashes = emptyList(),
-                signatures = emptyList()
+                consentRecords = listOf(ConsentRecord(
+                        metadata = Metadata1(
+                                domain = listOf(Domain.medical),
+                                secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                                organisationSecureKeys = emptyList(),
+                                period = Period(OffsetDateTime.now())
+                        ),
+                        attachmentHash = "",
+                        cipherText = "af==",
+                        signatures = emptyList()
+                ))
         )
 
         val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)
