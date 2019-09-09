@@ -138,7 +138,7 @@ class NutsEventListener {
 
         val payload = Base64.getDecoder().decode(e.payload)
         val consentRequestState = Serialization.objectMapper().readValue(payload, FullConsentRequestState::class.java)
-        val handle = cordaService.newConsentRequestState(consentRequestState)
+        val handle = cordaService.createConsentBranch(consentRequestState)
 
         e.name = EventName.EventConsentRequestInFlight
         e.transactionId = handle.id.uuid.toString()
@@ -177,7 +177,7 @@ class NutsEventListener {
 
             val cId = e.consentId ?: throw IllegalStateException("missing consentId in event: ${e.UUID}")
             // this node is the initiator, finalize flow
-            val handle = cordaService.finalizeConsentRequestState(cId)
+            val handle = cordaService.mergeConsentBranch(cId)
 
             e.name = EventName.EventInFinalFlight
             e.transactionId = handle.id.uuid.toString()
@@ -192,7 +192,7 @@ class NutsEventListener {
         val payload = Base64.getDecoder().decode(e.payload)
         val attachmentSignature = Serialization.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
         val cId = e.consentId ?: throw IllegalStateException("missing consentId in event: ${e.UUID}")
-        val handle = cordaService.acceptConsentRequestState(cId, attachmentSignature)
+        val handle = cordaService.signConsentBranch(cId, attachmentSignature)
 
         e.name = EventName.EventConsentRequestInFlight
         e.transactionId = handle.id.uuid.toString()

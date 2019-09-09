@@ -19,23 +19,17 @@
 package nl.nuts.consent.bridge.nats
 
 import com.nhaarman.mockito_kotlin.any
-import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
-import net.corda.core.messaging.CordaRPCOps
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
-import nl.nuts.consent.bridge.api.ConsentApiService
 import nl.nuts.consent.bridge.model.*
-import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
-import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.SecureRandom
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -84,7 +78,7 @@ class NutsEventListenerTest {
         Thread.sleep(1000)
 
         // then
-        verify(cordaService).newConsentRequestState(any())
+        verify(cordaService).createConsentBranch(any())
     }
 
     private fun event(name : EventName) : Event {

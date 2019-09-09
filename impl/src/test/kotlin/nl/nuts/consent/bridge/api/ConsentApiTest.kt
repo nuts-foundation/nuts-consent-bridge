@@ -19,13 +19,14 @@
 package nl.nuts.consent.bridge.api
 
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
 import nl.nuts.consent.model.SymmetricKey
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentBranch
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,7 +56,7 @@ class ConsentApiTest {
 
     @Test
     fun `consentRequestStateByUUID returns state`() {
-        `when`(cordaService.consentRequestStateByUUID("uuid")).thenReturn(ConsentRequestState("1", emptySet(), emptySet(), emptyList(), emptySet()))
+        `when`(cordaService.consentBranchByUUID("uuid")).thenReturn(ConsentBranch(UniqueIdentifier(externalId = "1"), UniqueIdentifier(), emptySet(), emptySet(), emptyList(), emptySet()))
 
         val state = consentApiService.getConsentRequestStateById("uuid")
 
@@ -64,7 +65,7 @@ class ConsentApiTest {
 
     @Test
     fun `consentRequestStateByUUID raises NotFoundException for not found`() {
-        `when`(cordaService.consentRequestStateByUUID("uuid")).thenThrow(NotFoundException("not found"))
+        `when`(cordaService.consentBranchByUUID("uuid")).thenThrow(NotFoundException("not found"))
 
         try {
             consentApiService.getConsentRequestStateById("uuid")
@@ -76,7 +77,7 @@ class ConsentApiTest {
 
     @Test
     fun `consentRequestStateByUUID raises IllegalStateException for too many results`() {
-        `when`(cordaService.consentRequestStateByUUID("uuid")).thenThrow(IllegalStateException("too many states"))
+        `when`(cordaService.consentBranchByUUID("uuid")).thenThrow(IllegalStateException("too many states"))
 
         try {
             consentApiService.getConsentRequestStateById("uuid")

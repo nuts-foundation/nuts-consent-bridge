@@ -33,7 +33,7 @@ import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -147,7 +147,7 @@ class CordaStateChangeListener<S : ContractState>(
 class CordaStateChangeListenerController {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
-    lateinit var requestStateListener: CordaStateChangeListener<ConsentRequestState>
+    lateinit var requestStateListener: CordaStateChangeListener<ConsentBranch>
     lateinit var consentStateListener: CordaStateChangeListener<ConsentState>
 
     @Autowired
@@ -173,7 +173,7 @@ class CordaStateChangeListenerController {
         consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::handleStateProducedEvent)
 
         if (consentBridgeRPCProperties.enabled) {
-            requestStateListener.start(ConsentRequestState::class.java)
+            requestStateListener.start(ConsentBranch::class.java)
             consentStateListener.start(ConsentState::class.java)
         }
     }
@@ -199,11 +199,11 @@ class CordaStateChangeListenerController {
      *
      * @param stateAndRef the StateAndRef object from Corda.
      */
-    fun handleRequestStateProduced(stateAndRef: StateAndRef<ConsentRequestState>) {
+    fun handleRequestStateProduced(stateAndRef: StateAndRef<ConsentBranch>) {
         logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
-        val event = cordaService.consentRequestStateToEvent(state)
+        val event = cordaService.consentBranchToEvent(state)
 
         // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
         // the contents of the new event will be a NewConsentRequestState object as json/base64
