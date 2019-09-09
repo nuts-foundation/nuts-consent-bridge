@@ -63,6 +63,6 @@ class ConsentApiServiceImpl : ConsentApiService {
     override fun getConsentRequestStateById(uuid: String): FullConsentRequestState {
         logger.debug("getConsentRequestStateById({})", uuid)
 
-        return convert(cordaService.consentRequestStateByUUID(uuid))
+        return convert(cordaService.consentBranchByUUID(uuid))
     }
 }

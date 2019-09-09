@@ -26,7 +26,7 @@ import nl.nuts.consent.model.ASymmetricKey
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentBranch
 import org.bouncycastle.util.io.pem.PemObject
 import org.bouncycastle.util.io.pem.PemWriter
 import java.io.StringWriter
@@ -160,7 +160,7 @@ class CordappToBridgeType {
          * @param source consent-cordapp model
          * @return bridge model
          */
-        fun convert(source: ConsentRequestState): FullConsentRequestState {
+        fun convert(source: ConsentBranch): FullConsentRequestState {
             val consentRecords = mutableListOf<ConsentRecord>()
 
             source.attachments.forEach { att ->
@@ -172,7 +172,7 @@ class CordappToBridgeType {
             }
 
             return FullConsentRequestState(
-                    consentId = convert(source.consentStateUUID),
+                    consentId = convert(source.uuid),
                     legalEntities = source.legalEntities.toList(),
                     consentRecords = consentRecords
             )

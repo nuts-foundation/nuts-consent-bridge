@@ -23,6 +23,7 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.UniqueIdentifier
@@ -33,7 +34,10 @@ import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandleImpl
 import net.corda.core.messaging.startFlow
 import net.corda.core.node.services.Vault
+import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
+import net.corda.core.utilities.getOrThrow
+import net.corda.core.utilities.seconds
 import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
@@ -41,12 +45,13 @@ import nl.nuts.consent.bridge.conversion.BridgeToCordappType
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.models.Endpoint
-import nl.nuts.consent.flow.ConsentRequestFlows
+import nl.nuts.consent.flow.ConsentFlows
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
 import nl.nuts.consent.model.SymmetricKey
-import nl.nuts.consent.state.ConsentRequestState
+import nl.nuts.consent.state.ConsentBranch
+import nl.nuts.consent.state.ConsentState
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -59,6 +64,7 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.annotation.Signed
 import kotlin.test.assertFailsWith
 
 class CordaServiceTest {
@@ -80,15 +86,15 @@ class CordaServiceTest {
     }
 
     @Test
-    fun `consentRequestStateByUUID throws NotFoundException when proxy returns empty states`() {
-        `when`(cordaRPCOps.vaultQueryBy<ConsentRequestState>(
+    fun `ConsentBranchByUUID throws NotFoundException when proxy returns empty states`() {
+        `when`(cordaRPCOps.vaultQueryBy<ConsentBranch>(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(ConsentRequestState::class.java))).thenReturn(page(0))
+                contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(0))
 
         try {
-            cordaService.consentRequestStateByUUID("1111-2222-33334444-5555-6666")
+            cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
             fail("Exception should have been raised")
         } catch (e: NotFoundException) {
             // suc6
@@ -96,15 +102,15 @@ class CordaServiceTest {
     }
 
     @Test
-    fun `consentRequestStateByUUID throws IllegalStateException when proxy returns more than 1 state`() {
-        `when`(cordaRPCOps.vaultQueryBy<ConsentRequestState>(
+    fun `ConsentBranchByUUID throws IllegalStateException when proxy returns more than 1 state`() {
+        `when`(cordaRPCOps.vaultQueryBy<ConsentBranch>(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(ConsentRequestState::class.java))).thenReturn(page(2))
+                contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(2))
 
         try {
-            cordaService.consentRequestStateByUUID("1111-2222-33334444-5555-6666")
+            cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
             fail("Exception should have been raised")
         } catch (e: IllegalStateException) {
             // suc6
@@ -112,14 +118,14 @@ class CordaServiceTest {
     }
 
     @Test
-    fun `consentRequestStateByUUID state data on success`() {
-        `when`(cordaRPCOps.vaultQueryBy<ConsentRequestState>(
+    fun `ConsentBranchByUUID state data on success`() {
+        `when`(cordaRPCOps.vaultQueryBy<ConsentBranch>(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(ConsentRequestState::class.java))).thenReturn(page(1))
+                contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(1))
 
-        val state = cordaService.consentRequestStateByUUID("1111-2222-33334444-5555-6666")
+        val state = cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
         assertNotNull(state)
     }
 
@@ -188,7 +194,7 @@ class CordaServiceTest {
         `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(true)
         `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob".toByteArray()))
 
-        val event = cordaService.consentRequestStateToEvent(consentRequestState())
+        val event = cordaService.consentBranchToEvent(consentBranch())
 
         assertNotNull(event)
 
@@ -208,60 +214,118 @@ class CordaServiceTest {
         `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(false)
 
         assertFailsWith<IllegalStateException> {
-            cordaService.consentRequestStateToEvent(consentRequestState())
+            cordaService.consentBranchToEvent(consentBranch())
         }
     }
 
     @Test
-    fun `newConsentRequestState raises for inconsistent legalEntitites`() {
-        val newConsentRequestState = newConsentRequestState(emptyList())
+    fun `newConsentBranch raises for inconsistent legalEntitites`() {
+        val newConsentBranch = newConsentBranch(emptyList())
+
+        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+                criteria = any(),
+                paging = any(),
+                sorting = any(),
+                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
 
         assertFailsWith<IllegalArgumentException> {
-            cordaService.newConsentRequestState(newConsentRequestState)
+            cordaService.createConsentBranch(newConsentBranch)
         }
     }
 
     @Test
-    fun `newConsentRequestState returns FlowHandle on valid NewConsentRequestState`() {
-        val newConsentRequestState = newConsentRequestState()
+    fun `createConsentBranch returns FlowHandle on valid ConsentBranch`() {
+        val newConsentBranch = newConsentBranch()
+        val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
-                ConsentRequestFlows::NewConsentRequest,
-                "externalId",
+                ConsentFlows::CreateConsentBranch,
+                id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
                 setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+                criteria = any(),
+                paging = any(),
+                sorting = any(),
+                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, id))
 
-        val handle = cordaService.newConsentRequestState(newConsentRequestState)
+        val handle = cordaService.createConsentBranch(newConsentBranch)
 
         assertNotNull(handle)
     }
 
     @Test
-    fun `newConsentRequestState returns FlowHandle on valid NewConsentRequestState with duplicate attachment upload`() {
-        val newConsentRequestState = newConsentRequestState()
+    fun `createConsentBranch returns FlowHandle on valid ConsentBranch with missing GenesisRecord`() {
+        val newConsentBranch = newConsentBranch()
+        val id = UniqueIdentifier(externalId = "externalId")
+
+        val futureMock : CordaFuture<SignedTransaction> = mock()
+        val txMock : SignedTransaction = mock()
+        val coreTxMock : CoreTransaction = mock()
+        `when`(futureMock.getOrThrow(5.seconds)).thenReturn(txMock)
+        `when`(txMock.coreTransaction).thenReturn(coreTxMock)
+        `when`(coreTxMock.outputsOfType<ConsentState>()).thenReturn(listOf(ConsentState(uuid = id, version = 1)))
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.startFlow(
+                ConsentFlows::CreateConsentBranch,
+                id,
+                setOf(SecureHash.allOnesHash),
+                setOf("legalEntity"),
+                setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+                criteria = any(),
+                paging = any(),
+                sorting = any(),
+                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(0, id))
+        // create genesis block
+        `when`(cordaRPCOps.startFlow(
+                ConsentFlows::CreateGenesisConsentState,
+                "externalId"
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), futureMock))
+
+        val handle = cordaService.createConsentBranch(newConsentBranch)
+
+        assertNotNull(handle)
+    }
+
+    @Test
+    fun `newConsentBranch returns FlowHandle on valid NewConsentBranch with duplicate attachment upload`() {
+        val newConsentBranch = newConsentBranch()
+        val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(DuplicateAttachmentException(SecureHash.allOnesHash.toString()))
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
-                ConsentRequestFlows::NewConsentRequest,
-                "externalId",
+                ConsentFlows::CreateConsentBranch,
+                id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
                 setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+                criteria = any(),
+                paging = any(),
+                sorting = any(),
+                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, id))
 
-        val handle = cordaService.newConsentRequestState(newConsentRequestState)
+        val handle = cordaService.createConsentBranch(newConsentBranch)
 
         assertNotNull(handle)
     }
 
 
     @Test
-    fun `acceptConsentRequestState returns FlowHandle on valid partyAttachmentSignature`() {
+    fun `acceptConsentBranch returns FlowHandle on valid partyAttachmentSignature`() {
         val uuid = "1111-2222-33334444-5555-6666"
         val attachment = VALID_HEX
         val partyAttachmentSignature = PartyAttachmentSignature(
@@ -274,38 +338,44 @@ class CordaServiceTest {
         )
 
         `when`(cordaRPCOps.startFlow(
-                ConsentRequestFlows::AcceptConsentRequest,
+                ConsentFlows::SignConsentBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid)),
                 listOf(BridgeToCordappType.convert(partyAttachmentSignature))
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
 
-        val handle = cordaService.acceptConsentRequestState(uuid, partyAttachmentSignature)
+        val handle = cordaService.signConsentBranch(uuid, partyAttachmentSignature)
 
         assertNotNull(handle)
     }
     @Test
-    fun `finalizeConsentRequestState returns FlowHandle on valid partyAttachmentSignature`() {
+    fun `finalizeConsentBranch returns FlowHandle on valid partyAttachmentSignature`() {
         val uuid = "1111-2222-33334444-5555-6666"
 
         `when`(cordaRPCOps.startFlow(
-                ConsentRequestFlows::FinalizeConsentRequest,
+                ConsentFlows::MergeBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid))
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
 
-        val handle = cordaService.finalizeConsentRequestState(uuid)
+        val handle = cordaService.mergeConsentBranch(uuid)
 
         assertNotNull(handle)
     }
 
     @Test
-    fun `newConsentRequestState raises on missing endpoints`() {
-        val newConsentRequestState = newConsentRequestState()
+    fun `newConsentBranch raises on missing endpoints`() {
+        val newConsentBranch = newConsentBranch()
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(emptyArray())
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+                criteria = any(),
+                paging = any(),
+                sorting = any(),
+                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
 
         assertFailsWith<IllegalArgumentException> {
-            cordaService.newConsentRequestState(newConsentRequestState)
+            cordaService.createConsentBranch(newConsentBranch)
         }
     }
 
@@ -319,7 +389,7 @@ class CordaServiceTest {
         )
     }
 
-    private fun newConsentRequestState(legalEntities: List<String>) : FullConsentRequestState {
+    private fun newConsentBranch(legalEntities: List<String>) : FullConsentRequestState {
         val att = zip(consentMetadataAsJson(), "blob".toByteArray())
 
         val outputStream = ByteArrayOutputStream()
@@ -353,11 +423,11 @@ class CordaServiceTest {
         )
     }
 
-    private fun newConsentRequestState() : FullConsentRequestState {
-        return newConsentRequestState(listOf("legalEntity"))
+    private fun newConsentBranch() : FullConsentRequestState {
+        return newConsentBranch(listOf("legalEntity"))
     }
 
-    private fun consentRequestState() : ConsentRequestState {
+    private fun consentBranch() : ConsentBranch {
         val att = zip(consentMetadataAsJson(), "blob".toByteArray())
 
         val outputStream = ByteArrayOutputStream()
@@ -369,8 +439,9 @@ class CordaServiceTest {
             }
         }
 
-        return ConsentRequestState(
-                externalId = "externalId",
+        return ConsentBranch(
+                uuid = UniqueIdentifier(externalId = "externalId"),
+                branchPoint = UniqueIdentifier(),
                 attachments = setOf(SecureHash.allOnesHash),
                 legalEntities = setOf("legalEntity"),
                 signatures = emptyList(),
@@ -401,13 +472,33 @@ class CordaServiceTest {
         return ByteArrayInputStream(baos.toByteArray())
     }
 
-    private fun page(numberOfResults: Int) : Vault.Page<ConsentRequestState> {
-        val states = mutableListOf<StateAndRef<ConsentRequestState>>()
+    private fun branchPage(numberOfResults: Int) : Vault.Page<ConsentBranch> {
+        val states = mutableListOf<StateAndRef<ConsentBranch>>()
 
         for (i in 0 until numberOfResults) {
             states.add(
                     StateAndRef(
                             state = TransactionState(mock(), "nl.nuts.consent.contract.ConsentContract", mock()),
+                            ref = mock()
+                    )
+            )
+        }
+
+        return Vault.Page(
+                states = states,
+                otherResults = emptyList(),
+                statesMetadata = emptyList(),
+                stateTypes = Vault.StateStatus.UNCONSUMED,
+                totalStatesAvailable = numberOfResults.toLong())
+    }
+
+    private fun statePage(numberOfResults: Int, id: UniqueIdentifier) : Vault.Page<nl.nuts.consent.state.ConsentState> {
+        val states = mutableListOf<StateAndRef<nl.nuts.consent.state.ConsentState>>()
+
+        for (i in 0 until numberOfResults) {
+            states.add(
+                    StateAndRef(
+                            state = TransactionState(ConsentState(uuid = id, version = 1), "nl.nuts.consent.contract.ConsentContract", mock()),
                             ref = mock()
                     )
             )
