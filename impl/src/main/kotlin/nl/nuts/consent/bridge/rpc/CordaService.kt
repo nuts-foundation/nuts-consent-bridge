@@ -354,7 +354,7 @@ class CordaService {
 
         val customCriteriaI = builder { ConsentSchemaV1.PersistentConsent::externalId.equal(externalId) }
         val customCriteria = QueryCriteria.VaultCustomQueryCriteria(customCriteriaI, Vault.StateStatus.UNCONSUMED, setOf(ConsentState::class.java))
-        val sortAttribute = SortAttribute.Custom(entityStateClass = ConsentSchemaV1.PersistentConsent::class.java, entityStateColumnName = "external_id")
+        val sortAttribute = SortAttribute.Custom(entityStateClass = ConsentSchemaV1.PersistentConsent::class.java, entityStateColumnName = "externalId")
 
         val page : Vault.Page<ConsentState> = proxy.vaultQueryBy(
                 criteria = customCriteria,
