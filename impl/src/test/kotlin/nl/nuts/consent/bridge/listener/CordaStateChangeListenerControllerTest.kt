@@ -117,6 +117,18 @@ class CordaStateChangeListenerControllerTest {
     }
 
     @Test
+    fun `publishStateEvent does nothing for genesis block`() {
+        val s = consentState(1)
+        val e = consentStateToEvent(s)
+        val state: TransactionState<ConsentState> = mock()
+        `when`(state.data).thenReturn(s)
+
+        cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
+
+        verify(nutsEventPublisher)
+    }
+
+    @Test
     fun `publishStateEvent reuses existing event when found`() {
         val s = consentState()
         val e = consentStateToEvent(s)
@@ -155,10 +167,10 @@ class CordaStateChangeListenerControllerTest {
         )
     }
 
-    private fun consentState() : ConsentState {
+    private fun consentState(version: Int = 2) : ConsentState {
         return ConsentState(
                 uuid = UniqueIdentifier(externalId = "externalId"),
-                version = 1,
+                version = version,
                 attachments = emptySet(),
                 parties = emptySet()
         )

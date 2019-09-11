@@ -295,7 +295,7 @@ class CordaService {
      * @throws IllegalStateException when an RPC connection could not be made
      */
     fun createConsentBranch(newConsentRequestState: FullConsentRequestState): FlowHandle<SignedTransaction> {
-        logger.debug("createConsentBranc() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
+        logger.debug("createConsentBranch() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
         val externalId = newConsentRequestState.consentId.externalId ?: throw IllegalArgumentException("consentRequestState.consentId.externalId can not be empty")

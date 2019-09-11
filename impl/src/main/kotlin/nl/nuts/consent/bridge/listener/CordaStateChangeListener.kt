@@ -241,9 +241,14 @@ class CordaStateChangeListenerController {
      * @param stateAndRef the StateAndRef object from Corda.
      */
     fun handleStateProducedEvent(stateAndRef: StateAndRef<ConsentState>) {
-        logger.debug("Received final consent state event from Corda: ${stateAndRef.state.data}")
+        logger.debug("Received consentState produced event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
+
+        if (state.version == 1) {
+            // ignore genesis block
+            return
+        }
 
         val event = cordaService.consentStateToEvent(state)
 
