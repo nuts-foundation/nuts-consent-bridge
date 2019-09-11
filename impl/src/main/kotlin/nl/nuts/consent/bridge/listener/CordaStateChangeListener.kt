@@ -203,6 +203,12 @@ class CordaStateChangeListenerController {
         logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
+            
+        if (state.version == 1) {
+            // ignore genesis block
+            return
+        }    
+            
         val event = cordaService.consentBranchToEvent(state)
 
         // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
