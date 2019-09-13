@@ -1,11 +1,6 @@
 package nl.nuts.consent.bridge.model
 
-import java.util.Objects
 import com.fasterxml.jackson.annotation.JsonProperty
-import nl.nuts.consent.bridge.model.Metadata
-import nl.nuts.consent.bridge.model.PartyAttachmentSignature
-import javax.validation.Valid
-import javax.validation.constraints.*
 
 /**
  * 
