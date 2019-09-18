@@ -119,7 +119,6 @@ class CordaStateChangeListenerControllerTest {
     @Test
     fun `publishStateEvent does nothing for genesis block`() {
         val s = consentState(1)
-        val e = consentStateToEvent(s)
         val state: TransactionState<ConsentState> = mock()
         `when`(state.data).thenReturn(s)
 
@@ -140,7 +139,7 @@ class CordaStateChangeListenerControllerTest {
 
         cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
 
-        e.UUID = n.uuid.toString()
+        e.UUID = n.uuid
 
         verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
