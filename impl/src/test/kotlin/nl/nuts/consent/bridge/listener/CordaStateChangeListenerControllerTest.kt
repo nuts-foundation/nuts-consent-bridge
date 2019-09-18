@@ -123,8 +123,6 @@ class CordaStateChangeListenerControllerTest {
         `when`(state.data).thenReturn(s)
 
         cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
-
-        verify(nutsEventPublisher)
     }
 
     @Test
