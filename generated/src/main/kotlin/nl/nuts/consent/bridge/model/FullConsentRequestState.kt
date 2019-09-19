@@ -19,9 +19,10 @@ data class FullConsentRequestState (
         @JsonProperty("consentId") val consentId: ConsentId,
 
         @get:NotNull 
-        @JsonProperty("legalEntities") val legalEntities: List<String>,
+        @JsonProperty("consentRecords") val consentRecords: List<ConsentRecord>,
 
-        @JsonProperty("consentRecords") val consentRecords: List<ConsentRecord>? = null
+        @get:NotNull 
+        @JsonProperty("legalEntities") val legalEntities: List<String>
 ) {
 
 }

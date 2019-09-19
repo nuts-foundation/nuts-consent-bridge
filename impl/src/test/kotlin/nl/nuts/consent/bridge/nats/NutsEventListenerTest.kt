@@ -96,7 +96,7 @@ class NutsEventListenerTest {
 
     private fun newConsentRequestStateAsEvent() : Event {
         val newConsentRequestState = FullConsentRequestState(
-                consentId = ConsentId(externalId = "externalId"),
+                consentId = ConsentId(UUID = UUID.randomUUID().toString(),externalId = "externalId"),
                 legalEntities = emptyList(),
                 consentRecords = listOf(ConsentRecord(
                         cipherText = "",
@@ -106,13 +106,14 @@ class NutsEventListenerTest {
                                 organisationSecureKeys = emptyList(),
                                 secureKey = SymmetricKey(alg = "alg", iv = "iv")
                         ),
-                        attachmentHash = ""
+                        attachmentHash = "",
+                        signatures = emptyList()
                 ))
         )
         val emptyJson = Serialization.objectMapper().writeValueAsString(newConsentRequestState)
 
         return Event(
-                UUID = "1111-2222-33334444-5555-6666",
+                UUID = newConsentRequestState.consentId.UUID,
                 name = EventName.EventConsentRequestConstructed,
                 retryCount = 0,
                 externalId = "uuid",

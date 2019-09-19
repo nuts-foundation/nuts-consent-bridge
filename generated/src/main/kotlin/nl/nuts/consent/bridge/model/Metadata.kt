@@ -15,6 +15,7 @@ import javax.validation.constraints.*
  * @param secureKey 
  * @param organisationSecureKeys 
  * @param period 
+ * @param previousAttachmentHash SHA256 of cipherText bytes
  */
 data class Metadata (
 
@@ -28,7 +29,9 @@ data class Metadata (
         @JsonProperty("organisationSecureKeys") val organisationSecureKeys: List<ASymmetricKey>,
 
         @get:NotNull 
-        @JsonProperty("period") val period: Period
+        @JsonProperty("period") val period: Period,
+
+        @JsonProperty("previousAttachmentHash") val previousAttachmentHash: String? = null
 ) {
 
 }

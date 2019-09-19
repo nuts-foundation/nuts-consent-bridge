@@ -23,11 +23,13 @@ import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
+import net.corda.node.services.vault.VaultSchemaV1
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
@@ -176,8 +178,9 @@ class CordaService {
 
         val eId = state.uuid.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
 
+        // the uuid of the event equals the uuid of the ConsentBranch which equals the uuid of the event at the originating side
         return Event(
-                UUID = UUID.randomUUID().toString(),
+                UUID = state.uuid.id.toString(),
                 name = EventName.EventDistributedConsentRequestReceived,
                 retryCount = 0,
                 externalId = eId,
@@ -201,7 +204,8 @@ class CordaService {
             consentRecords.add(ConsentRecord(
                     metadata = CordappToBridgeType.convert(attachment.metadata),
                     cipherText = Base64.getEncoder().encodeToString(attachment.data),
-                    attachmentHash = att.toString()
+                    attachmentHash = att.toString(),
+                    signatures = emptyList()
             ))
         }
 
@@ -342,6 +346,7 @@ class CordaService {
         // start flow
         return proxy.startFlow(
                 ConsentFlows::CreateConsentBranch,
+                UUID.fromString(newConsentRequestState.consentId.UUID),
                 consentState.uuid,
                 hashes,
                 orgIds.toSet(),
@@ -452,6 +457,27 @@ class CordaService {
                 ConsentFlows::MergeBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid))
         )
+    }
+
+    /**
+     * find a consumed ConsentBranch State given a Transaction Hash. Used to find the ConsentBranch UUID after a merge
+     * @param tx Transaction hash
+     * @return the UUID from the ConsentBranch UniqueIdentifier or null if something can't be found
+     */
+    fun consentBranchByTx(tx: SecureHash) : UUID? {
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
+
+        val transaction = proxy.internalFindVerifiedTransaction(tx) ?: return null
+
+        val criteria = QueryCriteria.VaultQueryCriteria(stateRefs = transaction.inputs, status = Vault.StateStatus.CONSUMED)
+        val results = proxy.vaultQueryBy<ConsentBranch>(criteria)
+
+        if (results.states.size != 1) {
+            logger.debug("Found multiple consumed ConsentBranch states for tx: $tx")
+            return null
+        }
+
+        return results.states[1].state.data.uuid.id
     }
 
     /**

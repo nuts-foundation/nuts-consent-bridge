@@ -23,8 +23,10 @@ import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.TransactionState
 import net.corda.core.contracts.UniqueIdentifier
+import net.corda.core.crypto.SecureHash
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType
 import nl.nuts.consent.bridge.events.apis.EventApi
@@ -69,7 +71,7 @@ class CordaStateChangeListenerControllerTest {
         val state: TransactionState<ConsentBranch> = mock()
         `when`(state.data).thenReturn(s)
         `when`(cordaService.consentBranchToEvent(any())).thenReturn(e)
-        `when`(eventApi.getEventByExternalId("externalId")).thenThrow(ClientException())
+        `when`(eventApi.getEvent(s.uuid.id)).thenThrow(ClientException())
 
         cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
@@ -84,15 +86,15 @@ class CordaStateChangeListenerControllerTest {
         val eMock = consentRequestStateToEvent(s)
         eMock.payload = ""
         val state: TransactionState<ConsentBranch> = mock()
-        val n = storeEvent(nl.nuts.consent.bridge.events.models.Event.Name.distributedConsentRequestReceived)
+        val n = storeEvent(nl.nuts.consent.bridge.events.models.Event.Name.distributedConsentRequestReceived, s.uuid.id.toString())
         `when`(state.data).thenReturn(s)
         `when`(cordaService.consentBranchToEvent(any())).thenReturn(eMock)
-        `when`(eventApi.getEventByExternalId("externalId")).thenReturn(n)
+        `when`(eventApi.getEvent(s.uuid.id)).thenReturn(n)
 
         cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
         // fields to copy
-        eCheck.UUID = n.uuid.toString()
+        eCheck.UUID = n.uuid
         eCheck.initiatorLegalEntity = n.initiatorLegalEntity
         eCheck.retryCount = n.retryCount
 
@@ -105,13 +107,18 @@ class CordaStateChangeListenerControllerTest {
     @Test
     fun `publishStateEvent publishes new encountered event`() {
         val s = consentState()
+        val n = storeEvent()
         val e = consentStateToEvent(s)
         val state: TransactionState<ConsentState> = mock()
+        val ref: StateRef = mock()
+        val uuid = UUID.fromString(n.uuid)
         `when`(state.data).thenReturn(s)
+        `when`(ref.txhash).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.consentStateToEvent(any())).thenReturn(e)
-        `when`(eventApi.getEventByExternalId("externalId")).thenThrow(ClientException())
+        `when`(cordaService.consentBranchByTx(SecureHash.allOnesHash)).thenReturn(uuid)
+        `when`(eventApi.getEvent(uuid)).thenReturn(n)
 
-        cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
+        cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = ref))
 
         verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
@@ -126,25 +133,21 @@ class CordaStateChangeListenerControllerTest {
     }
 
     @Test
-    fun `publishStateEvent reuses existing event when found`() {
+    fun `publishStateEvent does nothing when event in store is not found`() {
         val s = consentState()
         val e = consentStateToEvent(s)
         val state: TransactionState<ConsentState> = mock()
-        val n = storeEvent()
         `when`(state.data).thenReturn(s)
         `when`(cordaService.consentStateToEvent(any())).thenReturn(e)
-        `when`(eventApi.getEventByExternalId("externalId")).thenReturn(n)
+        `when`(eventApi.getEvent(any())).thenThrow(ClientException())
 
         cordaStateChangeListenerController.handleStateProducedEvent(StateAndRef(state, ref = mock()))
-
-        e.UUID = n.uuid
-
-        verify(nutsEventPublisher).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(e)))
     }
 
-    private fun storeEvent(name: nl.nuts.consent.bridge.events.models.Event.Name = nl.nuts.consent.bridge.events.models.Event.Name.consentRequestConstructed) : nl.nuts.consent.bridge.events.models.Event {
+    private fun storeEvent(name: nl.nuts.consent.bridge.events.models.Event.Name = nl.nuts.consent.bridge.events.models.Event.Name.consentRequestConstructed,
+                           uuid : String = UUID.randomUUID().toString()) : nl.nuts.consent.bridge.events.models.Event {
         return nl.nuts.consent.bridge.events.models.Event(
-            uuid = UUID.randomUUID().toString(),
+            uuid = uuid,
                 externalId = "externalId",
                 name = name,
                 payload = "",
@@ -176,7 +179,7 @@ class CordaStateChangeListenerControllerTest {
     private fun consentRequestStateToEvent(state: ConsentBranch) : Event {
 
         val ncrs =  FullConsentRequestState(
-                consentId = ConsentId(externalId = state.uuid.externalId!!),
+                consentId = ConsentId(UUID = state.uuid.id.toString() , externalId = state.uuid.externalId!!),
                 legalEntities = emptyList(),
                 consentRecords = listOf(ConsentRecord(
                         metadata = Metadata1(
@@ -195,7 +198,7 @@ class CordaStateChangeListenerControllerTest {
         val ncrsBase64 = Base64.getEncoder().encodeToString(ncrsBytes)
 
         return Event(
-                UUID = UUID.randomUUID().toString(),
+                UUID = ncrs.consentId.UUID,
                 name = EventName.EventDistributedConsentRequestReceived,
                 retryCount = 0,
                 externalId = state.uuid.externalId!!,
@@ -216,7 +219,8 @@ class CordaStateChangeListenerControllerTest {
                                         organisationSecureKeys = emptyList(),
                                         period = Period(OffsetDateTime.now())
                                 ),
-                                cipherText = "af=="
+                                cipherText = "af==",
+                                signatures = emptyList()
                         )
                 )
         )

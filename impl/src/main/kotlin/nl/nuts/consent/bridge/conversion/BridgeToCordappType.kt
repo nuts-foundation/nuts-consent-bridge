@@ -49,7 +49,8 @@ class BridgeToCordappType {
                     domain = source.domain.map { convert(it) },
                     secureKey = convert(source.secureKey),
                     organisationSecureKeys = source.organisationSecureKeys.map { convert(it) },
-                    period = convert(source.period)
+                    period = convert(source.period),
+                    previousAttachmentId = source.previousAttachmentHash
             )
         }
 

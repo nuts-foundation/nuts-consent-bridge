@@ -242,6 +242,7 @@ class CordaServiceTest {
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
+                UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
@@ -275,6 +276,7 @@ class CordaServiceTest {
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
+                UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
@@ -306,6 +308,7 @@ class CordaServiceTest {
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
+                UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
@@ -402,7 +405,7 @@ class CordaServiceTest {
         }
 
         return FullConsentRequestState(
-                consentId = ConsentId(externalId = "externalId"),
+                consentId = ConsentId(UUID = UUID.randomUUID().toString(), externalId = "externalId"),
                 consentRecords = listOf(ConsentRecord(
                         cipherText = String(outputStream.toByteArray()),
                         metadata = Metadata(

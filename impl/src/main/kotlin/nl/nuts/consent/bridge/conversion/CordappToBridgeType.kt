@@ -101,7 +101,8 @@ class CordappToBridgeType {
                     domain = source.domain.map { convert(it) },
                     period = convert(source.period),
                     secureKey = convert(source.secureKey),
-                    organisationSecureKeys = source.organisationSecureKeys.map { convert(it) }
+                    organisationSecureKeys = source.organisationSecureKeys.map { convert(it) },
+                    previousAttachmentHash = source.previousAttachmentId
             )
         }
 

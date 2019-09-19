@@ -12,9 +12,10 @@ import javax.validation.constraints.*
  */
 data class ConsentId (
 
-        @JsonProperty("externalId") val externalId: String? = null,
+        @get:NotNull 
+        @JsonProperty("UUID") val UUID: String,
 
-        @JsonProperty("UUID") val UUID: String? = null
+        @JsonProperty("externalId") val externalId: String? = null
 ) {
 
 }

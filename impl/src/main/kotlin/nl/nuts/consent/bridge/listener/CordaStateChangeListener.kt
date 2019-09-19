@@ -41,6 +41,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import rx.Subscription
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
@@ -210,14 +211,13 @@ class CordaStateChangeListenerController {
         // the contents of the new event will be a NewConsentRequestState object as json/base64
         var knownEvent: Event? = null
         try {
-            knownEvent = remoteEvent(event.externalId)
-            logger.debug("Found existing event for: ${event.externalId}")
+            knownEvent = remoteEvent(state.uuid.id)
+            logger.debug("Found existing event for: ${state.uuid.id}")
         } catch (e: ClientException) {
             logger.debug("Got new consentRequestState, generating new event")
         }
 
         if (knownEvent != null) {
-            event.UUID = knownEvent.UUID
             event.initiatorLegalEntity = knownEvent.initiatorLegalEntity
             event.retryCount = knownEvent.retryCount
         }
@@ -245,33 +245,41 @@ class CordaStateChangeListenerController {
             return
         }
 
+        // try to find the Tx and any consumed ConsentBranches
+        val tx = stateAndRef.ref.txhash
+
+        // if nothing is found, than it wasn't a merge that produced this state
+        val consentBranchUUID = cordaService.consentBranchByTx(tx) ?: return
+
         val event = cordaService.consentStateToEvent(state)
 
-        // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
-        // the contents of the new event will be a NewConsentRequestState object as json/base64
+        // if a branch exists than there MUST be an existing event in the event store
         var knownEvent: Event? = null
         try {
-            knownEvent = remoteEvent(event.externalId)
+            knownEvent = remoteEvent(consentBranchUUID)
         } catch (e: ClientException) {
             // nop
         }
 
-        if (knownEvent != null) {
-            event.UUID = knownEvent.UUID
+        if (knownEvent == null) {
+            logger.error("Can't find event in event store with UUID: $consentBranchUUID")
+            return
         }
+
+        event.UUID = knownEvent.UUID
         event.name = EventName.EventConsentDistributed
 
         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
         nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
     }
 
-    private fun remoteEvent(externalId: String): Event {
-        return eventToEvent(eventApi.getEventByExternalId(externalId))
+    private fun remoteEvent(stateUUID: UUID): Event {
+        return eventToEvent(eventApi.getEvent(stateUUID))
     }
 
     private fun eventToEvent(source: nl.nuts.consent.bridge.events.models.Event): Event {
         return Event(
-                UUID = source.uuid.toString(),
+                UUID = source.uuid,
                 payload = source.payload,
                 initiatorLegalEntity = source.initiatorLegalEntity,
                 externalId = source.externalId,

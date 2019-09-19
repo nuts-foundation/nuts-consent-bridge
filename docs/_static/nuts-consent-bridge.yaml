@@ -81,6 +81,7 @@ components:
       required:
         - consentId
         - legalEntities
+        - consentRecords
       properties:
         consentId:
           $ref: '#/components/schemas/ConsentId'
@@ -93,6 +94,8 @@ components:
           items:
             $ref: '#/components/schemas/Identifier'
     ConsentRecord:
+      required:
+        - signatures
       properties:
         metadata:
           $ref: '#/components/schemas/Metadata'
@@ -101,7 +104,7 @@ components:
           description: "Base64 encoded cipher_text.bin (fhir)"
         attachmentHash:
           type: string
-          description: "SHA256 of cipherText bytes"
+          description: "SHA256 of attachment (metadata + cipherText)"
         signatures:
           type: array
           items:
@@ -136,6 +139,9 @@ components:
             $ref: '#/components/schemas/ASymmetricKey'
         period:
           $ref: '#/components/schemas/Period'
+        previousAttachmentHash:
+          type: string
+          description: "SHA256 of cipherText bytes"
     Domain:
       type: string
       enum: ["medical", "pgo", "insurance", "social"]
@@ -170,6 +176,8 @@ components:
           type: string
           format: 'date-time'
     ConsentId:
+      required:
+        - UUID
       properties:
         externalId:
           type: string

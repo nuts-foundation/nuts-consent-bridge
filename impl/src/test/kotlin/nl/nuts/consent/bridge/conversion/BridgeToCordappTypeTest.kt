@@ -46,7 +46,8 @@ class BridgeToCordappTypeTest {
             domain = listOf(testDomain),
             secureKey = testSymmetricKey,
             organisationSecureKeys = listOf(testAsymmetricKey),
-            period = testPeriod
+            period = testPeriod,
+            previousAttachmentHash = "hash"
     )
 
     @Test
@@ -93,6 +94,7 @@ class BridgeToCordappTypeTest {
         assertEquals("medical", m.domain.first().name)
         assertEquals(testSymmetricKey.iv, m.secureKey.iv)
         assertEquals(testAsymmetricKey.alg, m.organisationSecureKeys.first().alg)
+        assertEquals("hash", m.previousAttachmentId)
     }
 
     @Test
