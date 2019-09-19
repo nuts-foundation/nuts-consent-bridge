@@ -94,8 +94,6 @@ components:
           items:
             $ref: '#/components/schemas/Identifier'
     ConsentRecord:
-      required:
-        - signatures
       properties:
         metadata:
           $ref: '#/components/schemas/Metadata'
