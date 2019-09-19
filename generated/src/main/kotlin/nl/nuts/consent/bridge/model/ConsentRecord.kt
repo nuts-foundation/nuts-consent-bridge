@@ -16,14 +16,13 @@ import javax.validation.constraints.*
  */
 data class ConsentRecord (
 
-        @get:NotNull 
-        @JsonProperty("signatures") val signatures: List<PartyAttachmentSignature>,
-
         @JsonProperty("metadata") val metadata: Metadata? = null,
 
         @JsonProperty("cipherText") val cipherText: String? = null,
 
-        @JsonProperty("attachmentHash") val attachmentHash: String? = null
+        @JsonProperty("attachmentHash") val attachmentHash: String? = null,
+
+        @JsonProperty("signatures") val signatures: List<PartyAttachmentSignature>? = null
 ) {
 
 }
