@@ -89,8 +89,9 @@ class NutsEventListener {
                 logger.error(e.message, e)
             } catch (e : JsonMappingException) {
                 logger.error(e.message, e)
+            } catch (e : Exception) {
+                logger.error(e.message, e)
             }
-            // todo: more exceptions?
         }, SubscriptionOptions.Builder().build())
 
         logger.info("NutsEventListener connection to Nats server established")
