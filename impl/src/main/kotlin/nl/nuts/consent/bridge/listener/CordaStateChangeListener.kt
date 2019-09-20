@@ -116,7 +116,7 @@ class CordaStateChangeListener<S : ContractState>(
             }
         },
         { e:Throwable ->
-            logger.error(e.message)
+            logger.error(e.message, e)
             logger.info("Unsubscribing and disconnecting...")
 
             // cleanup stuff to make sure we don't leak anything
