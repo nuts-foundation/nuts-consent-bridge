@@ -477,7 +477,7 @@ class CordaService {
             return null
         }
 
-        return results.states[1].state.data.uuid.id
+        return results.states[0].state.data.uuid.id
     }
 
     /**
