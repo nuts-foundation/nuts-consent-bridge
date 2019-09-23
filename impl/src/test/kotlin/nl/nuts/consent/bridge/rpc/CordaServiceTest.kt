@@ -66,7 +66,6 @@ import java.time.OffsetDateTime
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import javax.annotation.Signed
 import kotlin.test.assertFailsWith
 
 class CordaServiceTest {
@@ -137,7 +136,7 @@ class CordaServiceTest {
 
         `when`(cordaRPCOps.attachmentExists(hash)).thenReturn(false)
 
-        val att = cordaService.getAttachment(hash)
+        val att = cordaService.getCipherText(hash)
 
         assertNull(att)
     }
@@ -158,7 +157,7 @@ class CordaServiceTest {
         bytes[7] = -127
         `when`(cordaRPCOps.openAttachment(hash)).thenReturn(zip(consentMetadataAsJson(), bytes))
 
-        val att = cordaService.getAttachment(hash)
+        val att = cordaService.getCipherText(hash)
 
         assertNotNull(att)
         assertTrue(att!!.metadata.domain.contains(Domain.medical))
@@ -174,7 +173,7 @@ class CordaServiceTest {
 
 
         assertFailsWith<IllegalStateException> {
-            cordaService.getAttachment(hash)
+            cordaService.getCipherText(hash)
         }
     }
 
@@ -187,7 +186,7 @@ class CordaServiceTest {
 
 
         assertFailsWith<IllegalStateException> {
-            cordaService.getAttachment(hash)
+            cordaService.getCipherText(hash)
         }
     }
 
@@ -307,7 +306,7 @@ class CordaServiceTest {
         val futureMock : CordaFuture<SignedTransaction> = mock()
         val txMock : SignedTransaction = mock()
         val coreTxMock : CoreTransaction = mock()
-        `when`(futureMock.getOrThrow(5.seconds)).thenReturn(txMock)
+        `when`(futureMock.getOrThrow(15.seconds)).thenReturn(txMock)
         `when`(txMock.coreTransaction).thenReturn(coreTxMock)
         `when`(coreTxMock.outputsOfType<ConsentState>()).thenReturn(listOf(ConsentState(uuid = id, version = 1)))
 

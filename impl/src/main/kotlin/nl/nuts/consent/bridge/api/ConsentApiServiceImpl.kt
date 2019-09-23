@@ -48,9 +48,7 @@ class ConsentApiServiceImpl : ConsentApiService {
         logger.debug("getAttachmentBySecureHash({})", secureHash)
 
         val hash = SecureHash.parse(secureHash)
-        val attachment = cordaService.getAttachment(hash) ?: throw NotFoundException("Attachment with hash $secureHash not found")
-
-        return attachment.data
+        return cordaService.getAttachment(hash) ?: throw NotFoundException("Attachment with hash $secureHash not found")
     }
 
     /**

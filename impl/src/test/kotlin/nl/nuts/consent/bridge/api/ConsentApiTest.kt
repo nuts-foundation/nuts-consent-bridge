@@ -89,7 +89,7 @@ class ConsentApiTest {
 
     @Test
     fun `getAttachment raises NotFoundException for not found`() {
-        `when`(cordaService.getAttachment(SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"))).thenReturn(null)
+        `when`(cordaService.getCipherText(SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"))).thenReturn(null)
 
         try {
             consentApiService.getAttachmentBySecureHash("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf")
@@ -101,7 +101,7 @@ class ConsentApiTest {
 
     @Test
     fun `getAttachment returns attachment when exists`() {
-        `when`(cordaService.getAttachment(SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"))).thenReturn(CordaService.Attachment(consentMetadata(), ByteArray(1)))
+        `when`(cordaService.getAttachment(SecureHash.parse("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"))).thenReturn(ByteArray(1))
 
         val att = consentApiService.getAttachmentBySecureHash("afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf")
 

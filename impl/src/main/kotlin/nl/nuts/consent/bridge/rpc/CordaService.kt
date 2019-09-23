@@ -21,6 +21,7 @@ package nl.nuts.consent.bridge.rpc
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.internal.readFully
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -29,7 +30,6 @@ import net.corda.core.node.services.vault.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
-import net.corda.node.services.vault.VaultSchemaV1
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
@@ -157,7 +157,7 @@ class CordaService {
         val consentRecords = mutableListOf<ConsentRecord>()
 
         state.attachments.forEach { att ->
-            val attachment= getAttachment(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+            val attachment= getCipherText(state.attachments.first()) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
             val hash = att.toString()
             consentRecords.add(ConsentRecord(
                     metadata = CordappToBridgeType.convert(attachment.metadata),
@@ -200,7 +200,7 @@ class CordaService {
         val consentRecords = mutableListOf<ConsentRecord>()
 
         state.attachments.forEach { att ->
-            val attachment= getAttachment(att) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
+            val attachment= getCipherText(att) ?: throw IllegalStateException("Attachment with ID ${state.attachments.first()} does not exist")
             consentRecords.add(ConsentRecord(
                     metadata = CordappToBridgeType.convert(attachment.metadata),
                     cipherText = Base64.getEncoder().encodeToString(attachment.data),
@@ -230,11 +230,11 @@ class CordaService {
     }
 
     /**
-     * Get an attachment bashed on its hash (Sha256)
+     * Get the cipherText bashed on the hash of the attachment (Sha256)
      * @param secureHash sha256 of attachment bytes
      * @throws IllegalStateException if no Corda RPC connection is available
      */
-    fun getAttachment(secureHash: SecureHash) : Attachment? {
+    fun getCipherText(secureHash: SecureHash) : Attachment? {
         val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
         if(!proxy.attachmentExists(secureHash)) {
             return null
@@ -272,6 +272,21 @@ class CordaService {
         }
 
         return Attachment(m, attachment)
+    }
+
+    /**
+     * Get the attachment bashed on the hash (Sha256)
+     * @param secureHash sha256 of attachment bytes
+     * @throws IllegalStateException if no Corda RPC connection is available
+     */
+    fun getAttachment(secureHash: SecureHash) : ByteArray? {
+        val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
+        if(!proxy.attachmentExists(secureHash)) {
+            return null
+        }
+
+        val inputStream = proxy.openAttachment(secureHash)
+        return inputStream.readFully()
     }
 
     private fun readZipBytes(reader : BufferedInputStream) : ByteArray {
