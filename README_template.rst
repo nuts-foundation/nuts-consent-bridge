@@ -3,12 +3,8 @@ nuts-consent-bridge
 
 App to bridge gap between the Corda kotlin world and Nuts polyglot service space
 
-.. image:: https://travis-ci.org/nuts-foundation/nuts-consent-bridge.svg?branch=master
-    :target: https://travis-ci.org/nuts-foundation/nuts-consent-bridge
-    :alt: Build Status
-
-.. image:: https://circleci.com/gh/nuts-foundation/nuts-consent-bridge/tree/master.svg?style=svg
-    :target: https://circleci.com/gh/nuts-foundation/nuts-consent-bridge/tree/master
+.. image:: https://circleci.com/gh/nuts-foundation/nuts-consent-bridge.svg?style=svg
+    :target: https://circleci.com/gh/nuts-foundation/nuts-consent-bridge
     :alt: Build Status
 
 .. image:: https://readthedocs.org/projects/nuts-consent-bridge/badge/?version=latest
