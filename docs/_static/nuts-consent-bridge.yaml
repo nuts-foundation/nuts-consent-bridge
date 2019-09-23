@@ -124,6 +124,7 @@ components:
         - secureKey
         - organisationSecureKeys
         - period
+        - consentRecordHash
       properties:
         domain:
           type: array
@@ -140,6 +141,9 @@ components:
         previousAttachmentHash:
           type: string
           description: "SHA256 of cipherText bytes"
+        consentRecordHash:
+          type: string
+          description: Hash of the unencrypted consent FHIR resource. Can be used for uniqueness.
     Domain:
       type: string
       enum: ["medical", "pgo", "insurance", "social"]

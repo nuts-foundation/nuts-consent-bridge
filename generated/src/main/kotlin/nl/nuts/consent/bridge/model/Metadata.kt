@@ -16,6 +16,7 @@ import javax.validation.constraints.*
  * @param organisationSecureKeys 
  * @param period 
  * @param previousAttachmentHash SHA256 of cipherText bytes
+ * @param consentRecordHash Hash of the unencrypted consent FHIR resource. Can be used for uniqueness.
  */
 data class Metadata (
 
@@ -30,6 +31,9 @@ data class Metadata (
 
         @get:NotNull 
         @JsonProperty("period") val period: Period,
+
+        @get:NotNull 
+        @JsonProperty("consentRecordHash") val consentRecordHash: String,
 
         @JsonProperty("previousAttachmentHash") val previousAttachmentHash: String? = null
 ) {
