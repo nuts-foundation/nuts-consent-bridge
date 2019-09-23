@@ -374,7 +374,7 @@ class CordaService {
                     ConsentFlows::CreateGenesisConsentState,
                     externalId)
 
-            val tx = f.returnValue.getOrThrow(5.seconds)
+            val tx = f.returnValue.getOrThrow(15.seconds)
             return tx.coreTransaction.outputsOfType<ConsentState>().first()
         }
 
