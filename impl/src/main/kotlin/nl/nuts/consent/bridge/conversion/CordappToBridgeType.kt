@@ -102,7 +102,8 @@ class CordappToBridgeType {
                     period = convert(source.period),
                     secureKey = convert(source.secureKey),
                     organisationSecureKeys = source.organisationSecureKeys.map { convert(it) },
-                    previousAttachmentHash = source.previousAttachmentId
+                    previousAttachmentHash = source.previousAttachmentId,
+                    consentRecordHash = "" // placeHolder
             )
         }
 
