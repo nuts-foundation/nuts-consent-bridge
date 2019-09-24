@@ -71,7 +71,7 @@ class CordaStateChangeListenerControllerTest {
         val state: TransactionState<ConsentBranch> = mock()
         `when`(state.data).thenReturn(s)
         `when`(cordaService.consentBranchToEvent(any())).thenReturn(e)
-        `when`(eventApi.getEvent(s.uuid.id)).thenThrow(ClientException())
+        `when`(eventApi.getEvent(s.linearId.id)).thenThrow(ClientException())
 
         cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
@@ -86,10 +86,10 @@ class CordaStateChangeListenerControllerTest {
         val eMock = consentRequestStateToEvent(s)
         eMock.payload = ""
         val state: TransactionState<ConsentBranch> = mock()
-        val n = storeEvent(nl.nuts.consent.bridge.events.models.Event.Name.distributedConsentRequestReceived, s.uuid.id.toString())
+        val n = storeEvent(nl.nuts.consent.bridge.events.models.Event.Name.distributedConsentRequestReceived, s.linearId.id.toString())
         `when`(state.data).thenReturn(s)
         `when`(cordaService.consentBranchToEvent(any())).thenReturn(eMock)
-        `when`(eventApi.getEvent(s.uuid.id)).thenReturn(n)
+        `when`(eventApi.getEvent(s.linearId.id)).thenReturn(n)
 
         cordaStateChangeListenerController.handleRequestStateProduced(StateAndRef(state, ref = mock()))
 
@@ -179,14 +179,15 @@ class CordaStateChangeListenerControllerTest {
     private fun consentRequestStateToEvent(state: ConsentBranch) : Event {
 
         val ncrs =  FullConsentRequestState(
-                consentId = ConsentId(UUID = state.uuid.id.toString() , externalId = state.uuid.externalId!!),
+                consentId = ConsentId(UUID = state.linearId.id.toString() , externalId = state.linearId.externalId!!),
                 legalEntities = emptyList(),
                 consentRecords = listOf(ConsentRecord(
                         metadata = Metadata1(
                                 domain = listOf(Domain.medical),
                                 secureKey = SymmetricKey(alg = "alg", iv = "iv"),
                                 organisationSecureKeys = emptyList(),
-                                period = Period(OffsetDateTime.now())
+                                period = Period(OffsetDateTime.now()),
+                                consentRecordHash = "hash"
                         ),
                         attachmentHash = "",
                         cipherText = "af==",
@@ -201,8 +202,8 @@ class CordaStateChangeListenerControllerTest {
                 UUID = ncrs.consentId.UUID,
                 name = EventName.EventDistributedConsentRequestReceived,
                 retryCount = 0,
-                externalId = state.uuid.externalId!!,
-                consentId = state.uuid.id.toString(),
+                externalId = state.linearId.externalId!!,
+                consentId = state.linearId.id.toString(),
                 payload = ncrsBase64
         )
     }
@@ -210,14 +211,15 @@ class CordaStateChangeListenerControllerTest {
     private fun consentStateToEvent(state: ConsentState) : Event {
 
         val cs = ConsentState(
-                consentId = CordappToBridgeType.convert(state.uuid),
+                consentId = CordappToBridgeType.convert(state.linearId),
                 consentRecords = listOf(
                         ConsentRecord(
                                 metadata = Metadata1(
                                         domain = listOf(Domain.medical),
                                         secureKey = SymmetricKey(alg = "alg", iv = "iv"),
                                         organisationSecureKeys = emptyList(),
-                                        period = Period(OffsetDateTime.now())
+                                        period = Period(OffsetDateTime.now()),
+                                        consentRecordHash = "hash"
                                 ),
                                 cipherText = "af==",
                                 signatures = emptyList()
@@ -232,8 +234,8 @@ class CordaStateChangeListenerControllerTest {
                 UUID = UUID.randomUUID().toString(),
                 name = EventName.EventConsentDistributed,
                 retryCount = 0,
-                externalId = state.uuid.externalId!!,
-                consentId = state.uuid.id.toString(),
+                externalId = state.linearId.externalId!!,
+                consentId = state.linearId.id.toString(),
                 payload = csBase64
         )
     }

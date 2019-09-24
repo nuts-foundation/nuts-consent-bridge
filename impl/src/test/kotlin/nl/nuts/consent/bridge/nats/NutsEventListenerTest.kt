@@ -104,7 +104,8 @@ class NutsEventListenerTest {
                                 domain = listOf(Domain.medical),
                                 period = Period(validFrom = OffsetDateTime.now()),
                                 organisationSecureKeys = emptyList(),
-                                secureKey = SymmetricKey(alg = "alg", iv = "iv")
+                                secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                                consentRecordHash = "hash"
                         ),
                         attachmentHash = "",
                         signatures = emptyList()

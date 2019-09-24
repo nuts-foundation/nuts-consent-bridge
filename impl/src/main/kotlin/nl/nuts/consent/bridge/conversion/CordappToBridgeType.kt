@@ -103,7 +103,7 @@ class CordappToBridgeType {
                     secureKey = convert(source.secureKey),
                     organisationSecureKeys = source.organisationSecureKeys.map { convert(it) },
                     previousAttachmentHash = source.previousAttachmentId,
-                    consentRecordHash = "" // placeHolder
+                    consentRecordHash = source.consentRecordHash
             )
         }
 
@@ -174,7 +174,7 @@ class CordappToBridgeType {
             }
 
             return FullConsentRequestState(
-                    consentId = convert(source.uuid),
+                    consentId = convert(source.linearId),
                     legalEntities = source.legalEntities.toList(),
                     consentRecords = consentRecords
             )

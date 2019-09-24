@@ -118,7 +118,8 @@ class ConsentApiTest {
                 organisationSecureKeys = emptyList(),
                 period = Period(
                         validFrom = LocalDate.now()
-                )
+                ),
+                consentRecordHash = "hash"
         )
     }
 }

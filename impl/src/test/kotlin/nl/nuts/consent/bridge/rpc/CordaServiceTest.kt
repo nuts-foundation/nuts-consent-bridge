@@ -228,8 +228,8 @@ class CordaServiceTest {
 
         val event = cordaService.consentStateToEvent(state)
 
-        assertEquals(state.uuid.externalId, event.externalId)
-        assertEquals(state.uuid.id.toString(), event.consentId)
+        assertEquals(state.linearId.externalId, event.externalId)
+        assertEquals(state.linearId.id.toString(), event.consentId)
         assertEquals(EventName.EventConsentDistributed, event.name)
         assertEquals(0, event.retryCount)
     }
@@ -247,8 +247,8 @@ class CordaServiceTest {
         val cs = Serialization.objectMapper().readValue<nl.nuts.consent.bridge.model.ConsentState>(payload)
 
         assertEquals(1, cs.consentRecords.size)
-        assertEquals(state.uuid.externalId, cs.consentId.externalId)
-        assertEquals(state.uuid.id.toString(), cs.consentId.UUID)
+        assertEquals(state.linearId.externalId, cs.consentId.externalId)
+        assertEquals(state.linearId.id.toString(), cs.consentId.UUID)
 
         val cr = cs.consentRecords[0]
 
@@ -482,7 +482,8 @@ class CordaServiceTest {
                                                 cipherText = "afaf"
                                         )
                                 ),
-                                secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv")
+                                secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv"),
+                                consentRecordHash = "hash"
                         ),
                         signatures = emptyList()
                 )),
@@ -605,7 +606,8 @@ class CordaServiceTest {
                 organisationSecureKeys = emptyList(),
                 period = Period(
                         validFrom = LocalDate.now()
-                )
+                ),
+                consentRecordHash = "hash"
         )
     }
 

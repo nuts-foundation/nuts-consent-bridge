@@ -47,7 +47,8 @@ class BridgeToCordappTypeTest {
             secureKey = testSymmetricKey,
             organisationSecureKeys = listOf(testAsymmetricKey),
             period = testPeriod,
-            previousAttachmentHash = "hash"
+            previousAttachmentHash = "hash",
+            consentRecordHash = "hash"
     )
 
     @Test
@@ -95,6 +96,7 @@ class BridgeToCordappTypeTest {
         assertEquals(testSymmetricKey.iv, m.secureKey.iv)
         assertEquals(testAsymmetricKey.alg, m.organisationSecureKeys.first().alg)
         assertEquals("hash", m.previousAttachmentId)
+        assertEquals("hash", m.consentRecordHash)
     }
 
     @Test

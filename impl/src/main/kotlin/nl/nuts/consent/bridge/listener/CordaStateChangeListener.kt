@@ -211,8 +211,8 @@ class CordaStateChangeListenerController {
         // the contents of the new event will be a NewConsentRequestState object as json/base64
         var knownEvent: Event? = null
         try {
-            knownEvent = remoteEvent(state.uuid.id)
-            logger.debug("Found existing event for: ${state.uuid.id}")
+            knownEvent = remoteEvent(state.linearId.id)
+            logger.debug("Found existing event for: ${state.linearId.id}")
         } catch (e: ClientException) {
             logger.debug("Got new consentRequestState, generating new event")
         }

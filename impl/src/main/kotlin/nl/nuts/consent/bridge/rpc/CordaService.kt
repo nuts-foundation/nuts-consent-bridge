@@ -168,7 +168,7 @@ class CordaService {
         }
 
         val crs = FullConsentRequestState(
-                consentId = CordappToBridgeType.convert(state.uuid),
+                consentId = CordappToBridgeType.convert(state.linearId),
                 legalEntities = state.legalEntities.toList(),
                 consentRecords = consentRecords
         )
@@ -176,15 +176,15 @@ class CordaService {
         val crsBytes = Serialization.objectMapper().writeValueAsBytes(crs)
         val crsBase64 = Base64.getEncoder().encodeToString(crsBytes)
 
-        val eId = state.uuid.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
+        val eId = state.linearId.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
 
         // the uuid of the event equals the uuid of the ConsentBranch which equals the uuid of the event at the originating side
         return Event(
-                UUID = state.uuid.id.toString(),
+                UUID = state.linearId.id.toString(),
                 name = EventName.EventDistributedConsentRequestReceived,
                 retryCount = 0,
                 externalId = eId,
-                consentId = state.uuid.id.toString(),
+                consentId = state.linearId.id.toString(),
                 payload = crsBase64
         )
     }
@@ -210,21 +210,21 @@ class CordaService {
         }
 
         val cs = nl.nuts.consent.bridge.model.ConsentState(
-                consentId = CordappToBridgeType.convert(state.uuid),
+                consentId = CordappToBridgeType.convert(state.linearId),
                 consentRecords = consentRecords
         )
 
         val csBytes = Serialization.objectMapper().writeValueAsBytes(cs)
         val csBase64 = Base64.getEncoder().encodeToString(csBytes)
 
-        val eId = state.uuid.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
+        val eId = state.linearId.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
 
         return Event(
                 UUID = UUID.randomUUID().toString(),
                 name = EventName.EventConsentDistributed,
                 retryCount = 0,
                 externalId = eId,
-                consentId = state.uuid.id.toString(),
+                consentId = state.linearId.id.toString(),
                 payload = csBase64
         )
     }
@@ -362,7 +362,7 @@ class CordaService {
         return proxy.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentRequestState.consentId.UUID),
-                consentState.uuid,
+                consentState.linearId,
                 hashes,
                 orgIds.toSet(),
                 nodeNames)
@@ -492,7 +492,7 @@ class CordaService {
             return null
         }
 
-        return results.states[0].state.data.uuid.id
+        return results.states[0].state.data.linearId.id
     }
 
     /**
