@@ -64,15 +64,16 @@ class CordaStateChangeListener<S : ContractState>(
      * This will initiate the RPC connection and start the observer stream
      */
     fun start(stateClass: Class<S>) {
-        if (shutdown) {
-            return
-        }
-
         val proxy = cordaRPClientWrapper.proxy()
 
         if (proxy == null) {
             logger.warn("Couldn't get proxy, stopping CordaStateChangeListener")
             shutdown = true
+            return
+        }
+
+        if (shutdown) {
+            proxy.shutdown()
             return
         }
 
