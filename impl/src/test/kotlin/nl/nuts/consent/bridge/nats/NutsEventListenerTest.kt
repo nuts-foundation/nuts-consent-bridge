@@ -23,6 +23,9 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.verify
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.model.*
@@ -30,6 +33,7 @@ import nl.nuts.consent.bridge.rpc.CordaService
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.`when`
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -48,10 +52,22 @@ class NutsEventListenerTest {
         nutsEventListener = NutsEventListener()
         nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties()
         nutsEventListener.cordaService = cordaService
+        nutsEventListener.eventStateStore = EventStateStore()
+        nutsEventListener.nutsEventPublisher = mock()
 
         cf.natsUrl = nutsEventListener.consentBridgeNatsProperties.address
-        connection = cf.createConnection()
         nutsEventListener.init()
+        connection = cf.createConnection()
+
+        // wait for connection to be established
+        val t = System.currentTimeMillis()
+        while ((System.currentTimeMillis() - t) > 2000L) {
+            val connected = nutsEventListener.connected()
+            if (connected) {
+                break
+            }
+            Thread.sleep(10L)
+        }
     }
 
     @After
@@ -71,7 +87,14 @@ class NutsEventListenerTest {
 
     @Test
     fun `requested state is forwarded to consentService`() {
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
         //when
+        `when`(cordaService.createConsentBranch(any())).thenReturn(t)
+
         val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
 

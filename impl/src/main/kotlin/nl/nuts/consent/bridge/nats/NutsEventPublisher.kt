@@ -18,44 +18,13 @@
 
 package nl.nuts.consent.bridge.nats
 
-import io.nats.streaming.StreamingConnection
-import io.nats.streaming.StreamingConnectionFactory
-import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.util.*
-import javax.annotation.PostConstruct
-import javax.annotation.PreDestroy
 
 /**
  * wrapper class for Nats event publishing, handles connection
  */
 @Service
-class NutsEventPublisher {
-    private val logger: Logger = LoggerFactory.getLogger(this::class.java)
-
-    @Autowired
-    lateinit var consentBridgeNatsProperties: ConsentBridgeNatsProperties
-
-    lateinit var cf: StreamingConnectionFactory
-
-    lateinit var connection: StreamingConnection
-
-    /**
-     * Initializes the connection to the Nats streaming server
-     *
-     * It uses the standard Options. Server config is loaded via Spring properties: nuts.consent.nats.*.
-     */
-    @PostConstruct
-    fun init() {
-        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "nutsEventPublisher-${Integer.toHexString(Random().nextInt())}")
-        cf.natsUrl = consentBridgeNatsProperties.address
-
-        connection = cf.createConnection()
-    }
-
+class NutsEventPublisher : NutsEventBase() {
     /**
      * Publishes the given data to the given channel
      *
@@ -64,18 +33,14 @@ class NutsEventPublisher {
      */
     // todo fatal errors
     fun publish(subject:String, data: ByteArray) {
-        connection.publish(subject, data)
+        if (connected()) {
+            connection!!.publish(subject, data)
+        } else {
+            throw IllegalStateException("Nats server not connected")
+        }
     }
 
-    /**
-     * Closes the Nats connection
-     */
-    @PreDestroy
-    fun destroy() {
-        logger.debug("Stopping publisher")
-
-        connection.close()
-
-        logger.info("Publisher stopped")
+    override fun initListener() {
+        // noop
     }
 }
