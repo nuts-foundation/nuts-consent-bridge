@@ -34,7 +34,7 @@ class NutsEventPublisher : NutsEventBase() {
     // todo fatal errors
     fun publish(subject:String, data: ByteArray) {
         if (connected()) {
-            connection!!.publish(subject, data)
+            connection?.publish(subject, data)
         } else {
             throw IllegalStateException("Nats server not connected")
         }

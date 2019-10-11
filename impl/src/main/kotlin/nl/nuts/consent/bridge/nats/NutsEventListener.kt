@@ -62,7 +62,7 @@ class NutsEventListener : NutsEventBase() {
     lateinit var nutsEventPublisher: NutsEventPublisher
 
     override fun initListener() {
-        subscription = connection!!.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
+        subscription = connection?.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
             try {
                 logger.trace("Received event with data ${String(it.data)}")
                 val e = Serialization.objectMapper().readValue(it.data, Event::class.java)
@@ -88,9 +88,7 @@ class NutsEventListener : NutsEventBase() {
     fun destroy() {
         logger.debug("Unsubscribing from Nats")
 
-        if (subscription != null) {
-            subscription!!.unsubscribe()
-        }
+        subscription?.unsubscribe()
     }
 
     private fun processEvent(e : Event) {

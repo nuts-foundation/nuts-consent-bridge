@@ -32,6 +32,9 @@ import java.util.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
+/**
+ * Base class for NutsEventListener/Publisher, handles all connection logic
+ */
 abstract class NutsEventBase {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
@@ -92,9 +95,7 @@ abstract class NutsEventBase {
     fun destroyBase() {
         logger.debug("Disconnecting listener from Nats")
 
-        if (connection != null) {
-            connection!!.close()
-        }
+        connection?.close()
     }
 
     protected abstract fun initListener()
