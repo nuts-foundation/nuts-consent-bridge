@@ -20,10 +20,8 @@ package nl.nuts.consent.bridge.nats
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
-import io.nats.streaming.StreamingConnection
-import io.nats.streaming.StreamingConnectionFactory
-import io.nats.streaming.Subscription
-import io.nats.streaming.SubscriptionOptions
+import io.nats.client.Connection
+import io.nats.client.ConnectionListener
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.model.FullConsentRequestState
@@ -38,17 +36,19 @@ import java.lang.IllegalStateException
 import java.util.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
+import io.nats.client.Nats
+import io.nats.client.Options
+import io.nats.streaming.*
+import org.bouncycastle.crypto.tls.ConnectionEnd.server
+import java.time.Duration
 
 
 /**
  * Control class for linking CordaStateChangeListener to publisher topics.
  */
 @Service
-class NutsEventListener {
+class NutsEventListener : NutsEventBase() {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
-
-    @Autowired
-    lateinit var consentBridgeNatsProperties: ConsentBridgeNatsProperties
 
     @Autowired
     lateinit var cordaService : CordaService
@@ -56,29 +56,13 @@ class NutsEventListener {
     @Autowired
     lateinit var eventStateStore: EventStateStore
 
-    lateinit var cf: StreamingConnectionFactory
-    lateinit var connection: StreamingConnection
-    lateinit var subscription: Subscription
+    var subscription: Subscription? = null
 
     @Autowired
     lateinit var nutsEventPublisher: NutsEventPublisher
 
-    /**
-     * Initializes the connection to the Nats streaming server and creates a subscription to channel with subject: "consentRequest"
-     *
-     * It uses the standard SubscriptionOptions. Server config is loaded via Spring properties: nuts.consent.nats.*.
-     *
-     * The subscription receives all events but only processes: ["consentRequest constructed", "consentRequest in flight", "consentRequest in flight for final state", "all signatures present", "attachment signed"]
-     */
-    @PostConstruct
-    fun init() {
-        logger.debug("Connecting listener to Nats on ${consentBridgeNatsProperties.address} with ClusterID: ${consentBridgeNatsProperties.cluster}")
-
-        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "cordaBridgePublisher-${Integer.toHexString(Random().nextInt())}")
-        cf.natsUrl = consentBridgeNatsProperties.address
-        connection = cf.createConnection()
-
-        subscription = connection.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
+    override fun initListener() {
+        subscription = connection?.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
             try {
                 logger.trace("Received event with data ${String(it.data)}")
                 val e = Serialization.objectMapper().readValue(it.data, Event::class.java)
@@ -94,7 +78,7 @@ class NutsEventListener {
             }
         }, SubscriptionOptions.Builder().build())
 
-        logger.info("NutsEventListener connection to Nats server established")
+        logger.info("Nats subscrtiption with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
     }
 
     /**
@@ -102,12 +86,9 @@ class NutsEventListener {
      */
     @PreDestroy
     fun destroy() {
-        logger.debug("Disconnecting listener from Nats")
+        logger.debug("Unsubscribing from Nats")
 
-        subscription.unsubscribe()
-        connection.close()
-
-        logger.info("Disconnected listener from Nats")
+        subscription?.unsubscribe()
     }
 
     private fun processEvent(e : Event) {
