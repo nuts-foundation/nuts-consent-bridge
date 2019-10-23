@@ -22,12 +22,13 @@ class EndpointsApi(basePath: kotlin.String = "http://localhost") : ApiClient(bas
     * 
     * @param orgIds A list of organisation identifiers to query for. identifiers are Nuts Identifiers with proper escaping 
     * @param type The type of endpoint requested, eg Nuts or FHIR (optional, default to null)
+    * @param strict only return successfull result if each given organisation has an endpoint of the requested type, otherwise 400 (optional, default to null)
     * @return kotlin.Array<Endpoint>
     */
     @Suppress("UNCHECKED_CAST")
-    fun endpointsByOrganisationId(orgIds: kotlin.Array<kotlin.String>, type: kotlin.String) : kotlin.Array<Endpoint> {
+    fun endpointsByOrganisationId(orgIds: kotlin.Array<kotlin.String>, type: kotlin.String, strict: kotlin.Boolean) : kotlin.Array<Endpoint> {
         val localVariableBody: kotlin.Any? = null
-        val localVariableQuery: MultiValueMap = mapOf("orgIds" to toMultiValue(orgIds.toList(), "multi"), "type" to listOf("$type"))
+        val localVariableQuery: MultiValueMap = mapOf("orgIds" to toMultiValue(orgIds.toList(), "multi"), "type" to listOf("$type"), "strict" to listOf("$strict"))
         val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
         val localVariableConfig = RequestConfig(
             RequestMethod.GET,

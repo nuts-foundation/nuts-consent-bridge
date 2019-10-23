@@ -349,7 +349,7 @@ class CordaService {
 
         // todo: magic string
         val orgIds = newConsentRequestState.legalEntities
-        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent")
+        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent", true)
 
         if (endpoints.isEmpty()) {
             throw IllegalArgumentException("No available endpoints for given organization ids in registry")

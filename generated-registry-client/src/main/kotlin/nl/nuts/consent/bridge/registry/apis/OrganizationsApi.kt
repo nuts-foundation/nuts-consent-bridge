@@ -49,39 +49,6 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
     }
 
     /**
-    * get actors for given organization, the main question that is answered by this api: may the professional represent the organization?
-    * 
-    * @param id URL encoded Identifier 
-    * @param actorId URL encoded Actor identifier 
-    * @return kotlin.Array<kotlin.String>
-    */
-    @Suppress("UNCHECKED_CAST")
-    fun organizationActors(id: kotlin.String, actorId: kotlin.String) : kotlin.Array<kotlin.String> {
-        val localVariableBody: kotlin.Any? = null
-        val localVariableQuery: MultiValueMap = mapOf("actorId" to listOf("$actorId"))
-        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
-        val localVariableConfig = RequestConfig(
-            RequestMethod.GET,
-            "/api/organization/{id}/actors".replace("{"+"id"+"}", "$id"),
-            query = localVariableQuery,
-            headers = localVariableHeaders
-        )
-        val response = request<kotlin.Array<kotlin.String>>(
-            localVariableConfig,
-            localVariableBody
-        )
-
-        return when (response.responseType) {
-            ResponseType.Success -> (response as Success<*>).data as kotlin.Array<kotlin.String>
-            ResponseType.Informational -> TODO()
-            ResponseType.Redirection -> TODO()
-            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
-            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
-            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
-        }
-    }
-
-    /**
     * Get organization by id
     * 
     * @param id URL encoded identifier 
@@ -148,12 +115,13 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
     * Search for organizations
     * 
     * @param query Search string 
+    * @param exact Only return exact matches, for reverse lookup (optional, default to null)
     * @return kotlin.Array<Organization>
     */
     @Suppress("UNCHECKED_CAST")
-    fun searchOrganizations(query: kotlin.String) : kotlin.Array<Organization> {
+    fun searchOrganizations(query: kotlin.String, exact: kotlin.Boolean) : kotlin.Array<Organization> {
         val localVariableBody: kotlin.Any? = null
-        val localVariableQuery: MultiValueMap = mapOf("query" to listOf("$query"))
+        val localVariableQuery: MultiValueMap = mapOf("query" to listOf("$query"), "exact" to listOf("$exact"))
         val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
         val localVariableConfig = RequestConfig(
             RequestMethod.GET,
