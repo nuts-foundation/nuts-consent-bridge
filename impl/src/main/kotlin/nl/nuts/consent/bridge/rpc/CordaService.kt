@@ -21,6 +21,7 @@ package nl.nuts.consent.bridge.rpc
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.internal.readFully
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
@@ -355,8 +356,13 @@ class CordaService {
             throw IllegalArgumentException("No available endpoints for given organization ids in registry")
         }
 
+        // check consistency of nodeNames
         // urn:ietf:rfc:1779:X to X
-        val nodeNames = endpoints.map{ CordaX500Name.parse(it.identifier.split(":").last()) }.toSet()
+        val nodeNames = endpoints.map {
+            val name = CordaX500Name.parse(it.identifier.split(":").last())
+            proxy.wellKnownPartyFromX500Name(name) ?: throw IllegalStateException("Party with name $name does not exist in the network")
+            name
+        }.toSet()
 
         // start flow
         return proxy.startFlow(
