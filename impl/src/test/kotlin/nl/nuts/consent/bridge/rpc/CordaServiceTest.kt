@@ -78,6 +78,8 @@ class CordaServiceTest {
 
     val VALID_HEX = "afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"
 
+    val cordaName = CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local")
+
     lateinit var cordaService : CordaService
 
     @Before
@@ -273,19 +275,40 @@ class CordaServiceTest {
     }
 
     @Test
+    fun `createConsentBranch raises on unknown nodeName`() {
+        val newConsentBranch = newConsentBranch()
+        val id = UniqueIdentifier(externalId = "externalId")
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(null)
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+                criteria = any(),
+                paging = any(),
+                sorting = any(),
+                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, id))
+
+        assertFailsWith<IllegalStateException> {
+            cordaService.createConsentBranch(newConsentBranch)
+        }
+    }
+
+    @Test
     fun `createConsentBranch returns FlowHandle on valid ConsentBranch`() {
         val newConsentBranch = newConsentBranch()
         val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
-                setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
+                setOf(cordaName)
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
         `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
@@ -313,13 +336,14 @@ class CordaServiceTest {
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
-                setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
+                setOf(cordaName)
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
         `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
@@ -345,13 +369,14 @@ class CordaServiceTest {
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(DuplicateAttachmentException(SecureHash.allOnesHash.toString()))
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
-                setOf(CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local"))
+                setOf(cordaName)
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
         `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
