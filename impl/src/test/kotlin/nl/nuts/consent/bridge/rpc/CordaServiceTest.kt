@@ -46,6 +46,7 @@ import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.registry.infrastructure.ClientException
 import nl.nuts.consent.bridge.registry.models.Endpoint
 import nl.nuts.consent.flow.ConsentFlows
 import nl.nuts.consent.model.ConsentMetadata
@@ -277,7 +278,7 @@ class CordaServiceTest {
         val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentBranch.consentId.UUID),
@@ -311,7 +312,7 @@ class CordaServiceTest {
         `when`(coreTxMock.outputsOfType<ConsentState>()).thenReturn(listOf(ConsentState(uuid = id, version = 1)))
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentBranch.consentId.UUID),
@@ -343,7 +344,7 @@ class CordaServiceTest {
         val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(DuplicateAttachmentException(SecureHash.allOnesHash.toString()))
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentBranch.consentId.UUID),
@@ -407,7 +408,7 @@ class CordaServiceTest {
         val newConsentBranch = newConsentBranch()
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"))).thenReturn(emptyArray())
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(emptyArray())
         // simulate Genesis block
         `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
                 criteria = any(),
@@ -416,6 +417,24 @@ class CordaServiceTest {
                 contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
 
         assertFailsWith<IllegalArgumentException> {
+            cordaService.createConsentBranch(newConsentBranch)
+        }
+    }
+
+    @Test
+    fun `newConsentBranch raises on non exact match`() {
+        val newConsentBranch = newConsentBranch()
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenThrow(ClientException("organization with id X does not have an endpoint of type urn:nuts:endpoint:consen"))
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+                criteria = any(),
+                paging = any(),
+                sorting = any(),
+                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
+
+        assertFailsWith<ClientException> {
             cordaService.createConsentBranch(newConsentBranch)
         }
     }

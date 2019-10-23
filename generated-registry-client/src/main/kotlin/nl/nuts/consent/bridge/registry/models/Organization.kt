@@ -11,14 +11,12 @@
 */
 package nl.nuts.consent.bridge.registry.models
 
-import nl.nuts.consent.bridge.registry.models.Actor
 import nl.nuts.consent.bridge.registry.models.Endpoint
 
 /**
  * 
  * @param name the well-known name for the organization
  * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
- * @param actors 
  * @param endpoints 
  * @param publicKey PEM encoded public key
  */
@@ -27,7 +25,6 @@ data class Organization (
     val name: kotlin.String,
     /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
     val identifier: kotlin.String,
-    val actors: kotlin.Array<Actor>? = null,
     val endpoints: kotlin.Array<Endpoint>? = null,
     /* PEM encoded public key */
     val publicKey: kotlin.String? = null
