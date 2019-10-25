@@ -77,6 +77,7 @@ class CordaStateChangeListener<S : ContractState>(
             return
         }
 
+        // todo since last successfull received!!
         // time criteria
         val asOfDateTime = Instant.ofEpochSecond(0, 0)
         val recordedAfterExpression = QueryCriteria.TimeCondition(

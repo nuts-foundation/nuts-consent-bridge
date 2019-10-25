@@ -112,14 +112,49 @@ class CordaService {
     /**
      * Get a ConsentRequestState given its UUID
      *
-     * @param uuid uuid part of the Corda UniqueIdentifier
+     * @param UUID uuid part of the Corda UniqueIdentifier
      *
      * @return ConsentRequestState or NotFoundException when not found
      * @throws NotFoundException for not found
      * @throws IllegalStateException if more than 1 result is found or when an RPC connection could not be made
      */
     @Throws(NotFoundException::class)
-    fun consentBranchByUUID(uuid: String) : ConsentBranch {
+    fun consentBranchByUUID(UUID: String) : ConsentBranch {
+        val page : Vault.Page<ConsentBranch> = listConsentBranchByUUID(UUID)
+
+        if (page.states.isEmpty()) {
+            throw NotFoundException("No states found with linearId $UUID")
+        }
+
+        if (page.states.size > 1) {
+            throw IllegalStateException("Too many states found with linearId $UUID")
+        }
+
+        val stateAndRef = page.states.first()
+        return stateAndRef.state.data
+    }
+
+    /**
+     * Check if a ConsentBranch already exists
+     *
+     * @param UUID the UUID of the consent branch
+     *
+     */
+    fun consentBranchExists(UUID: String) : Boolean {
+        val page : Vault.Page<ConsentBranch> = listConsentBranchByUUID(UUID)
+
+        if (page.states.isEmpty()) {
+            return false
+        }
+
+        if (page.states.size > 1) {
+            throw IllegalStateException("Too many states found with linearId $UUID")
+        }
+
+        return false
+    }
+
+    private fun listConsentBranchByUUID(uuid: String) : Vault.Page<ConsentBranch> {
         // not autoclose, but reuse instance
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
@@ -128,23 +163,12 @@ class CordaService {
                 status = Vault.StateStatus.UNCONSUMED,
                 contractStateTypes = setOf(nl.nuts.consent.state.ConsentBranch::class.java))
 
-        val page : Vault.Page<ConsentBranch> = proxy.vaultQueryBy(
+        return proxy.vaultQueryBy(
                 criteria = criteria,
                 paging = PageSpecification(),
                 sorting = Sort(emptySet()),
                 contractStateType = ConsentBranch::class.java
         )
-
-        if (page.states.isEmpty()) {
-            throw NotFoundException("No states found with linearId $uuid")
-        }
-
-        if (page.states.size > 1) {
-            throw IllegalStateException("Too many states found with linearId $uuid")
-        }
-
-        val stateAndRef = page.states.first()
-        return stateAndRef.state.data
     }
 
     /**
@@ -326,7 +350,7 @@ class CordaService {
         val hashes = mutableSetOf<SecureHash>()
 
         // upload all attachments
-        newConsentRequestState.consentRecords?.forEach { cr ->
+        newConsentRequestState.consentRecords.forEach { cr ->
             // serialize consentRequestMetadata.metadata into 'metadata-[hash].json'
             val metadata = cr.metadata ?: throw IllegalArgumentException("consentRecord.metadata can not be empty")
             val cipherText = cr.cipherText ?: throw IllegalArgumentException("consentRecord.cipherText can not be empty")

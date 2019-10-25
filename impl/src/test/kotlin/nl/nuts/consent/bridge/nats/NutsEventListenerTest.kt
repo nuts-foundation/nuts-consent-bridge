@@ -20,20 +20,26 @@ package nl.nuts.consent.bridge.nats
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.verify
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
+import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.rpc.CordaService
+import nl.nuts.consent.contract.AttachmentSignature
+import nl.nuts.consent.state.ConsentBranch
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
+import org.springframework.test.web.client.ExpectedCount.once
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -94,6 +100,7 @@ class NutsEventListenerTest {
 
         //when
         `when`(cordaService.createConsentBranch(any())).thenReturn(t)
+        `when`(cordaService.consentBranchExists(any())).thenReturn(false)
 
         val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
@@ -102,6 +109,104 @@ class NutsEventListenerTest {
 
         // then
         verify(cordaService).createConsentBranch(any())
+    }
+
+    @Test
+    fun `requested state is ignored when branch exists`() {
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
+        //when
+        `when`(cordaService.consentBranchExists(any())).thenReturn(true)
+
+        val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        Thread.sleep(1000)
+
+        // then
+        verify(cordaService, never()).createConsentBranch(any())
+    }
+
+    @Test
+    fun `sign event is ignored when branch does not exist`() {
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
+        //when
+        `when`(cordaService.consentBranchByUUID(any())).thenThrow(NotFoundException(""))
+
+        val e = Serialization.objectMapper().writeValueAsBytes(acceptConsentRequestAsEvent())
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        Thread.sleep(1000)
+
+        // then
+        verify(cordaService, never()).signConsentBranch(any(), any())
+    }
+
+    @Test
+    fun `sign event is ignored when branch already has signature`() {
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
+        //when
+        `when`(cordaService.consentBranchByUUID(any())).thenReturn(
+                ConsentBranch(
+                        signatures = listOf(
+                                AttachmentSignature(
+                                        legalEntityURI = "custodian",
+                                        attachmentHash = SecureHash.zeroHash,
+                                        signature = mock()
+                                )
+                        ),
+                        uuid = mock(),
+                        attachments = emptySet(),
+                        branchPoint = mock(),
+                        legalEntities = emptySet()
+                )
+        )
+
+        val e = Serialization.objectMapper().writeValueAsBytes(acceptConsentRequestAsEvent())
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        Thread.sleep(1000)
+
+        // then
+        verify(cordaService, never()).signConsentBranch(any(), any())
+    }
+
+    @Test
+    fun `sign event is forwarded to corda`() {
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
+        //when
+        `when`(cordaService.consentBranchByUUID(any())).thenReturn(
+                ConsentBranch(
+                        signatures = emptyList(),
+                        uuid = mock(),
+                        attachments = emptySet(),
+                        branchPoint = mock(),
+                        legalEntities = emptySet()
+                )
+        )
+
+        val e = Serialization.objectMapper().writeValueAsBytes(acceptConsentRequestAsEvent())
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        Thread.sleep(1000)
+
+        // then
+        verify(cordaService).signConsentBranch(any(), any())
     }
 
     private fun event(name : EventName) : Event {

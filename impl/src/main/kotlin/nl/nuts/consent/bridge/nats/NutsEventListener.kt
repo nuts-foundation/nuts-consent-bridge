@@ -39,6 +39,7 @@ import javax.annotation.PreDestroy
 import io.nats.client.Nats
 import io.nats.client.Options
 import io.nats.streaming.*
+import nl.nuts.consent.bridge.api.NotFoundException
 import org.bouncycastle.crypto.tls.ConnectionEnd.server
 import java.time.Duration
 
@@ -120,6 +121,13 @@ class NutsEventListener : NutsEventBase() {
 
         val payload = Base64.getDecoder().decode(e.payload)
         val consentRequestState = Serialization.objectMapper().readValue(payload, FullConsentRequestState::class.java)
+
+        logger.debug("Checking existing ConsentBranch for UUID: ${consentRequestState.consentId.UUID}")
+        if (cordaService.consentBranchExists(consentRequestState.consentId.UUID)) {
+            logger.warn("ConsentBranch exists for UUID: ${consentRequestState.consentId.UUID}, possible duplicate event, ignoring")
+            return
+        }
+
         val handle = cordaService.createConsentBranch(consentRequestState)
 
         e.name = EventName.EventConsentRequestInFlight
@@ -165,15 +173,35 @@ class NutsEventListener : NutsEventBase() {
             e.transactionId = handle.id.uuid.toString()
             eventStateStore.put(handle.id.uuid, e)
 
-            // todo publish inFlight
+            // todo publish as inFlight
         }
     }
 
+    /**
+     * Duplicate signatures will cause the flow to fail. So if an earlier event is received, a possible "distributed ConsentRequest received" must be published.
+     *
+     */
     private fun processEventAttachmentSigned(e: Event) {
         logger.debug("Processing attachment signed event with data ${Serialization.objectMapper().writeValueAsString(e)}")
         val payload = Base64.getDecoder().decode(e.payload)
         val attachmentSignature = Serialization.objectMapper().readValue(payload, PartyAttachmentSignature::class.java)
         val cId = e.consentId ?: throw IllegalStateException("missing consentId in event: ${e.UUID}")
+
+        // find current ConsentBranch
+        try {
+            val consentBranch = cordaService.consentBranchByUUID(cId)
+            if (!consentBranch.signatures.none { it.legalEntityURI == attachmentSignature.legalEntity }) {
+                logger.warn("Signature for ${attachmentSignature.legalEntity} in ConsentBranch: $cId already present, possible duplicate event")
+                // todo should we republish?
+                return
+            }
+        } catch (e:NotFoundException) {
+            // given branch has probably be completed, errored or cancelled already
+            // this should have been published by the CordaStateChangeListener
+            logger.warn("ConsentBranch missing for UUID: $cId, possible duplicate event, ignoring")
+            return
+        }
+
         val handle = cordaService.signConsentBranch(cId, attachmentSignature)
 
         e.name = EventName.EventConsentRequestInFlight
