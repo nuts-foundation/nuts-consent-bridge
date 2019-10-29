@@ -182,9 +182,8 @@ class NutsEventListener : NutsEventBase() {
         }
     }
 
-    /**
+    /*
      * Duplicate signatures will cause the flow to fail. So if an earlier event is received, a possible "distributed ConsentRequest received" must be published.
-     *
      */
     private fun processEventAttachmentSigned(e: Event) {
         logger.debug("Processing attachment signed event with data ${Serialization.objectMapper().writeValueAsString(e)}")
