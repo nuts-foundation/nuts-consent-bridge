@@ -49,20 +49,16 @@ class NutsEventListenerTest {
     lateinit var connection: StreamingConnection
     lateinit var nutsEventListener: NutsEventListener
 
-    private var cordaService: CordaService = mock()
+    lateinit var cordaService: CordaService
 
     @Before
     fun setup() {
         cf = StreamingConnectionFactory("test-cluster", "cordaBridgeTest-${Integer.toHexString(Random().nextInt())}")
 
-        nutsEventListener = NutsEventListener()
-        nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties()
-        nutsEventListener.cordaService = cordaService
-        nutsEventListener.eventStateStore = EventStateStore()
-        nutsEventListener.nutsEventPublisher = mock()
+        cordaService = mock()
 
+        nutsEventListener = initNewListener()
         cf.natsUrl = nutsEventListener.consentBridgeNatsProperties.address
-        nutsEventListener.init()
         connection = cf.createConnection()
 
         // wait for connection to be established
@@ -80,6 +76,18 @@ class NutsEventListenerTest {
     fun tearDown() {
         connection.close()
         nutsEventListener.destroy()
+        nutsEventListener.destroyBase()
+    }
+
+    private fun initNewListener() : NutsEventListener {
+        val nutsEventListener = NutsEventListener()
+        nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties()
+        nutsEventListener.cordaService = cordaService
+        nutsEventListener.eventStateStore = EventStateStore()
+        nutsEventListener.nutsEventPublisher = mock()
+        nutsEventListener.init()
+
+        return nutsEventListener
     }
 
     @Test
@@ -104,6 +112,34 @@ class NutsEventListenerTest {
 
         val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        Thread.sleep(1000)
+
+        // then
+        verify(cordaService).createConsentBranch(any())
+    }
+
+    @Test
+    fun `events survive shutdowns`() {
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
+        //when
+        `when`(cordaService.createConsentBranch(any())).thenReturn(t)
+        `when`(cordaService.consentBranchExists(any())).thenReturn(false)
+        val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
+
+        // close down listener
+        nutsEventListener.destroy()
+        nutsEventListener.destroyBase()
+
+        // publish
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        // restart listener
+        nutsEventListener = initNewListener()
 
         Thread.sleep(1000)
 
@@ -199,6 +235,7 @@ class NutsEventListenerTest {
                         legalEntities = emptySet()
                 )
         )
+        `when`(cordaService.signConsentBranch(any(), any())).thenReturn(t)
 
         val e = Serialization.objectMapper().writeValueAsBytes(acceptConsentRequestAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)

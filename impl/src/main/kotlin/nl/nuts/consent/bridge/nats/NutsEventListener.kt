@@ -39,6 +39,7 @@ import javax.annotation.PreDestroy
 import io.nats.client.Nats
 import io.nats.client.Options
 import io.nats.streaming.*
+import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.api.NotFoundException
 import org.bouncycastle.crypto.tls.ConnectionEnd.server
 import java.time.Duration
@@ -77,7 +78,11 @@ class NutsEventListener : NutsEventBase() {
             } catch (e : Exception) {
                 logger.error(e.message, e)
             }
-        }, SubscriptionOptions.Builder().build())
+        }, SubscriptionOptions.Builder()
+                .startWithLastReceived()
+                .durableName("${Constants.NAME}Durable")
+                .build()
+        )
 
         logger.info("Nats subscrtiption with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
     }
@@ -87,9 +92,9 @@ class NutsEventListener : NutsEventBase() {
      */
     @PreDestroy
     fun destroy() {
-        logger.debug("Unsubscribing from Nats")
+        logger.debug("Closing subscription at Nats (queue remains)")
 
-        subscription?.unsubscribe()
+        subscription?.close()
     }
 
     private fun processEvent(e : Event) {
@@ -177,9 +182,8 @@ class NutsEventListener : NutsEventBase() {
         }
     }
 
-    /**
+    /*
      * Duplicate signatures will cause the flow to fail. So if an earlier event is received, a possible "distributed ConsentRequest received" must be published.
-     *
      */
     private fun processEventAttachmentSigned(e: Event) {
         logger.debug("Processing attachment signed event with data ${Serialization.objectMapper().writeValueAsString(e)}")

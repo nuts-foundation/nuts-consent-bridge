@@ -23,6 +23,13 @@ import org.springframework.context.annotation.ComponentScan
 import org.springframework.boot.autoconfigure.SpringBootApplication
 
 /**
+ * commonly used constants in the bridge
+ */
+object Constants {
+    val NAME = "cordaBridge"
+}
+
+/**
  * Main application
  */
 @SpringBootApplication

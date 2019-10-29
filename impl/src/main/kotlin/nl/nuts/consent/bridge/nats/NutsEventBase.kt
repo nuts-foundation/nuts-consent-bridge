@@ -25,10 +25,10 @@ import io.nats.client.Options
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import nl.nuts.consent.bridge.Constants
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import java.util.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
@@ -55,7 +55,7 @@ abstract class NutsEventBase {
     fun init() {
         logger.debug("Connecting listener to Nats on ${consentBridgeNatsProperties.address} with ClusterID: ${consentBridgeNatsProperties.cluster}")
 
-        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "cordaBridgePublisher-${Integer.toHexString(Random().nextInt())}")
+        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "${Constants.NAME}")
 
         val listener = ConnectionListener { conn, type ->
             when(type) {
