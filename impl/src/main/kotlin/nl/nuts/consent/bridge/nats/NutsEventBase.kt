@@ -53,9 +53,9 @@ abstract class NutsEventBase {
      */
     @PostConstruct
     fun init() {
-        logger.debug("Connecting listener to Nats on ${consentBridgeNatsProperties.address} with ClusterID: ${consentBridgeNatsProperties.cluster}")
+        logger.debug("Connecting ${name()} to Nats on ${consentBridgeNatsProperties.address} with ClusterID: ${consentBridgeNatsProperties.cluster}")
 
-        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "${Constants.NAME}")
+        cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "${Constants.NAME}-${name()}")
 
         val listener = ConnectionListener { conn, type ->
             when(type) {
@@ -64,9 +64,9 @@ abstract class NutsEventBase {
                     connection = cf.createConnection() // this reuses the just created Nats connection but as StreamingConnection
                     initListener()
 
-                    logger.info("EventListener connected to Nats server")
+                    logger.info("${name()} connected to Nats server")
                 }
-                ConnectionListener.Events.CLOSED -> logger.info("Nats connection to EventListener closed")
+                ConnectionListener.Events.CLOSED -> logger.info("Nats connection to closed")
                 ConnectionListener.Events.DISCONNECTED -> logger.trace("Nats disconnected")
                 ConnectionListener.Events.RECONNECTED -> logger.debug("Nats reconnected")
                 ConnectionListener.Events.RESUBSCRIBED -> logger.trace("Nats subscription resubscribed")
@@ -93,10 +93,12 @@ abstract class NutsEventBase {
      */
     @PreDestroy
     fun destroyBase() {
-        logger.debug("Disconnecting listener from Nats")
+        logger.debug("Disconnecting ${name()} from Nats")
 
         connection?.close()
     }
 
     protected abstract fun initListener()
+
+    protected abstract fun name() : String
 }

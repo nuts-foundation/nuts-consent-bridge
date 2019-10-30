@@ -87,6 +87,10 @@ class NutsEventListener : NutsEventBase() {
         logger.info("Nats subscrtiption with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
     }
 
+    override fun name() : String {
+        return "listener"
+    }
+
     /**
      * stop subscription and close Nats connection
      */

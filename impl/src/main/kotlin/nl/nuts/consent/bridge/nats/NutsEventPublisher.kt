@@ -40,6 +40,10 @@ class NutsEventPublisher : NutsEventBase() {
         }
     }
 
+    override fun name() : String {
+        return "publisher"
+    }
+
     override fun initListener() {
         // noop
     }
