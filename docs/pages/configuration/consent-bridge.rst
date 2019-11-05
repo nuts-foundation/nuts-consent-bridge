@@ -10,9 +10,9 @@ The *Nuts Consent Bridge* application is a Spring boot application. Therefore al
 - Using a runtime JVM parameter specifying the spring configuration file: ``java -jar myproject.jar --spring.config.location=/tmp/overrides.properties``
 - Using environment variables, replacing all camelCasing and dots with underscores. So ``nuts.consent.zmq.publisherAddress`` becomes ``NUTS_CONSENT_ZMQ_PUBLISHER_ADDRESS``
 
-=====================================   ====================    ================================================================
+=====================================   =====================   ================================================================
 Property                                Default                 Description
-=====================================   ====================    ================================================================
+=====================================   =====================   ================================================================
 nuts.consent.nats.address               nats://localhost:4222   The Nats address for events from and to *Nuts Service Space*
 nuts.consent.nats.cluster               test-cluster            The Nats clusterID
 nuts.consent.rpc.host                   localhost               The host running the Consent Cordapp.
