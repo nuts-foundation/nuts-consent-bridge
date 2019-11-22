@@ -18,10 +18,8 @@
 
 package nl.nuts.consent.bridge.rpc
 
-import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.*
 import net.corda.client.rpc.CordaRPCClientConfiguration
-import net.corda.client.rpc.CordaRPCConnection
-import net.corda.client.rpc.RPCException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -127,7 +125,15 @@ class CordaRPClientWrapper : AutoCloseable {
                             override val connectionMaxRetryInterval = retryInterval
                         }
                 )
-                val unvalidatedConnection = client.start(consentBridgeRPCProperties.user, consentBridgeRPCProperties.password)
+                val unvalidatedConnection = client.start(
+                        username = consentBridgeRPCProperties.user,
+                        password = consentBridgeRPCProperties.password,
+                        gracefulReconnect = GracefulReconnect(
+                                maxAttempts = -1,
+                                onDisconnect = { logger.error("disconnected from RPC") },
+                                onReconnect = { logger.info("RPC connection re-established") }
+                        )
+                )
 
                 // Check connection is truly operational before returning it.
                 val nodeInfo = unvalidatedConnection.proxy.nodeInfo()
