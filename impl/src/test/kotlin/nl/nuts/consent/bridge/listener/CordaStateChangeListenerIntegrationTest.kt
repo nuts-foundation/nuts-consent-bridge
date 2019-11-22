@@ -70,10 +70,10 @@ class CordaStateChangeListenerIntegrationTest {
                         extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
                         portAllocation = PortAllocation.Incremental(11000)
                 )) {
-                    val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateChangeListenerConnectionIntegrationTest.rpcUser))
+                    val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateMachineListenerIntegrationTest.rpcUser))
                     node = nodeF.get()
                     val address = node!!.rpcAddress
-                    validProperties = ConsentBridgeRPCProperties(address.host, address.port, CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, 1)
+                    validProperties = ConsentBridgeRPCProperties(address.host, address.port, CordaStateMachineListenerIntegrationTest.USER, CordaStateMachineListenerIntegrationTest.PASSWORD, 1)
                     waitForTests.await()
                     waitForDriver.countDown()
                 }
@@ -96,7 +96,7 @@ class CordaStateChangeListenerIntegrationTest {
     @Before
     fun setup() {
         val client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
-        connection = client.start(CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, null, null)
+        connection = client.start(CordaStateMachineListenerIntegrationTest.USER, CordaStateMachineListenerIntegrationTest.PASSWORD, null, null)
     }
 
     @After

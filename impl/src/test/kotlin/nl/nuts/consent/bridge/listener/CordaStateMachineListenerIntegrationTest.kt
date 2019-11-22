@@ -21,36 +21,38 @@ package nl.nuts.consent.bridge.listener
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.contains
 import com.natpryce.hamkrest.equalTo
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.verify
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.messaging.startFlow
+import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.PortAllocation
 import net.corda.testing.driver.driver
+import net.corda.testing.node.User
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.Serialization
-import nl.nuts.consent.bridge.nats.*
+import nl.nuts.consent.bridge.nats.Event
+import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.nats.EventStateStore
+import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
-import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.junit.*
-import org.mockito.Mockito
-import org.mockito.internal.matchers.Equals
-import org.mockito.internal.matchers.NotNull
-import org.mockito.internal.matchers.NotNull.NOT_NULL
-import java.lang.Exception
 import java.util.*
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.test.assertNotNull
 
 class CordaStateMachineListenerIntegrationTest {
     companion object {
+        const val USER = "user1"
+        const val PASSWORD = "test"
+        val rpcUser = User(USER, PASSWORD, permissions = setOf(Permissions.all()))
+
         fun blockUntilSet(waitTime: Long = 10000L, check: () -> Any?) : Any? {
             val begin = System.currentTimeMillis()
             var x: Any? = null
@@ -88,10 +90,10 @@ class CordaStateMachineListenerIntegrationTest {
                 driver(DriverParameters(
                         extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
                         portAllocation = PortAllocation.Incremental(12000))) {
-                    val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateChangeListenerConnectionIntegrationTest.rpcUser))
+                    val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))
                     node = nodeF.get()
                     val address = node!!.rpcAddress
-                    validProperties = ConsentBridgeRPCProperties(address.host, address.port, CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, 1)
+                    validProperties = ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)
                     waitForTests.await()
                     waitForDriver.countDown()
                 }
@@ -115,7 +117,7 @@ class CordaStateMachineListenerIntegrationTest {
     @Before
     fun setup() {
         val client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
-        connection = client.start(CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, null, null)
+        connection = client.start(USER, PASSWORD, null, null)
     }
 
     @After
