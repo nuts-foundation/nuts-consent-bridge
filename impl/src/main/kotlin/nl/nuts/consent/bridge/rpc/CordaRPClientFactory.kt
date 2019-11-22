@@ -80,7 +80,7 @@ class CordaRPClientWrapper : AutoCloseable {
     override fun close() {
         logger.info("Closing RPC connection")
 
-        connection?.forceClose()
+        connection?.notifyServerAndClose()
         connection = null
     }
 
