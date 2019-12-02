@@ -18,20 +18,35 @@
 
 package nl.nuts.consent.bridge.listener
 
+import com.natpryce.hamkrest.assertion.assertThat
+import com.natpryce.hamkrest.contains
+import com.natpryce.hamkrest.equalTo
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.mock
+import com.nhaarman.mockito_kotlin.verify
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.internal.concurrent.map
 import net.corda.core.messaging.startFlow
+import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.*
+import net.corda.testing.node.User
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
+import nl.nuts.consent.bridge.Serialization
+import nl.nuts.consent.bridge.nats.Event
+import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.nats.EventStateStore
+import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
+import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
 import org.junit.*
+import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -43,6 +58,10 @@ import kotlin.test.assertNotNull
  */
 class CordaStateChangeListenerIntegrationTest {
     companion object {
+        const val USER = "user1"
+        const val PASSWORD = "test"
+        val rpcUser = User(USER, PASSWORD, permissions = setOf(Permissions.all()))
+
         fun blockUntilSet(waitTime: Long = 10000L, check: () -> Any?) : Any? {
             val begin = System.currentTimeMillis()
             var x: Any? = null
@@ -51,6 +70,17 @@ class CordaStateChangeListenerIntegrationTest {
                 if (System.currentTimeMillis() - begin > waitTime) break
                 x = check() ?: continue
                 break
+            }
+            return x
+        }
+
+        fun blockUntilNull(waitTime: Long = 10000L, check: () -> Any?) : Any? {
+            val begin = System.currentTimeMillis()
+            var x: Any? = null
+            while(true) {
+                Thread.sleep(10)
+                if (System.currentTimeMillis() - begin > waitTime) break
+                x = check() ?: break
             }
             return x
         }
@@ -66,18 +96,20 @@ class CordaStateChangeListenerIntegrationTest {
         @JvmStatic fun runNodes() {
             Thread {
                 // blocking call
-                driver(DriverParameters(extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
-                        portAllocation = PortAllocation.Incremental(11000))) {
-                    val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateChangeListenerConnectionIntegrationTest.rpcUser))
+                driver(DriverParameters(
+                        extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
+                        startNodesInProcess = true
+                )) {
+                    val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))
                     node = nodeF.get()
                     val address = node!!.rpcAddress
-                    validProperties = ConsentBridgeRPCProperties(address.host, address.port, CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, 1)
+                    validProperties = ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)
                     waitForTests.await()
                     waitForDriver.countDown()
                 }
             }.start()
 
-            blockUntilSet(90000L) {
+            blockUntilSet(120000L) {
                 node
             }
         }
@@ -90,11 +122,13 @@ class CordaStateChangeListenerIntegrationTest {
     }
 
     private var listener : CordaStateChangeListener<DummyState>? = null
+    private var smListener : CordaStateMachineListener? = null
+    private val eventStateStore = EventStateStore()
 
     @Before
     fun setup() {
         val client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
-        connection = client.start(CordaStateChangeListenerConnectionIntegrationTest.USER, CordaStateChangeListenerConnectionIntegrationTest.PASSWORD, null, null)
+        connection = client.start(USER, PASSWORD, null, null)
     }
 
     @After
@@ -164,5 +198,40 @@ class CordaStateChangeListenerIntegrationTest {
             consumedState.get()
         }
         assertNotNull(consumedState.get())
+    }
+
+    @Test
+    fun `event is published on state machine error`() {
+        val nutsEventPublisher : NutsEventPublisher = mock()
+        val uuid: UUID = UUID.randomUUID()
+        val eventIn = event(EventName.EventConsentRequestInFlight, uuid)
+        val eventOut = event(EventName.EventConsentRequestFlowErrored, uuid)
+        eventOut.error = "error"
+        smListener = CordaStateMachineListener(CordaRPClientWrapper(validProperties!!), nutsEventPublisher, eventStateStore)
+        smListener!!.start()
+
+        val handle = connection!!.proxy.startFlow(DummyFlow::ErrorFlow)
+        eventStateStore.put(handle.id.uuid, eventIn)
+
+        // wait for it
+        blockUntilNull {
+            eventStateStore.get(handle.id.uuid)
+        }
+
+        // verify updated event
+        verify(nutsEventPublisher).publish(eq("consentRequestErrored"), com.nhaarman.mockito_kotlin.check {
+            assertThat(Serialization.objectMapper().readValue(it, Event::class.java).error!!, contains(Regex.fromLiteral("error")))
+            assertThat(Serialization.objectMapper().readValue(it, Event::class.java).name, equalTo(EventName.EventConsentRequestInFlight))
+        })
+    }
+
+    private fun event(name: EventName, uuid: UUID) : Event {
+        return Event(
+                UUID = uuid.toString(),
+                name = name,
+                retryCount = 0,
+                payload = "",
+                externalId = "externalId"
+        )
     }
 }
