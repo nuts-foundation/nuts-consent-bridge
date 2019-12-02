@@ -68,7 +68,7 @@ class CordaStateChangeListenerIntegrationTest {
                 // blocking call
                 driver(DriverParameters(
                         extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
-                        portAllocation = PortAllocation.Incremental(11000)
+                        startNodesInProcess = false
                 )) {
                     val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(CordaStateMachineListenerIntegrationTest.rpcUser))
                     node = nodeF.get()
@@ -79,7 +79,7 @@ class CordaStateChangeListenerIntegrationTest {
                 }
             }.start()
 
-            blockUntilSet(90000L) {
+            blockUntilSet(120000L) {
                 node
             }
         }
