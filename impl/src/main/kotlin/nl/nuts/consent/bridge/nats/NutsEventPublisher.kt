@@ -40,6 +40,10 @@ class NutsEventPublisher : NutsEventBase() {
         }
     }
 
+    override fun destroy() {
+        // nop
+    }
+
     override fun name() : String {
         return "publisher"
     }

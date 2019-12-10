@@ -84,7 +84,7 @@ class NutsEventListener : NutsEventBase() {
                 .build()
         )
 
-        logger.info("Nats subscrtiption with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
+        logger.info("Nats subscription with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
     }
 
     override fun name() : String {
@@ -92,10 +92,10 @@ class NutsEventListener : NutsEventBase() {
     }
 
     /**
-     * stop subscription and close Nats connection
+     * stop subscription
      */
     @PreDestroy
-    fun destroy() {
+    override fun destroy() {
         logger.debug("Closing subscription at Nats (queue remains)")
 
         subscription?.close()

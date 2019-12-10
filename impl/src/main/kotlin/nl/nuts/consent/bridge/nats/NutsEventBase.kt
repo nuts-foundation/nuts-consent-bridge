@@ -60,15 +60,18 @@ abstract class NutsEventBase {
         val listener = ConnectionListener { conn, type ->
             when(type) {
                 ConnectionListener.Events.CONNECTED -> {
-                    cf.natsConnection = conn
-                    connection = cf.createConnection() // this reuses the just created Nats connection but as StreamingConnection
-                    initListener()
-
+                    saveConnection(conn)
                     logger.info("${name()} connected to Nats server")
                 }
                 ConnectionListener.Events.CLOSED -> logger.info("Nats connection to closed")
-                ConnectionListener.Events.DISCONNECTED -> logger.trace("Nats disconnected")
-                ConnectionListener.Events.RECONNECTED -> logger.debug("Nats reconnected")
+                ConnectionListener.Events.DISCONNECTED -> {
+                    destroy()
+                    logger.trace("Nats disconnected")
+                }
+                ConnectionListener.Events.RECONNECTED -> {
+                    saveConnection(conn)
+                    logger.debug("Nats reconnected")
+                }
                 ConnectionListener.Events.RESUBSCRIBED -> logger.trace("Nats subscription resubscribed")
             }
         }
@@ -79,6 +82,14 @@ abstract class NutsEventBase {
                 .connectionListener(listener)
                 .build()
         Nats.connectAsynchronously(o, true)
+    }
+
+    private fun saveConnection(conn : Connection) {
+        if (!connected()) {
+            cf.natsConnection = conn
+            connection = cf.createConnection()
+        }
+        initListener()
     }
 
     /**
@@ -97,6 +108,8 @@ abstract class NutsEventBase {
 
         connection?.close()
     }
+
+    abstract fun destroy()
 
     protected abstract fun initListener()
 
