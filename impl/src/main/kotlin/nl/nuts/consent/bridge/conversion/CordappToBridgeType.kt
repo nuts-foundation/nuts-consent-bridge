@@ -48,8 +48,8 @@ class CordappToBridgeType {
          */
         fun convert(source: Period): nl.nuts.consent.bridge.model.Period {
             return nl.nuts.consent.bridge.model.Period(
-                    validFrom = source.validFrom.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime(),
-                    validTo = source.validTo?.atStartOfDay(ZoneId.systemDefault())?.toOffsetDateTime()
+                    validFrom = source.validFrom,
+                    validTo = source.validTo
             )
         }
 

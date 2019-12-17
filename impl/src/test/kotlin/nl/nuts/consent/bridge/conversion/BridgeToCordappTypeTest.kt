@@ -54,15 +54,15 @@ class BridgeToCordappTypeTest {
     @Test
     fun `Period is converted correctly`() {
         val cPeriod = BridgeToCordappType.convert(testPeriod)
-        assertEquals(LocalDate.now(), cPeriod.validFrom)
-        assertEquals(LocalDate.now(), cPeriod.validTo)
+        assertEquals(testPeriod.validFrom, cPeriod.validFrom)
+        assertEquals(testPeriod.validTo, cPeriod.validTo)
     }
 
     @Test
     fun `Period without validTo is converted correctly`() {
         val testPeriod = Period(validFrom = OffsetDateTime.now())
         val cPeriod = BridgeToCordappType.convert(testPeriod)
-        assertEquals(LocalDate.now(), cPeriod.validFrom)
+        assertEquals(testPeriod.validFrom, cPeriod.validFrom)
         assertNull(cPeriod.validTo)
     }
 
@@ -91,7 +91,7 @@ class BridgeToCordappTypeTest {
     @Test
     fun `Metadata is converted correctly`() {
         val m = BridgeToCordappType.convert(testMetadata)
-        assertEquals(LocalDate.now(), m.period.validFrom)
+        assertEquals(testPeriod.validFrom, m.period.validFrom)
         assertEquals("medical", m.domain.first().name)
         assertEquals(testSymmetricKey.iv, m.secureKey.iv)
         assertEquals(testAsymmetricKey.alg, m.organisationSecureKeys.first().alg)

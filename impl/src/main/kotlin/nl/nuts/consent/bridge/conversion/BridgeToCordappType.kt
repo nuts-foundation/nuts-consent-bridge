@@ -91,11 +91,7 @@ class BridgeToCordappType {
          * @return consent-cordapp type
          */
         fun convert(source: nl.nuts.consent.bridge.model.Period) : Period{
-            return if (source.validTo == null) {
-                Period(validFrom = source.validFrom.toLocalDate())
-            } else {
-                Period(validFrom = source.validFrom.toLocalDate(), validTo = source.validTo!!.toLocalDate())
-            }
+            return Period(validFrom = source.validFrom, validTo = source.validTo)
         }
 
         /**

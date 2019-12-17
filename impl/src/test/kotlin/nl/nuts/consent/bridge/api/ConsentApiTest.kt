@@ -37,6 +37,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import kotlin.test.assertEquals
 import kotlin.test.fail
 
@@ -117,7 +118,7 @@ class ConsentApiTest {
                 ),
                 organisationSecureKeys = emptyList(),
                 period = Period(
-                        validFrom = LocalDate.now()
+                        validFrom = OffsetDateTime.now()
                 ),
                 consentRecordHash = "hash"
         )

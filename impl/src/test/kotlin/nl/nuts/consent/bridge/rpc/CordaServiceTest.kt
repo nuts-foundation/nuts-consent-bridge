@@ -649,7 +649,7 @@ class CordaServiceTest {
                 ),
                 organisationSecureKeys = emptyList(),
                 period = Period(
-                        validFrom = LocalDate.now()
+                        validFrom = OffsetDateTime.now()
                 ),
                 consentRecordHash = "hash"
         )
