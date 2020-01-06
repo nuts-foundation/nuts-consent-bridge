@@ -4,6 +4,6 @@ COPY / .
 RUN ./gradlew bootJar
 
 FROM adoptopenjdk/openjdk11:alpine-slim
-COPY --from=builder impl/build/libs/consent-bridge-0.11.0.jar /opt/nuts/consent-bridge-0.11.0.jar
+COPY --from=builder impl/build/libs/consent-bridge-*.jar /opt/nuts/consent-bridge.jar
 EXPOSE 8080 5563
-CMD ["java", "-jar", "/opt/nuts/consent-bridge-0.11.0.jar", "--spring.config.location=file:/opt/nuts/application.properties"]
+CMD ["java", "-jar", "/opt/nuts/consent-bridge.jar", "--spring.config.location=file:/opt/nuts/application.properties"]
