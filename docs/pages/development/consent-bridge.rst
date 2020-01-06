@@ -57,7 +57,7 @@ To build locally
 
 .. code-block:: shell
 
-    docker build . -f docker/Dockerfile-dev
+    docker build . -f docker/Dockerfile-dev -t nutsfoundation/nuts-consent-bridge:latest-dev
 
 The ``nutsfoundation/nuts-consent-bridge:latest-dev`` docker image can be used to connect to one of the 2 consent nodes locally. Checkout :ref:`nuts-network-local-development-docker` for setting up a complete environment with ``docker-compose``.
 

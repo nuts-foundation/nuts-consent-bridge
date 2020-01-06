@@ -32,3 +32,6 @@ out
 
 # Ignore RST buiild dir
 _build
+
+# Java profiling heap dumps
+*.hprof
