@@ -30,6 +30,10 @@ import org.springframework.web.bind.annotation.RequestMethod
 @Controller
 @RequestMapping("\${api.base-path:}")
 class StatusApi {
+    /**
+     * REST service that always returns a 200 OK with an empty body.
+     * Can be used for checking if the bridge is up and running.
+     */
     @RequestMapping(
             value = ["/status"],
             method = [RequestMethod.GET])
