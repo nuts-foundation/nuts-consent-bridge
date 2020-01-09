@@ -38,8 +38,9 @@ class StatusApiTest {
 
     @Test
     fun `status returns 200 OK`() {
-        val response: ResponseEntity<Unit> = statusApi.getStatus()
+        val response: ResponseEntity<String> = statusApi.getStatus()
 
         assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals("OK", response.body)
     }
 }
