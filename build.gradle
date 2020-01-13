@@ -100,6 +100,8 @@ allprojects {
         testImplementation 'org.jetbrains.kotlin:kotlin-test'
         testImplementation 'org.jetbrains.kotlin:kotlin-test-junit'
         testImplementation 'org.liquibase:liquibase-core:3.8.2'
+
+        annotationProcessor "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}"
     }
 
     jacoco {
