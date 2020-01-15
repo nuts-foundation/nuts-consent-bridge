@@ -49,6 +49,9 @@
         <Logger name="org.springframework" level="info" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
+        <Logger name="org.eclipse.jetty" level="info" additivity="false">
+            <AppenderRef ref="Console-Appender"/>
+        </Logger>
         <Logger name="io.netty" level="warn" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
