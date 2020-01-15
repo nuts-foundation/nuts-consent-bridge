@@ -46,10 +46,7 @@
         <Logger name="com.zaxxer.hikari" level="error" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
-        <Logger name="org.eclipse.jetty" level="error" additivity="false">
-            <AppenderRef ref="Console-Appender"/>
-        </Logger>
-        <Logger name="org.springframework" level="warn" additivity="false">
+        <Logger name="org.springframework" level="info" additivity="false">
             <AppenderRef ref="Console-Appender"/>
         </Logger>
         <Logger name="io.netty" level="warn" additivity="false">
