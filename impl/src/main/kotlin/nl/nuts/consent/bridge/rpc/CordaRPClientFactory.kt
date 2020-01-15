@@ -182,7 +182,7 @@ class CordaRPClientWrapper : AutoCloseable {
                 logger.info("Connection successfully established with: $nodeAddress")
             } else {
                 retryCount--
-                if (retryCount <= 0) {
+                if (retryCount == 0) {
                     shutdown = true
                 }
             }
