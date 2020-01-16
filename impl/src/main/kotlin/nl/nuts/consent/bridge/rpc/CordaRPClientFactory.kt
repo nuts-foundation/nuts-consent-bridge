@@ -68,7 +68,7 @@ class CordaRPClientFactory : AbstractFactoryBean<CordaRPClientWrapper>(), Health
             wrapper.term()
 
             return Health.up().build()
-        } catch (e: Exception) {
+        } catch (e: ActiveMQSecurityException) {
             return Health.down(e).build()
         }
     }
