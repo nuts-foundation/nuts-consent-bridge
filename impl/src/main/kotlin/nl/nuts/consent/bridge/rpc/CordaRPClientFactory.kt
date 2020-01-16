@@ -171,11 +171,11 @@ class CordaRPClientWrapper : AutoCloseable {
                     throw secEx
                 } catch (ex: RPCException) {
                     // Deliberately not logging full stack trace as it will be full of internal stacktraces.
-                    logger.error("Exception upon establishing connection: " + ex.message)
+                    logger.error("Exception upon establishing connection: {}", ex.message)
                     null
                 }
             } catch (e : IOException) {
-                logger.error("Exception upon establishing connection: " + e.message)
+                logger.error("Exception upon establishing connection: {}", e.message)
             }
 
             if(connection != null) {
