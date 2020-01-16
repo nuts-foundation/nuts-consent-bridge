@@ -63,13 +63,9 @@ class StatusApi {
             method = [RequestMethod.GET])
     fun diagnostics() : ResponseEntity<String> {
         val h = healthAggregator.aggregate(healthIndicatorRegistry.all.map { it.key to it.value.health() }.toMap())
-        val buf = StringBuilder()
 
-        buf.appendln("General status=${h.status.code}")
-        h.details.forEach {
-            buf.appendln(it.toString())
-        }
+        var checks = h.details.map(Map.Entry<String, Any>::toString).toSet().joinToString("\n")
 
-        return ResponseEntity(buf.toString(), HttpStatus.OK)
+        return ResponseEntity("General status=${h.status.code}\n${checks}", HttpStatus.OK)
     }
 }
