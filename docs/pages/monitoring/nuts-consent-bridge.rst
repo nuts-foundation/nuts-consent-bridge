@@ -17,8 +17,26 @@ The main goal of the service is to give a YES/NO answer for if the service is ru
 
 It'll return an "OK" response with a 200 status code.
 
-Diagnostics
-***********
+Basic diagnostics
+*****************
+
+.. code-block:: text
+
+    GET /status/diagnostics
+
+It'll return some text displaying the current status of the various services
+
+.. code-block:: text
+
+    General status: DOWN
+    nutsEventListener=UP {}
+    nutsEventPublisher=UP {}
+    &cordaRPCClientFactory=DOWN {}
+
+Extensive diagnostics
+*********************
+
+The bridge uses `Spring Actuator <https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-features.html>`_ for health monitoring. A basic overview can be viewed at:
 
 .. code-block:: text
 
