@@ -30,8 +30,7 @@ buildscript {
         kotlinVersion = '1.2.71'
         cordaVersion = '4.3'
 //        cordaGradlePluginsVersion = '5.0.4'
-        springBootVersion = '2.1.6.RELEASE'
-        springBootGradlePluginVersion = '2.1.3.RELEASE'
+        springBootVersion = '2.1.11.RELEASE'
         openApiPluginVersion = '3.3.4'
         nutsVersion = project.version
     }
@@ -41,7 +40,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
 //        classpath "gradle.plugin.net.corda.plugins:cordapp:$cordaGradlePluginsVersion"
 //        classpath "net.corda.plugins:cordformation:$cordaGradlePluginsVersion"
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootGradlePluginVersion"
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
         classpath "org.openapitools:openapi-generator-gradle-plugin:$openApiPluginVersion"
     }
 }

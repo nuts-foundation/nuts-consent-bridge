@@ -29,13 +29,15 @@ import nl.nuts.consent.bridge.Constants
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.actuate.health.Health
+import org.springframework.boot.actuate.health.HealthIndicator
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
 /**
  * Base class for NutsEventListener/Publisher, handles all connection logic
  */
-abstract class NutsEventBase {
+abstract class NutsEventBase : HealthIndicator {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Autowired
@@ -97,6 +99,17 @@ abstract class NutsEventBase {
      */
     fun connected() : Boolean {
         return connection?.natsConnection?.status == Connection.Status.CONNECTED
+    }
+
+    override fun health(): Health {
+        if (connected()) {
+            return Health.up().build()
+        }
+
+        return Health.down()
+                .withDetail("connection.status", connection?.natsConnection?.status?.name ?: "unknown")
+                .withDetail("connection.error", connection?.natsConnection?.lastError ?: "no error")
+                .build()
     }
 
     /**

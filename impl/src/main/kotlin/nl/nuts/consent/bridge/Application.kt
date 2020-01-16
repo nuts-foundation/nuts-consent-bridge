@@ -33,7 +33,6 @@ object Constants {
  * Main application
  */
 @SpringBootApplication
-@ComponentScan(basePackages = ["nl.nuts.consent.bridge", "nl.nuts.consent.bridge.api", "nl.nuts.consent.bridge.model", "nl.nuts.consent.bridge.rpc"])
 class Application
 
 /**

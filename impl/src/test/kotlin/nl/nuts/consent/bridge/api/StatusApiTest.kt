@@ -19,17 +19,18 @@
 package nl.nuts.consent.bridge.api
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.client.RestClientTest
+import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 
 @ActiveProfiles("api")
-@RestClientTest(StatusApi::class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @RunWith(SpringJUnit4ClassRunner::class)
 class StatusApiTest {
 
@@ -42,5 +43,18 @@ class StatusApiTest {
 
         assertEquals(HttpStatus.OK, response.statusCode)
         assertEquals("OK", response.body)
+    }
+
+    @Test
+    fun `diagnostics returns 200 with info`() {
+        val response: ResponseEntity<String> = statusApi.diagnostics()
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        // TODO: CI has some kind of timing issue/race condition causing the test to be run before the listeners connect
+        assertTrue(response.body.contains("nutsEventPublisher="))
+        assertTrue(response.body.contains("nutsEventListener="))
+        // since no Corda node is running
+        assertTrue(response.body.contains("General status=DOWN"))
+        assertTrue(response.body.contains("cordaRPCClientFactory=DOWN"))
     }
 }
