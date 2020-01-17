@@ -29,6 +29,8 @@ import nl.nuts.consent.model.Period
 import nl.nuts.consent.state.ConsentBranch
 import org.bouncycastle.util.io.pem.PemObject
 import org.bouncycastle.util.io.pem.PemWriter
+import org.jose4j.jwk.JsonWebKey
+import org.jose4j.jwk.PublicJsonWebKey
 import java.io.StringWriter
 import java.time.ZoneId
 import java.util.*
@@ -116,14 +118,10 @@ class CordappToBridgeType {
          * @return bridge model
          */
         fun convert(source: DigitalSignature.WithKey): SignatureWithKey {
-            val stringWriter = StringWriter()
-            val writer = PemWriter(stringWriter)
-            writer.writeObject(PemObject("PUBLIC KEY", source.by.encoded))
-            writer.close()
-            stringWriter.close()
+            val jwk = PublicJsonWebKey.Factory.newPublicJwk(source.by)
 
             return SignatureWithKey(
-                    publicKey = stringWriter.toString(),
+                    publicKey = jwk.toParams(JsonWebKey.OutputControlLevel.PUBLIC_ONLY),
                     data = Base64.getEncoder().encodeToString(source.bytes)
             )
         }

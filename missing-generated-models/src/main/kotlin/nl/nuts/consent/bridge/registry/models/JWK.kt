@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-rootProject.name = 'nuts-consent-bridge'
-include 'generated'
-include 'impl'
-include 'missing-generated-models'
-include 'generated-registry-client'
-include 'generated-event-store-client'
+package nl.nuts.consent.bridge.registry.models
+
+/**
+ * The open api generator needs a JWK class, but the generator is broken...
+ */
+class JWK : HashMap<String, Any>()

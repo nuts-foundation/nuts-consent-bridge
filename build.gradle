@@ -166,7 +166,6 @@ check.dependsOn jacocoTestReport
 task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
     generatorName = "kotlin-spring"
     outputDir = "${project.rootDir}/generated"
-    //inputSpec = "https://nuts-node-rpc-spec.readthedocs.io/en/latest/_static/nuts-consent-bridge.yaml"
     inputSpec = "docs/_static/nuts-consent-bridge.yaml"
     verbose = false
     apiPackage = "nl.nuts.consent.bridge.api"
@@ -192,6 +191,7 @@ task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugi
     groupId = "${project.group}"
     id = "registry-client"
     outputDir = "${project.rootDir}/generated-registry-client"
+    //inputSpec = "https://nuts-documentation.readthedocs.io/en/latest/_static/nuts-registry.yaml"
     inputSpec = "../nuts-registry/docs/_static/nuts-registry.yaml"
     verbose = false
     generateApiDocumentation = false
@@ -215,7 +215,7 @@ task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plu
     groupId = "${project.group}"
     id = "event-store-client"
     outputDir = "${project.rootDir}/generated-event-store-client"
-    inputSpec = "../nuts-event-octopus/docs/_static/nuts-event-store.yaml"
+    inputSpec = "https://nuts-documentation.readthedocs.io/en/0.11.2/_static/nuts-event-store.yaml"
     verbose = false
     generateApiDocumentation = false
     generateModelDocumentation = false

@@ -399,7 +399,12 @@ class CordaServiceTest {
                 legalEntity = "legalEntity",
                 attachment = attachment,
                 signature = SignatureWithKey(
-                        publicKey = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwm7FBfggHaAfapO7TdFv\n0OwS+Ip9Wi7gyhddjmdZBZDzfYMUPr4+0utGM3Ry8JtCfxmsHL3ZmvG04GV1doeC\nLjLywm6OFfoEQCpliRiCyarpd2MrxKWjkSwOl9MJdVm3xpb7BWJdXkKEwoU4lBk8\ncZPay32juPzAV5eb6UCnq53PZ5O0H80J02oPLpBs2D6ASjUQpRf2xP0bvaP2W92P\nZYzJwrSA3zdxPmrMVApOoIZL7OHBE+y0I9ZUt+zmxD8TzRdN9Etf9wjLD7psu9aL\n/XHIHR0xMkYV8cr/nCbJ6H0PbDd3yIQvYPjLEVS5LeieN+DzIlYO6Y7kpws6k0rx\newIDAQAB\n-----END PUBLIC KEY-----\n",
+                        publicKey = mapOf(
+                                "kty" to "RSA",
+                                "e" to "AQAB",
+                                "kid" to "17bf8a6f-0a0a-4bce-878c-4ac9b7447c64",
+                                "n" to "wm7FBfggHaAfapO7TdFv0OwS-Ip9Wi7gyhddjmdZBZDzfYMUPr4-0utGM3Ry8JtCfxmsHL3ZmvG04GV1doeCLjLywm6OFfoEQCpliRiCyarpd2MrxKWjkSwOl9MJdVm3xpb7BWJdXkKEwoU4lBk8cZPay32juPzAV5eb6UCnq53PZ5O0H80J02oPLpBs2D6ASjUQpRf2xP0bvaP2W92PZYzJwrSA3zdxPmrMVApOoIZL7OHBE-y0I9ZUt-zmxD8TzRdN9Etf9wjLD7psu9aL_XHIHR0xMkYV8cr_nCbJ6H0PbDd3yIQvYPjLEVS5LeieN-DzIlYO6Y7kpws6k0rxew"
+                        ),
                         data = "afaf"
                 )
         )

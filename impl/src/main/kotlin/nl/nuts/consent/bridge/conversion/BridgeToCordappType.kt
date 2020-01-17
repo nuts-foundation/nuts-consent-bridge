@@ -25,6 +25,8 @@ import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.model.*
 import org.bouncycastle.util.io.pem.PemReader
+import org.jose4j.jwk.JsonWebKey
+import org.jose4j.jwk.PublicJsonWebKey
 import org.springframework.core.convert.converter.Converter
 import org.springframework.stereotype.Component
 import java.io.IOException
@@ -116,14 +118,10 @@ class BridgeToCordappType {
          */
         fun convert(source: PartyAttachmentSignature) : AttachmentSignature{
             try {
-                val reader = PemReader(StringReader(source.signature.publicKey))
-                val pemObject = reader.readPemObject() ?: throw IllegalArgumentException("Exception on parsing PartyAttachmentSignature.signature.publicKey")
+                val jwkMap = source.signature.publicKey
+                val jwk = PublicJsonWebKey.Factory.newPublicJwk(jwkMap)
 
-                val keySpec = X509EncodedKeySpec(pemObject.content)
-                val factory = KeyFactory.getInstance("RSA")
-                val pk = factory.generatePublic(keySpec)
-
-                return AttachmentSignature(source.legalEntity, SecureHash.parse(source.attachment), DigitalSignature.WithKey(pk, Base64.getDecoder().decode(source.signature.data)))
+                return AttachmentSignature(source.legalEntity, SecureHash.parse(source.attachment), DigitalSignature.WithKey(jwk.publicKey, Base64.getDecoder().decode(source.signature.data)))
             } catch(e : IOException) {
                 throw IllegalArgumentException("Exception on converting PartyAttachmentSignature: ${e.message}", e)
             }

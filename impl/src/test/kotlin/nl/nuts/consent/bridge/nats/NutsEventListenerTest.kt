@@ -296,7 +296,6 @@ class NutsEventListenerTest {
                 legalEntity = "custodian",
                 attachment = "",
                 signature = SignatureWithKey(
-                        publicKey = "",
                         data = ""
                 )
         )
