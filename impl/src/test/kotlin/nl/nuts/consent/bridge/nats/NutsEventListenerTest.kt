@@ -296,7 +296,8 @@ class NutsEventListenerTest {
                 legalEntity = "custodian",
                 attachment = "",
                 signature = SignatureWithKey(
-                        data = ""
+                        data = "",
+                        publicKey = emptyMap()
                 )
         )
         val emptyJson = Serialization.objectMapper().writeValueAsString(partyAttachmentSignature)

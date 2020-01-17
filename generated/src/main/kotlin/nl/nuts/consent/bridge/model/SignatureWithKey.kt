@@ -13,9 +13,10 @@ import javax.validation.constraints.*
 data class SignatureWithKey (
 
         @get:NotNull 
-        @JsonProperty("data") val `data`: String,
+        @JsonProperty("publicKey") val publicKey: Map<kotlin.String, Any>,
 
-        @JsonProperty("publicKey") val publicKey: Map<kotlin.String, Any>? = null
+        @get:NotNull 
+        @JsonProperty("data") val `data`: String
 ) {
 
 }
