@@ -24,14 +24,8 @@ import nl.nuts.consent.bridge.model.ASymmetricKey
 import nl.nuts.consent.bridge.model.Domain
 import nl.nuts.consent.bridge.model.Period
 import nl.nuts.consent.bridge.model.SymmetricKey
-import org.bouncycastle.util.io.pem.PemReader
 import org.jose4j.jwk.PublicJsonWebKey
 import org.junit.Test
-import java.io.StringReader
-import java.security.KeyFactory
-import java.security.PublicKey
-import java.security.spec.X509EncodedKeySpec
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
 import kotlin.test.assertEquals

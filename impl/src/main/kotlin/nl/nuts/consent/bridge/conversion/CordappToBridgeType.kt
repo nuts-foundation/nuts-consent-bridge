@@ -27,12 +27,8 @@ import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
 import nl.nuts.consent.state.ConsentBranch
-import org.bouncycastle.util.io.pem.PemObject
-import org.bouncycastle.util.io.pem.PemWriter
 import org.jose4j.jwk.JsonWebKey
 import org.jose4j.jwk.PublicJsonWebKey
-import java.io.StringWriter
-import java.time.ZoneId
 import java.util.*
 import nl.nuts.consent.bridge.model.Metadata as BridgeMetadata
 
