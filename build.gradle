@@ -191,8 +191,7 @@ task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugi
     groupId = "${project.group}"
     id = "registry-client"
     outputDir = "${project.rootDir}/generated-registry-client"
-    //inputSpec = "https://nuts-documentation.readthedocs.io/en/latest/_static/nuts-registry.yaml"
-    inputSpec = "../nuts-registry/docs/_static/nuts-registry.yaml"
+    inputSpec = "https://nuts-documentation.readthedocs.io/en/0.11.2/_static/nuts-registry.yaml"
     verbose = false
     generateApiDocumentation = false
     generateModelDocumentation = false
@@ -234,7 +233,6 @@ task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plu
 
 openApiValidate {
     inputSpec = "../nuts-api-spec/docs/_static/nuts-consent-bridge.yaml"
-    //inputSpec = "_static/nuts-consent-bridge.yaml"
 }
 
 openApiGenerate {
