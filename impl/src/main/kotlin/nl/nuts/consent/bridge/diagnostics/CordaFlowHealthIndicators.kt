@@ -26,77 +26,77 @@ import org.springframework.boot.actuate.health.HealthIndicator
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
 import kotlin.math.floor
 
+
 /**
- * Collection of Corda Flow based health checks
+ * Shared class for logic calling Corda Flows
  */
-object CordaFlowHealthIndicators {
+abstract class FlowHealthIndicator : HealthIndicator {
+    var lastCheck : CordaService.PingResult = CordaService.PingResult(true)
 
-    /**
-     * Shared class for logic calling Corda Flows
-     */
-    abstract class FlowHealthIndicator : HealthIndicator {
-        var lastCheck : CordaService.PingResult = CordaService.PingResult(true)
+    @Autowired
+    protected lateinit var schedulerProperties: SchedulerProperties
 
-        @Autowired
-        protected lateinit var schedulerProperties: SchedulerProperties
+    @Autowired
+    protected lateinit var cordaService: CordaService
 
-        @Autowired
-        protected lateinit var cordaService: CordaService
-
-        override fun health(): Health {
-            var now = System.currentTimeMillis()
-            if (!lastCheck.success) {
-                return Health.down().withDetail("reason", lastCheck.error).build()
-            }
-
-            if (now - lastCheck.timestamp > 2 * schedulerProperties.delay) {
-                val age = floor((now - lastCheck.timestamp)/60000.0)
-                return Health.down().withDetail("reason", "latest successful check was ${age.toInt()} minutes ago").build()
-            }
-
-            return Health.up().build()
+    override fun health(): Health {
+        var now = System.currentTimeMillis()
+        if (!lastCheck.success) {
+            return Health.down().withDetail("reason", lastCheck.error).build()
         }
 
-        /**
-         * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
-         */
-        @Async
-        @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
-        open fun ping() {
-            lastCheck = doFlowHealthCheck()
+        if (now - lastCheck.timestamp > 2 * schedulerProperties.delay) {
+            val age = floor((now - lastCheck.timestamp)/60000.0)
+            return Health.down().withDetail("reason", "latest successful check was ${age.toInt()} minutes ago").build()
         }
 
-        /**
-         * Calls the actual flow determined by the concrete subclass.
-         */
-        abstract fun doFlowHealthCheck() : CordaService.PingResult
+        return Health.up().build()
     }
+}
+
+/**
+ * Interface for exposing the Async scheduled method
+ */
+interface CordaHealthIndicator {
+    fun doFlowHealthCheck() : CordaService.PingResult;
+}
+
+/**
+ * Scheduled component that tries to run the NotaryPing flow via Corda RPC and stores the latest successful ping.
+ * When this ping is less than X then health is OK.
+ */
+@EnableAsync
+@Component
+class CordaNotaryHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
 
     /**
-     * Scheduled component that tries to run the NotaryPing flow via Corda RPC and stores the latest successful ping.
-     * When this ping is less than X then health is OK.
+     * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
      */
-    @EnableAsync
-    open class CordaNotaryHealthIndicator : FlowHealthIndicator() {
-
-        override fun doFlowHealthCheck() : CordaService.PingResult {
-            return cordaService.pingNotary()
-        }
-
+    @Async
+    @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
+    override fun doFlowHealthCheck() : CordaService.PingResult {
+        lastCheck = cordaService.pingNotary()
+        return lastCheck
     }
+}
 
+/**
+ * Scheduled component that tries to run the NotaryPing flow via Corda RPC and stores the latest successful ping.
+ * When this ping is less than X then health is OK.
+ */
+@EnableAsync
+@Component
+class CordaRandomHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
     /**
-     * Scheduled component that tries to run the NotaryPing flow via Corda RPC and stores the latest successful ping.
-     * When this ping is less than X then health is OK.
+     * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
      */
-    @EnableAsync
-    open class CordaRandomHealthIndicator : FlowHealthIndicator() {
-
-        override fun doFlowHealthCheck() : CordaService.PingResult {
-            return cordaService.pingRandom()
-        }
-
+    @Async
+    @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
+    override fun doFlowHealthCheck() : CordaService.PingResult {
+        lastCheck = cordaService.pingRandom()
+        return lastCheck
     }
 }
