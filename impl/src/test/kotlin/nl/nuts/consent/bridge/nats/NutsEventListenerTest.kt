@@ -22,6 +22,9 @@ import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.verify
+import io.nats.client.ConnectionListener
+import io.nats.client.Nats
+import io.nats.client.Options
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
 import net.corda.core.crypto.SecureHash
@@ -42,6 +45,8 @@ import org.mockito.Mockito.`when`
 import org.springframework.test.web.client.ExpectedCount.once
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class NutsEventListenerTest {
 
@@ -59,17 +64,28 @@ class NutsEventListenerTest {
 
         nutsEventListener = initNewListener()
         cf.natsUrl = nutsEventListener.consentBridgeNatsProperties.address
-        connection = cf.createConnection()
 
-        // wait for connection to be established
-        val t = System.currentTimeMillis()
-        while ((System.currentTimeMillis() - t) > 5000L) {
-            val connected = nutsEventListener.connected()
-            if (connected) {
-                break
+        val l = CountDownLatch(1)
+
+        val listener = ConnectionListener { conn, type ->
+            when(type) {
+                ConnectionListener.Events.CONNECTED -> {
+                    // notify
+                    cf.natsConnection = conn
+                    connection = cf.createConnection()
+                    l.countDown()
+                }
             }
-            Thread.sleep(10L)
         }
+
+        val o = Options.Builder()
+                .server(nutsEventListener.consentBridgeNatsProperties.address)
+                .maxReconnects(-1)
+                .connectionListener(listener)
+                .build()
+        Nats.connectAsynchronously(o, false)
+
+        l.await(10, TimeUnit.SECONDS)
     }
 
     @After
