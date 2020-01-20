@@ -82,7 +82,7 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
 
     /**
     * Add an organization to the registry
-    * 
+    * Keys can follow the following structures (EC or RSA): &#x60;&#x60;&#x60;json \&quot;keys\&quot;: [{   \&quot;kty\&quot;: \&quot;RSA\&quot;,   \&quot;n\&quot;: \&quot;0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw\&quot;,   \&quot;e\&quot;: \&quot;AQAB\&quot;,   \&quot;alg\&quot;: \&quot;RS256\&quot;,   \&quot;kid\&quot;: \&quot;2011-04-29\&quot;, }] &#x60;&#x60;&#x60;  or  &#x60;&#x60;&#x60;json \&quot;keys\&quot;: [{   \&quot;kty\&quot;: \&quot;EC\&quot;,   \&quot;crv\&quot;: \&quot;P-256\&quot;,   \&quot;x\&quot;: \&quot;MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4\&quot;,   \&quot;y\&quot;: \&quot;4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM\&quot;,   \&quot;kid\&quot;: \&quot;1\&quot;, }] &#x60;&#x60;&#x60; 
     * @param organization  
     * @return void
     */

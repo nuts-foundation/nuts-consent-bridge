@@ -19,6 +19,8 @@ repositories {
 }
 
 dependencies {
+    implementation project(':missing-generated-models')
+
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "com.squareup.moshi:moshi-kotlin:1.8.0"
     compile "com.squareup.moshi:moshi-adapters:1.8.0"

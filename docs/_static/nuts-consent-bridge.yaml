@@ -72,11 +72,14 @@ components:
         - data
       properties:
         publicKey:
-          type: string
-          description: "pem encoded RSA public key"
+          $ref: '#/components/schemas/JWK'
         data:
           type: string
           description: "base64 encoded bytes"
+    JWK:
+      type: object
+      description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
+      additionalProperties: {}
     FullConsentRequestState:
       required:
         - consentId

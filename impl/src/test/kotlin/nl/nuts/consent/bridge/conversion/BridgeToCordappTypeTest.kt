@@ -24,13 +24,8 @@ import nl.nuts.consent.bridge.model.ASymmetricKey
 import nl.nuts.consent.bridge.model.Domain
 import nl.nuts.consent.bridge.model.Period
 import nl.nuts.consent.bridge.model.SymmetricKey
-import org.bouncycastle.util.io.pem.PemReader
+import org.jose4j.jwk.PublicJsonWebKey
 import org.junit.Test
-import java.io.StringReader
-import java.security.KeyFactory
-import java.security.PublicKey
-import java.security.spec.X509EncodedKeySpec
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
 import kotlin.test.assertEquals
@@ -103,23 +98,12 @@ class BridgeToCordappTypeTest {
     fun `signature is correct from cross-language case`() {
         val attHex = "4D15851551A9E5DAF8114C98D0F8D4B18CC97ABD31424D5EA9E3CC84C5F9B45C"
         val base64Sign = "QeztwzJgxCuW+ZlUsUyFn7zESuyEFpPCP546hJdcXarzvsWWuTzA3RFLOIJJRqjz7sccGAcidi+rKDlI1Rj4gOSFLhJKkOABXLt+X2kcqpDguta5/i03j4jAN0dI2Sanp5gc7AHJ0r4791KEYrEbve6rVGN6kSd7kvWFyfTtFgD4R+Yp4T3e5oG5yMFdAmiNK8ko6o8nmzoY0yOWdHneUFaAjGAPkGGGsspQ7U3UYAyVdkXdspF4Ryeh8LbbePFSQkO6Pzj9gVMWBY1LrGIRSPhGQEXj7P6PTar8gs/AkX5gyAQLS383MEcg3fCOiEAbRgQLYsRgo04hl3IChfOW2w=="
-        val pemPub = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwm7FBfggHaAfapO7TdFv\n0OwS+Ip9Wi7gyhddjmdZBZDzfYMUPr4+0utGM3Ry8JtCfxmsHL3ZmvG04GV1doeC\nLjLywm6OFfoEQCpliRiCyarpd2MrxKWjkSwOl9MJdVm3xpb7BWJdXkKEwoU4lBk8\ncZPay32juPzAV5eb6UCnq53PZ5O0H80J02oPLpBs2D6ASjUQpRf2xP0bvaP2W92P\nZYzJwrSA3zdxPmrMVApOoIZL7OHBE+y0I9ZUt+zmxD8TzRdN9Etf9wjLD7psu9aL\n/XHIHR0xMkYV8cr/nCbJ6H0PbDd3yIQvYPjLEVS5LeieN+DzIlYO6Y7kpws6k0rx\newIDAQAB\n-----END PUBLIC KEY-----\n"
+        val jwkJson = "{\"kty\":\"RSA\",\"e\":\"AQAB\",\"kid\":\"17bf8a6f-0a0a-4bce-878c-4ac9b7447c64\",\"n\":\"wm7FBfggHaAfapO7TdFv0OwS-Ip9Wi7gyhddjmdZBZDzfYMUPr4-0utGM3Ry8JtCfxmsHL3ZmvG04GV1doeCLjLywm6OFfoEQCpliRiCyarpd2MrxKWjkSwOl9MJdVm3xpb7BWJdXkKEwoU4lBk8cZPay32juPzAV5eb6UCnq53PZ5O0H80J02oPLpBs2D6ASjUQpRf2xP0bvaP2W92PZYzJwrSA3zdxPmrMVApOoIZL7OHBE-y0I9ZUt-zmxD8TzRdN9Etf9wjLD7psu9aL_XHIHR0xMkYV8cr_nCbJ6H0PbDd3yIQvYPjLEVS5LeieN-DzIlYO6Y7kpws6k0rxew\"}"
 
-        val pubKey = pemToPub(pemPub)
         val secureHash = SecureHash.parse(attHex)
-        val digSign = DigitalSignature.WithKey(pubKey, Base64.getDecoder().decode(base64Sign))
+        val jwk = PublicJsonWebKey.Factory.newPublicJwk(jwkJson)
+        val digSign = DigitalSignature.WithKey(jwk.publicKey, Base64.getDecoder().decode(base64Sign))
 
         assertTrue(digSign.isValid(secureHash.bytes))
-    }
-
-    companion object {
-        fun pemToPub(s: String): PublicKey {
-            val reader = PemReader(StringReader(s))
-            val pemObject = reader.readPemObject() ?: throw IllegalArgumentException("Exception on parsing PartyAttachmentSignature.signature.publicKey")
-
-            val keySpec = X509EncodedKeySpec(pemObject.content)
-            val factory = KeyFactory.getInstance("RSA")
-            return factory.generatePublic(keySpec)
-        }
     }
 }

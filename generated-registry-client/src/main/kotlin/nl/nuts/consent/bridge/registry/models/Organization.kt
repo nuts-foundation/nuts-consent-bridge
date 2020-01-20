@@ -12,22 +12,26 @@
 package nl.nuts.consent.bridge.registry.models
 
 import nl.nuts.consent.bridge.registry.models.Endpoint
+import nl.nuts.consent.bridge.registry.models.JWK
 
 /**
  * 
  * @param name the well-known name for the organization
  * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  * @param endpoints 
- * @param publicKey PEM encoded public key
+ * @param publicKey PEM encoded public key (deprecated, use JWK)
+ * @param keys 
  */
-data class Organization (
+data class
+Organization (
     /* the well-known name for the organization */
     val name: kotlin.String,
     /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
     val identifier: kotlin.String,
     val endpoints: kotlin.Array<Endpoint>? = null,
-    /* PEM encoded public key */
-    val publicKey: kotlin.String? = null
+    /* PEM encoded public key (deprecated, use JWK) */
+    val publicKey: kotlin.String? = null,
+    val keys: kotlin.Array<JWK>? = null
 ) {
 
 }
