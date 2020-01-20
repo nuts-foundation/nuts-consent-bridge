@@ -61,6 +61,9 @@ abstract class FlowHealthIndicator : HealthIndicator {
  * Interface for exposing the Async scheduled method
  */
 interface CordaHealthIndicator {
+    /**
+     * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
+     */
     fun doFlowHealthCheck() : CordaService.PingResult;
 }
 
@@ -72,9 +75,6 @@ interface CordaHealthIndicator {
 @Component
 class CordaNotaryHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
 
-    /**
-     * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
-     */
     @Async
     @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
     override fun doFlowHealthCheck() : CordaService.PingResult {
@@ -90,9 +90,7 @@ class CordaNotaryHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
 @EnableAsync
 @Component
 class CordaRandomHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
-    /**
-     * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
-     */
+
     @Async
     @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
     override fun doFlowHealthCheck() : CordaService.PingResult {
