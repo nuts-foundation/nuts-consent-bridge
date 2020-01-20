@@ -49,6 +49,7 @@ import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.infrastructure.ClientException
 import nl.nuts.consent.bridge.registry.models.Endpoint
 import nl.nuts.consent.flow.ConsentFlows
+import nl.nuts.consent.flow.DiagnosticFlows
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
@@ -65,6 +66,7 @@ import java.io.InputStream
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
+import java.util.concurrent.ExecutionException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.assertFailsWith
@@ -493,6 +495,54 @@ class CordaServiceTest {
         val branch = cordaService.consentBranchByTx(SecureHash.allOnesHash)
 
         assertNull(branch)
+    }
+
+    @Test
+    fun `ping Notary returns success`() {
+        `when`(cordaRPCOps.startFlow(DiagnosticFlows::PingNotaryFlow)).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
+
+        val pr = cordaService.pingNotary()
+
+        assertTrue(pr.success)
+    }
+
+    @Test
+    fun `ping Notary returns false on timeout`() {
+        `when`(cordaRPCOps.startFlow(DiagnosticFlows::PingNotaryFlow)).thenThrow(ExecutionException(mock()))
+
+        val pr = cordaService.pingNotary()
+
+        assertFalse(pr.success)
+        assertEquals(TIMEOUT_ERROR, pr.error)
+    }
+
+    @Test
+    fun `ping Random returns success`() {
+        `when`(cordaRPCOps.startFlow(DiagnosticFlows::PingRandomFlow)).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
+
+        val pr = cordaService.pingRandom()
+
+        assertTrue(pr.success)
+    }
+
+    @Test
+    fun `ping random returns false on timeout`() {
+        `when`(cordaRPCOps.startFlow(DiagnosticFlows::PingRandomFlow)).thenThrow(ExecutionException(mock()))
+
+        val pr = cordaService.pingRandom()
+
+        assertFalse(pr.success)
+        assertEquals(TIMEOUT_ERROR, pr.error)
+    }
+
+    @Test
+    fun `ping random returns false on missing rpc connection`() {
+        `when`(cordaRPClientWrapper.proxy()).thenReturn(null)
+
+        val pr = cordaService.pingRandom()
+
+        assertFalse(pr.success)
+        assertEquals(RPC_PROXY_ERROR, pr.error)
     }
 
     private fun endpoint() : Endpoint {
