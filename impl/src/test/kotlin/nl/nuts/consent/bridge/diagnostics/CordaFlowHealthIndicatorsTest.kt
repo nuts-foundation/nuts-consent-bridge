@@ -30,19 +30,19 @@ import kotlin.math.floor
 import kotlin.test.assertEquals
 
 class CordaFlowHealthIndicatorsTest {
-    lateinit var cordaNotaryHealthIndicator: CordaNotaryHealthIndicator
-    lateinit var cordaRandomHealthIndicator: CordaRandomHealthIndicator
+    lateinit var cordaNotaryPingHealthIndicator: CordaNotaryPingHealthIndicator
+    lateinit var cordaRandomPingHealthIndicator: CordaRandomPingHealthIndicator
     lateinit var schedulerProperties: SchedulerProperties
 
     private var cordaService: CordaService = mock()
 
     @Before
     fun setup() {
-        cordaNotaryHealthIndicator = CordaNotaryHealthIndicator()
-        cordaRandomHealthIndicator = CordaRandomHealthIndicator()
+        cordaNotaryPingHealthIndicator = CordaNotaryPingHealthIndicator()
+        cordaRandomPingHealthIndicator = CordaRandomPingHealthIndicator()
         schedulerProperties = SchedulerProperties()
 
-        listOf(cordaNotaryHealthIndicator, cordaRandomHealthIndicator).forEach {
+        listOf(cordaNotaryPingHealthIndicator, cordaRandomPingHealthIndicator).forEach {
             ReflectionTestUtils.setField(it, "cordaService", cordaService)
             ReflectionTestUtils.setField(it, "schedulerProperties", schedulerProperties)
         }
@@ -54,10 +54,10 @@ class CordaFlowHealthIndicatorsTest {
         `when`(cordaService.pingNotary()).thenReturn(CordaService.PingResult(true))
 
         // when
-        cordaNotaryHealthIndicator.doFlowHealthCheck()
+        cordaNotaryPingHealthIndicator.doFlowHealthCheck()
 
         // then
-        val h = cordaNotaryHealthIndicator.health()
+        val h = cordaNotaryPingHealthIndicator.health()
         assertEquals(Status.UP, h.status)
     }
 
@@ -67,10 +67,10 @@ class CordaFlowHealthIndicatorsTest {
         `when`(cordaService.pingNotary()).thenReturn(CordaService.PingResult(false, "error"))
 
         // when
-        cordaNotaryHealthIndicator.doFlowHealthCheck()
+        cordaNotaryPingHealthIndicator.doFlowHealthCheck()
 
         // then
-        val h = cordaNotaryHealthIndicator.health()
+        val h = cordaNotaryPingHealthIndicator.health()
         assertEquals(Status.DOWN, h.status)
         assertEquals("error", h.details["reason"])
     }
@@ -82,10 +82,10 @@ class CordaFlowHealthIndicatorsTest {
         `when`(cordaService.pingNotary()).thenReturn(CordaService.PingResult(true, "", System.currentTimeMillis() - (2 * schedulerProperties.delay + 30000)))
 
         // when
-        cordaNotaryHealthIndicator.doFlowHealthCheck()
+        cordaNotaryPingHealthIndicator.doFlowHealthCheck()
 
         // then
-        val h = cordaNotaryHealthIndicator.health()
+        val h = cordaNotaryPingHealthIndicator.health()
         assertEquals(Status.DOWN, h.status)
         assertEquals("latest successful check was ${age} minutes ago", h.details["reason"])
     }
@@ -96,10 +96,10 @@ class CordaFlowHealthIndicatorsTest {
         `when`(cordaService.pingRandom()).thenReturn(CordaService.PingResult(true))
 
         // when
-        cordaRandomHealthIndicator.doFlowHealthCheck()
+        cordaRandomPingHealthIndicator.doFlowHealthCheck()
 
         // then
-        val h = cordaRandomHealthIndicator.health()
+        val h = cordaRandomPingHealthIndicator.health()
         assertEquals(Status.UP, h.status)
     }
 }

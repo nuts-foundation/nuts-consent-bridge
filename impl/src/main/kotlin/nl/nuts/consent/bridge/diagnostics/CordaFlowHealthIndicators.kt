@@ -73,7 +73,7 @@ interface CordaHealthIndicator {
  */
 @EnableAsync
 @Component
-class CordaNotaryHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
+class CordaNotaryPingHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
 
     @Async
     @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
@@ -89,7 +89,7 @@ class CordaNotaryHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
  */
 @EnableAsync
 @Component
-class CordaRandomHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
+class CordaRandomPingHealthIndicator : CordaHealthIndicator, FlowHealthIndicator() {
 
     @Async
     @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
