@@ -61,6 +61,9 @@ data class ConsentRegistryProperties(
 data class EventStoreProperties(
         var url: String = "http://localhost:8088")
 
+/**
+ * Dummy config for enabling certain annotation based config options
+ */
 @Configuration
 @EnableScheduling
 class GeneralConfiguration

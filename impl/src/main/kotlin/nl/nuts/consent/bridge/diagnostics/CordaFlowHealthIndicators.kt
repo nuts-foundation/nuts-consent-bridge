@@ -28,8 +28,14 @@ import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.Scheduled
 import kotlin.math.floor
 
+/**
+ * Collection of Corda Flow based health checks
+ */
 object CordaFlowHealthIndicators {
 
+    /**
+     * Shared class for logic calling Corda Flows
+     */
     abstract class FlowHealthIndicator : HealthIndicator {
         var lastCheck : CordaService.PingResult = CordaService.PingResult(true)
 
@@ -53,12 +59,18 @@ object CordaFlowHealthIndicators {
             return Health.up().build()
         }
 
+        /**
+         * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
+         */
         @Async
         @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
         open fun ping() {
             lastCheck = doFlowHealthCheck()
         }
 
+        /**
+         * Calls the actual flow determined by the concrete subclass.
+         */
         abstract fun doFlowHealthCheck() : CordaService.PingResult
     }
 
