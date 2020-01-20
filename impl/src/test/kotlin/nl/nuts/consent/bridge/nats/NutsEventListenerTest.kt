@@ -63,7 +63,7 @@ class NutsEventListenerTest {
 
         // wait for connection to be established
         val t = System.currentTimeMillis()
-        while ((System.currentTimeMillis() - t) > 2000L) {
+        while ((System.currentTimeMillis() - t) > 5000L) {
             val connected = nutsEventListener.connected()
             if (connected) {
                 break
