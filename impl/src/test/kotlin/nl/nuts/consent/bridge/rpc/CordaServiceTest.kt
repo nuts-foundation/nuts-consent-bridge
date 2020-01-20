@@ -53,6 +53,7 @@ import nl.nuts.consent.state.ConsentState
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.`when`
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream

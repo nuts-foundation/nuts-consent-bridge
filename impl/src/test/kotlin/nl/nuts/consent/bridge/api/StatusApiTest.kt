@@ -56,5 +56,7 @@ class StatusApiTest {
         // since no Corda node is running
         assertTrue(response.body.contains("General status=DOWN"))
         assertTrue(response.body.contains("cordaRPCClientFactory=DOWN"))
+        assertTrue(response.body.contains("cordaNotary=UP"))
+        assertTrue(response.body.contains("cordaRandom=UP"))
     }
 }

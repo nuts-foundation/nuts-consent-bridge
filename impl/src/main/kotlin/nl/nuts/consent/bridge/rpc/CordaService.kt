@@ -540,7 +540,16 @@ class CordaService {
      * @return PingResult with success as true/false and an error description when false
      */
     fun pingNotary() : PingResult {
-        return pingFlow(DiagnosticFlows::PingNotaryFlow)
+        val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
+
+        try {
+            val f = proxy.startFlow(DiagnosticFlows::PingNotaryFlow)
+
+            f.returnValue.get(10, TimeUnit.SECONDS)
+        } catch (e: ExecutionException) {
+            return PingResult(false, TIMEOUT_ERROR)
+        }
+        return PingResult(true)
     }
 
     /**
@@ -550,16 +559,10 @@ class CordaService {
      * @return PingResult with success as true/false and an error description when false
      */
     fun pingRandom() : PingResult {
-        return pingFlow(DiagnosticFlows::PingRandomFlow)
-    }
-
-    private fun pingFlow (
-            @Suppress("UNUSED_PARAMETER")
-            flowConstructor: () -> FlowLogic<Unit>) : PingResult {
         val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
 
         try {
-            val f = proxy.startFlow(flowConstructor)
+            val f = proxy.startFlow(DiagnosticFlows::PingRandomFlow)
 
             f.returnValue.get(10, TimeUnit.SECONDS)
         } catch (e: ExecutionException) {
