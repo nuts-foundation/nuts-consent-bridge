@@ -524,30 +524,6 @@ class CordaServiceTest {
         assertTrue(pr.success)
     }
 
-    @Test
-    fun `ping random returns false on timeout`() {
-        val cf = mock<CordaFuture<Unit>>()
-        val fh = mock<FlowHandle<Unit>>()
-        `when`(fh.returnValue).thenReturn(cf)
-        `when`(cf.get(10, TimeUnit.SECONDS)).thenThrow(ExecutionException(IllegalArgumentException("")))
-        `when`(cordaRPCOps.startFlow(DiagnosticFlows::PingRandomFlow)).thenReturn(fh)
-
-        val pr = cordaService.pingRandom()
-
-        assertFalse(pr.success)
-        assertEquals(TIMEOUT_ERROR, pr.error)
-    }
-
-    @Test
-    fun `ping random returns false on missing rpc connection`() {
-        `when`(cordaRPClientWrapper.proxy()).thenReturn(null)
-
-        val pr = cordaService.pingRandom()
-
-        assertFalse(pr.success)
-        assertEquals(RPC_PROXY_ERROR, pr.error)
-    }
-
     private fun endpoint() : Endpoint {
         return Endpoint(
                 endpointType = "urn:nuts:endpoint:consent",
