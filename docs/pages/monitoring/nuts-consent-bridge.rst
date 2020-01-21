@@ -32,6 +32,8 @@ It'll return some text displaying the current status of the various services
     nutsEventListener=UP {}
     nutsEventPublisher=UP {}
     &cordaRPCClientFactory=DOWN {}
+    cordaNotaryPing=UP {}
+    cordaRandomPing=UP {}
 
 Extensive diagnostics
 *********************

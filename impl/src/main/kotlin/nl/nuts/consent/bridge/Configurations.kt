@@ -20,6 +20,7 @@ package nl.nuts.consent.bridge
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Configuration
+import org.springframework.scheduling.annotation.EnableScheduling
 
 /**
  * Configuration data class for Corda RPC settings
@@ -59,3 +60,20 @@ data class ConsentRegistryProperties(
 @ConfigurationProperties("nuts.consent.events")
 data class EventStoreProperties(
         var url: String = "http://localhost:8088")
+
+/**
+ * Dummy config for enabling certain annotation based config options
+ */
+@Configuration
+@EnableScheduling
+class GeneralConfiguration
+
+/**
+ * Configuration data class for scheduler
+ */
+@Configuration
+@ConfigurationProperties("nuts.consent.schedule")
+data class SchedulerProperties(
+        var delay: Long = 15 * 60 * 1000,
+        var initialDelay: Long =  1000
+)

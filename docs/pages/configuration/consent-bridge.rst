@@ -13,13 +13,15 @@ The *Nuts Consent Bridge* application is a Spring boot application. Therefore al
 =====================================   =====================   ================================================================
 Property                                Default                 Description
 =====================================   =====================   ================================================================
-nuts.consent.nats.address               nats://localhost:4222   The Nats address for events from and to *Nuts Service Space*
-nuts.consent.nats.cluster               test-cluster            The Nats clusterID
+nuts.consent.nats.address               nats://localhost:4222   The Nats address for events from and to *Nuts Service Space*.
+nuts.consent.nats.cluster               test-cluster            The Nats clusterID.
 nuts.consent.rpc.host                   localhost               The host running the Consent Cordapp.
 nuts.consent.rpc.port                   7887                    Port for Consent Cordapp.
 nuts.consent.rpc.user                   admin                   Configured user on the RPC methods of the Consent Cordapp node.
 nuts.consent.rpc.password               nuts                    ^^ same, but password ^^
 nuts.consent.rpc.retryIntervalSeconds   5                       Cooldown period before trying to reconnect to node.
-nuts.consent.rpc.retryCount             0                       How many times to reconnect (0 for infinite)
-nuts.consent.registry.url               http://localhost:8088   The address + path where the Nuts registry is running
+nuts.consent.rpc.retryCount             0                       How many times to reconnect (0 for infinite).
+nuts.consent.registry.url               http://localhost:8088   The address + path where the Nuts registry is running.
+nuts.consent.schedule.delay             15 * 60 * 1000          Delay between scheduled health checks in milliseconds.
+nuts.consent.schedule.initial_delay     1000                    Delay between scheduled health checks.
 =====================================   =====================   ================================================================

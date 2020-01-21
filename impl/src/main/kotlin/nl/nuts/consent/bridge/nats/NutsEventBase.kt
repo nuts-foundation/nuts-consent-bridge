@@ -72,7 +72,7 @@ abstract class NutsEventBase : HealthIndicator {
                 }
                 ConnectionListener.Events.RECONNECTED -> {
                     saveConnection(conn)
-                    logger.debug("Nats reconnected")
+                    logger.info("${name()} connected to Nats server")
                 }
                 ConnectionListener.Events.RESUBSCRIBED -> logger.trace("Nats subscription resubscribed")
             }

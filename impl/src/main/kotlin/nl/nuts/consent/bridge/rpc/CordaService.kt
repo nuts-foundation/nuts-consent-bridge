@@ -20,9 +20,11 @@ package nl.nuts.consent.bridge.rpc
 
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
+import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.identity.Party
 import net.corda.core.internal.readFully
+import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -43,6 +45,7 @@ import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.apis.EndpointsApi
 import nl.nuts.consent.flow.ConsentFlows
+import nl.nuts.consent.flow.DiagnosticFlows
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.schema.ConsentSchemaV1
 import nl.nuts.consent.state.ConsentBranch
@@ -59,6 +62,8 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.file.FileAlreadyExistsException
 import java.util.*
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -66,6 +71,7 @@ import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
 const val RPC_PROXY_ERROR = "Could not get a proxy to Corda RPC"
+const val TIMEOUT_ERROR = "Operation timed out"
 
 /**
  * Service for all Corda related logic. Primarily uses the CordaRPC functionality.
@@ -528,10 +534,57 @@ class CordaService {
     }
 
     /**
+     * Start the PingNotaryFlow
+     * Expects answer within 10 seconds
+     *
+     * @return PingResult with success as true/false and an error description when false
+     */
+    fun pingNotary() : PingResult {
+        val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
+
+        try {
+            val f = proxy.startFlow(DiagnosticFlows::PingNotaryFlow)
+
+            f.returnValue.get(10, TimeUnit.SECONDS)
+        } catch (e: ExecutionException) {
+            return PingResult(false, TIMEOUT_ERROR)
+        }
+        return PingResult(true)
+    }
+
+    /**
+     * Start the PingRandomFlow
+     * Expects answer within 10 seconds
+     *
+     * @return PingResult with success as true/false and an error description when false
+     */
+    fun pingRandom() : PingResult {
+        val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
+
+        try {
+            val f = proxy.startFlow(DiagnosticFlows::PingRandomFlow)
+
+            f.returnValue.get(10, TimeUnit.SECONDS)
+        } catch (e: ExecutionException) {
+            return PingResult(false, TIMEOUT_ERROR)
+        }
+        return PingResult(true)
+    }
+
+    /**
      * helper class, represents the attachment zip
      */
     data class Attachment (
         val metadata: ConsentMetadata,
         val data: ByteArray
+    )
+
+    /**
+     * Helper for storing result of ping action
+     */
+    data class PingResult (
+        val success: Boolean,
+        val error: String = "",
+        val timestamp: Long = System.currentTimeMillis()
     )
 }
