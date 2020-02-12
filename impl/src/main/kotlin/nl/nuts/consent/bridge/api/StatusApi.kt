@@ -45,7 +45,7 @@ class StatusApi {
      * Can be used for checking if the bridge is up and running.
      */
     @RequestMapping(
-            value = ["/"],
+            value = [""],
             produces = ["text/plain"],
             method = [RequestMethod.GET])
     fun getStatus() : ResponseEntity<String> {
