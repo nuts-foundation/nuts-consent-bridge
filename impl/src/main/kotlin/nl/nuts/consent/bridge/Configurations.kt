@@ -74,6 +74,15 @@ class GeneralConfiguration
 @Configuration
 @ConfigurationProperties("nuts.consent.schedule")
 data class SchedulerProperties(
-        var delay: Long = 15 * 60 * 1000,
-        var initialDelay: Long =  1000
+    var delay: Long = 15 * 60 * 1000,
+    var initialDelay: Long =  1000
+)
+
+/**
+ * Configuration data class for state event resumption
+ */
+@Configuration
+@ConfigurationProperties("nuts.event.meta")
+data class EventMetaProperties(
+    var location: String = "."
 )
