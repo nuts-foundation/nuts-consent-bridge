@@ -195,14 +195,14 @@ class CordaStateChangeListener<S : ContractState>(
         }
     }
 
-    fun consumedCriteria(asOfDateTime: Instant) : QueryCriteria.VaultQueryCriteria {
+    private fun consumedCriteria(asOfDateTime: Instant) : QueryCriteria.VaultQueryCriteria {
         val consumedAfterExpression = QueryCriteria.TimeCondition(
             QueryCriteria.TimeInstantType.CONSUMED,
             ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
         return QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = consumedAfterExpression)
     }
 
-    fun producedCriteria(asOfDateTime: Instant) : QueryCriteria.VaultQueryCriteria {
+    private fun producedCriteria(asOfDateTime: Instant) : QueryCriteria.VaultQueryCriteria {
         val recordedAfterExpression = QueryCriteria.TimeCondition(
             QueryCriteria.TimeInstantType.RECORDED,
             ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))

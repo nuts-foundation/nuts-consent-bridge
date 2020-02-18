@@ -85,6 +85,9 @@ class StateFileStorageControl {
     }
 }
 
+/**
+ * Handles writing and reading a timestamp to/from a given file with locking
+ */
 class StateFileStorage(val file: File) {
 
     /**
@@ -114,9 +117,6 @@ class StateFileStorage(val file: File) {
         return currentTimestamp
     }
 
-    /**
-     * Reads latest timestamp from file
-     */
     private fun readTimestamp(stream: RandomAccessFile): Long {
         var currentTimestamp = 0L
 
@@ -135,10 +135,6 @@ class StateFileStorage(val file: File) {
         return currentTimestamp
     }
 
-    /**
-     * Locks on Object and then acquires file lock (for clustering), opens a stream
-     * Closes all after the fact
-     */
     private fun withFileLock(block: (stream: RandomAccessFile) -> Unit) {
         synchronized(this) {
             val stream = RandomAccessFile(file, "rw")
