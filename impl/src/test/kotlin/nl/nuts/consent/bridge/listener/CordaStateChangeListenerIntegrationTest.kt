@@ -40,12 +40,18 @@ import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
+import nl.nuts.consent.bridge.nats.NutsEventListenerTest
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
+import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
+import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
+import np.com.madanpokharel.embed.nats.NatsServerConfig
+import np.com.madanpokharel.embed.nats.NatsStreamingVersion
+import np.com.madanpokharel.embed.nats.ServerType
 import org.junit.*
 import java.io.File
 import java.util.*
@@ -88,6 +94,7 @@ class CordaStateChangeListenerIntegrationTest {
             return x
         }
 
+        var natsServer: EmbeddedNatsServer? = null
         var connection: CordaRPCConnection? = null
         var validProperties : ConsentBridgeRPCProperties? = null
         var node: NodeHandle? = null
@@ -112,6 +119,19 @@ class CordaStateChangeListenerIntegrationTest {
                 }
             }.start()
 
+            // nats server
+            val config = EmbeddedNatsConfig.Builder()
+                .withNatsServerConfig(
+                    NatsServerConfig.Builder()
+                        .withServerType(ServerType.NATS_STREAMING)
+                        .withPort(4222)
+                        .withNatsStreamingVersion(NatsStreamingVersion.V0_16_2)
+                        .build()
+                )
+                .build()
+            natsServer = EmbeddedNatsServer(config)
+            natsServer?.startServer()
+
             blockUntilSet(120000L) {
                 node
             }
@@ -121,6 +141,7 @@ class CordaStateChangeListenerIntegrationTest {
         @JvmStatic fun tearDown() {
             waitForTests.countDown()
             waitForDriver.await()
+            natsServer?.stopServer()
         }
     }
 
