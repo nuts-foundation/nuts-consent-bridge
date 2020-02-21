@@ -137,18 +137,17 @@ class StateFileStorage(val file: File) {
 
     private fun withFileLock(block: (stream: RandomAccessFile) -> Unit) {
         synchronized(this) {
-            val stream = RandomAccessFile(file, "rw")
-            val channel: FileChannel = stream.channel
-
-            // IllegalState or IOException can be thrown
-            var lock: FileLock? = null
-            try {
-                lock = channel.lock()
-                block(stream)
-            } finally {
-                lock?.release()
-                stream.close()
-                channel.close()
+            RandomAccessFile(file, "rw").use { stream ->
+                stream.channel.use { channel ->
+                    // IllegalState or IOException can be thrown
+                    var lock: FileLock? = null
+                    try {
+                        lock = channel.lock()
+                        block(stream)
+                    } finally {
+                        lock?.release()
+                    }
+                }
             }
         }
     }

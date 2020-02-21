@@ -146,7 +146,7 @@ class CordaStateChangeListener<S : ContractState>(
         // feed criteria
         return proxy.vaultTrackBy(
             producedCriteria(asOfDateTime).or(consumedCriteria(asOfDateTime)),
-            PageSpecification(DEFAULT_PAGE_NUM, 100),
+            PageSpecification(DEFAULT_PAGE_NUM, DEFAULT_PAGE_SIZE),
             Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
             stateClass)
     }
@@ -155,14 +155,10 @@ class CordaStateChangeListener<S : ContractState>(
         var historyDone = false
         var tempFeed: Vault.Page<S>? = null
         while (!historyDone) {
-            tempFeed = proxy.vaultQueryBy(
-                producedCriteria(asOfDateTime),
-                PageSpecification(DEFAULT_PAGE_NUM, 100),
-                Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
-                clazz)
+            tempFeed = vaultQueryBy(proxy, producedCriteria(asOfDateTime), clazz)
 
             // update exit criteria
-            historyDone = tempFeed.states.size < 100
+            historyDone = tempFeed.states.size < DEFAULT_PAGE_SIZE
 
             // publish all old
             tempFeed.states.forEach {
@@ -177,14 +173,10 @@ class CordaStateChangeListener<S : ContractState>(
         var historyDone = false
         var tempFeed: Vault.Page<S>? = null
         while (!historyDone) {
-            tempFeed = proxy.vaultQueryBy(
-                consumedCriteria(asOfDateTime),
-                PageSpecification(DEFAULT_PAGE_NUM, 100),
-                Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
-                clazz)
+            tempFeed = vaultQueryBy(proxy, consumedCriteria(asOfDateTime), clazz)
 
             // update exit criteria
-            historyDone = tempFeed.states.size < 100
+            historyDone = tempFeed.states.size < DEFAULT_PAGE_SIZE
 
             // publish all old
             tempFeed.states.forEach {
@@ -193,6 +185,14 @@ class CordaStateChangeListener<S : ContractState>(
                 consumedCallback.invoke(it)
             }
         }
+    }
+
+    private fun vaultQueryBy(proxy: CordaRPCOps, criteria: QueryCriteria, clazz: Class<S>) : Vault.Page<S> {
+        return proxy.vaultQueryBy(
+            criteria,
+            PageSpecification(DEFAULT_PAGE_NUM, DEFAULT_PAGE_SIZE),
+            Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
+            clazz)
     }
 
     private fun consumedCriteria(asOfDateTime: Instant) : QueryCriteria.VaultQueryCriteria {
