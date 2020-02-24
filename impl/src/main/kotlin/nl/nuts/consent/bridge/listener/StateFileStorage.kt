@@ -52,9 +52,6 @@ class StateFileStorageControl {
      */
     fun readTimestamp(eventType: String): Long = getOrCreateStateFileStorage(eventType).readTimestamp()
 
-    /**
-     * gets correct stateFileStorage or creates a new one if needed
-     */
     private fun getOrCreateStateFileStorage(eventType: String) : StateFileStorage {
         synchronized(this) {
             var stateFileStorage = stateFileStorages[eventType]
@@ -66,10 +63,6 @@ class StateFileStorageControl {
         }
     }
 
-    /**
-     * returns correct File handler for given eventType, making sure it exists and is accessible
-     * must be called from synchronized context
-     */
     private fun eventTypeFileLocation(eventType: String): File {
         val dir = File(eventMetaProperties.location)
         if (!dir.exists()) {
