@@ -94,7 +94,6 @@ class CordaStateChangeListenerIntegrationTest {
             return x
         }
 
-        var natsServer: EmbeddedNatsServer? = null
         var connection: CordaRPCConnection? = null
         var validProperties : ConsentBridgeRPCProperties? = null
         var node: NodeHandle? = null
@@ -129,8 +128,6 @@ class CordaStateChangeListenerIntegrationTest {
                         .build()
                 )
                 .build()
-            natsServer = EmbeddedNatsServer(config)
-            natsServer?.startServer()
 
             blockUntilSet(120000L) {
                 node
@@ -141,7 +138,6 @@ class CordaStateChangeListenerIntegrationTest {
         @JvmStatic fun tearDown() {
             waitForTests.countDown()
             waitForDriver.await()
-            natsServer?.stopServer()
         }
     }
 

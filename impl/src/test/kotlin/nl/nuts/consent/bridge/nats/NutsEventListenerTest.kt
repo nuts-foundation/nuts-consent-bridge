@@ -76,11 +76,13 @@ class NutsEventListenerTest {
 
         @BeforeClass @JvmStatic fun setupClass() {
             // server
+            var port = 4222
+            ServerSocket(0).use { port = it.localPort }
             val config = EmbeddedNatsConfig.Builder()
                 .withNatsServerConfig(
                     NatsServerConfig.Builder()
                         .withServerType(ServerType.NATS_STREAMING)
-                        .withPort(4222)
+                        .withPort(port)
                         .withNatsStreamingVersion(NatsStreamingVersion.V0_16_2)
                         .build()
                 )
@@ -101,7 +103,7 @@ class NutsEventListenerTest {
         cordaService = mock()
 
         nutsEventListener = initNewListener()
-        cf.natsUrl = nutsEventListener.consentBridgeNatsProperties.address
+        cf.natsUrl = natsServer?.natsUrl
 
         val l = CountDownLatch(1)
 
@@ -119,7 +121,7 @@ class NutsEventListenerTest {
 
         // client
         val o = Options.Builder()
-                .server(nutsEventListener.consentBridgeNatsProperties.address)
+                .server(natsServer?.natsUrl)
                 .maxReconnects(-1)
                 .connectionListener(listener)
                 .build()
@@ -137,7 +139,7 @@ class NutsEventListenerTest {
 
     private fun initNewListener() : NutsEventListener {
         val nutsEventListener = NutsEventListener()
-        nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties()
+        nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties(address = natsServer!!.natsUrl)
         nutsEventListener.cordaService = cordaService
         nutsEventListener.eventStateStore = EventStateStore()
         nutsEventListener.nutsEventPublisher = mock()
