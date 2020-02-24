@@ -34,27 +34,67 @@ import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
-import nl.nuts.consent.bridge.model.*
+import nl.nuts.consent.bridge.model.ConsentId
+import nl.nuts.consent.bridge.model.ConsentRecord
+import nl.nuts.consent.bridge.model.Domain
+import nl.nuts.consent.bridge.model.FullConsentRequestState
+import nl.nuts.consent.bridge.model.PartyAttachmentSignature
+import nl.nuts.consent.bridge.model.Period
+import nl.nuts.consent.bridge.model.SignatureWithKey
+import nl.nuts.consent.bridge.model.SymmetricKey
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.state.ConsentBranch
+import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
+import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
+import np.com.madanpokharel.embed.nats.NatsServerConfig
+import np.com.madanpokharel.embed.nats.NatsStreamingVersion
+import np.com.madanpokharel.embed.nats.NatsVersion
+import np.com.madanpokharel.embed.nats.ServerType
 import org.junit.After
+import org.junit.AfterClass
 import org.junit.Before
+import org.junit.BeforeClass
 import org.junit.Test
 import org.mockito.Mockito.`when`
-import org.springframework.test.web.client.ExpectedCount.once
+import java.net.ServerSocket
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+
 
 class NutsEventListenerTest {
 
     lateinit var cf : StreamingConnectionFactory
     lateinit var connection: StreamingConnection
     lateinit var nutsEventListener: NutsEventListener
-
     lateinit var cordaService: CordaService
+
+    companion object {
+        var natsServer: EmbeddedNatsServer? = null
+
+        @BeforeClass @JvmStatic fun setupClass() {
+            // server
+            var port = 4222
+            ServerSocket(0).use { port = it.localPort }
+            val config = EmbeddedNatsConfig.Builder()
+                .withNatsServerConfig(
+                    NatsServerConfig.Builder()
+                        .withServerType(ServerType.NATS_STREAMING)
+                        .withPort(port)
+                        .withNatsStreamingVersion(NatsStreamingVersion.V0_16_2)
+                        .build()
+                )
+                .build()
+            natsServer = EmbeddedNatsServer(config)
+            natsServer?.startServer()
+        }
+
+        @AfterClass @JvmStatic fun tearDownClass() {
+            natsServer?.stopServer()
+        }
+    }
 
     @Before
     fun setup() {
@@ -63,10 +103,11 @@ class NutsEventListenerTest {
         cordaService = mock()
 
         nutsEventListener = initNewListener()
-        cf.natsUrl = nutsEventListener.consentBridgeNatsProperties.address
+        cf.natsUrl = natsServer?.natsUrl
 
         val l = CountDownLatch(1)
 
+        // client connection listener
         val listener = ConnectionListener { conn, type ->
             when(type) {
                 ConnectionListener.Events.CONNECTED -> {
@@ -78,8 +119,9 @@ class NutsEventListenerTest {
             }
         }
 
+        // client
         val o = Options.Builder()
-                .server(nutsEventListener.consentBridgeNatsProperties.address)
+                .server(natsServer?.natsUrl)
                 .maxReconnects(-1)
                 .connectionListener(listener)
                 .build()
@@ -97,7 +139,7 @@ class NutsEventListenerTest {
 
     private fun initNewListener() : NutsEventListener {
         val nutsEventListener = NutsEventListener()
-        nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties()
+        nutsEventListener.consentBridgeNatsProperties = ConsentBridgeNatsProperties(address = natsServer!!.natsUrl)
         nutsEventListener.cordaService = cordaService
         nutsEventListener.eventStateStore = EventStateStore()
         nutsEventListener.nutsEventPublisher = mock()

@@ -10,9 +10,9 @@ The *Nuts Consent Bridge* application is a Spring boot application. Therefore al
 - Using a runtime JVM parameter specifying the spring configuration file: ``java -jar myproject.jar --spring.config.location=/tmp/overrides.properties``
 - Using environment variables, replacing all camelCasing and dots with underscores. So ``nuts.consent.zmq.publisherAddress`` becomes ``NUTS_CONSENT_ZMQ_PUBLISHER_ADDRESS``
 
-=====================================   =====================   ================================================================
+=====================================   =====================   =====================================================================
 Property                                Default                 Description
-=====================================   =====================   ================================================================
+=====================================   =====================   =====================================================================
 nuts.consent.nats.address               nats://localhost:4222   The Nats address for events from and to *Nuts Service Space*.
 nuts.consent.nats.cluster               test-cluster            The Nats clusterID.
 nuts.consent.rpc.host                   localhost               The host running the Consent Cordapp.
@@ -24,4 +24,5 @@ nuts.consent.rpc.retryCount             0                       How many times t
 nuts.consent.registry.url               http://localhost:8088   The address + path where the Nuts registry is running.
 nuts.consent.schedule.delay             15 * 60 * 1000          Delay between scheduled health checks in milliseconds.
 nuts.consent.schedule.initial_delay     1000                    Delay between scheduled health checks.
-=====================================   =====================   ================================================================
+nuts.event.meta.location                .                       Location where to store the timestamps of latest received Corda event
+=====================================   =====================   =====================================================================

@@ -20,6 +20,8 @@ package nl.nuts.consent.bridge.listener
 
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.DataFeed
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.*
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
@@ -53,6 +55,7 @@ import javax.annotation.PreDestroy
  */
 class CordaStateChangeListener<S : ContractState>(
         val cordaRPClientWrapper: CordaRPClientWrapper,
+        val stateFileStorageControl: StateFileStorageControl,
         val producedCallback:StateCallback<S> = StateCallbacks::noOpCallback,
         val consumedCallback:StateCallback<S> = StateCallbacks::noOpCallback) {
 
@@ -65,6 +68,7 @@ class CordaStateChangeListener<S : ContractState>(
      */
     fun start(stateClass: Class<S>) {
         val proxy = cordaRPClientWrapper.proxy()
+        val stateName = stateClass.simpleName
 
         if (proxy == null) {
             logger.warn("Couldn't get proxy, stopping CordaStateChangeListener")
@@ -77,25 +81,22 @@ class CordaStateChangeListener<S : ContractState>(
             return
         }
 
-        // todo since last successfull received!!
         // time criteria
-        val asOfDateTime = Instant.ofEpochSecond(0, 0)
-        val recordedAfterExpression = QueryCriteria.TimeCondition(
-                QueryCriteria.TimeInstantType.RECORDED,
-                ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
-        val recordedCriteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = recordedAfterExpression)
+        var epoch = stateFileStorageControl.readTimestamp(stateName)
+        if (epoch != 0L) {
+            epoch -= 60000L // some overlap for parallel processing
+        }
 
-        val consumedAfterExpression = QueryCriteria.TimeCondition(
-                QueryCriteria.TimeInstantType.CONSUMED,
-                ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
-        val consumedCriteria = QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = consumedAfterExpression)
+        val asOfDateTime = Instant.ofEpochMilli(epoch)
 
-        // feed criteria
-        val feed = proxy.vaultTrackBy(
-                recordedCriteria.or(consumedCriteria),
-                PageSpecification(DEFAULT_PAGE_NUM, 100),
-                Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
-                stateClass)
+        publishMissedProducedStates(proxy, asOfDateTime, stateClass)
+        publishMissedConsumedStates(proxy, asOfDateTime, stateClass)
+
+        // we're caught up
+        val now = System.currentTimeMillis()
+        stateFileStorageControl.writeTimestamp(stateName, now)
+
+        val feed = currentFeed(proxy, Instant.ofEpochMilli(now), stateClass)
 
         val observable = feed.updates
 
@@ -110,11 +111,17 @@ class CordaStateChangeListener<S : ContractState>(
                 logger.debug("Observed produced state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
 
                 producedCallback.invoke(it)
+
+                // update latest state, since any timestamp is missing from the Corda side, we store now!
+                stateFileStorageControl.writeTimestamp(stateName, System.currentTimeMillis())
             }
             update.consumed.forEach {
                 logger.debug("Observed consumed state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
 
                 consumedCallback.invoke(it)
+
+                // update latest state, since any timestamp is missing from the Corda side, we store now!
+                stateFileStorageControl.writeTimestamp(stateName, System.currentTimeMillis())
             }
         },
         { e:Throwable ->
@@ -134,6 +141,74 @@ class CordaStateChangeListener<S : ContractState>(
         // store in atomic reference, so that if the callback errors, the other thread can operate on it safely
         retryableStateUpdatesSubscription.set(subscription)
     }
+
+    private fun currentFeed(proxy: CordaRPCOps, asOfDateTime: Instant, stateClass: Class<S>): DataFeed<Vault.Page<S>, Vault.Update<S>> {
+        // feed criteria
+        return proxy.vaultTrackBy(
+            producedCriteria(asOfDateTime).or(consumedCriteria(asOfDateTime)),
+            PageSpecification(DEFAULT_PAGE_NUM, DEFAULT_PAGE_SIZE),
+            Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
+            stateClass)
+    }
+
+    private fun publishMissedProducedStates(proxy: CordaRPCOps, asOfDateTime: Instant, clazz: Class<S>) {
+        var historyDone = false
+        var tempFeed: Vault.Page<S>? = null
+        while (!historyDone) {
+            tempFeed = vaultQueryBy(proxy, producedCriteria(asOfDateTime), clazz)
+
+            // update exit criteria
+            historyDone = tempFeed.states.size < DEFAULT_PAGE_SIZE
+
+            // publish all old
+            tempFeed.states.forEach {
+                logger.debug("Observed older produced state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
+
+                producedCallback.invoke(it)
+            }
+        }
+    }
+
+    private fun publishMissedConsumedStates(proxy: CordaRPCOps, asOfDateTime: Instant, clazz: Class<S>) {
+        var historyDone = false
+        var tempFeed: Vault.Page<S>? = null
+        while (!historyDone) {
+            tempFeed = vaultQueryBy(proxy, consumedCriteria(asOfDateTime), clazz)
+
+            // update exit criteria
+            historyDone = tempFeed.states.size < DEFAULT_PAGE_SIZE
+
+            // publish all old
+            tempFeed.states.forEach {
+                logger.debug("Observed older consumed state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
+
+                consumedCallback.invoke(it)
+            }
+        }
+    }
+
+    private fun vaultQueryBy(proxy: CordaRPCOps, criteria: QueryCriteria, clazz: Class<S>) : Vault.Page<S> {
+        return proxy.vaultQueryBy(
+            criteria,
+            PageSpecification(DEFAULT_PAGE_NUM, DEFAULT_PAGE_SIZE),
+            Sort(setOf(Sort.SortColumn(SortAttribute.Standard(Sort.CommonStateAttribute.STATE_REF), Sort.Direction.ASC))),
+            clazz)
+    }
+
+    private fun consumedCriteria(asOfDateTime: Instant) : QueryCriteria.VaultQueryCriteria {
+        val consumedAfterExpression = QueryCriteria.TimeCondition(
+            QueryCriteria.TimeInstantType.CONSUMED,
+            ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
+        return QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = consumedAfterExpression)
+    }
+
+    private fun producedCriteria(asOfDateTime: Instant) : QueryCriteria.VaultQueryCriteria {
+        val recordedAfterExpression = QueryCriteria.TimeCondition(
+            QueryCriteria.TimeInstantType.RECORDED,
+            ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
+        return QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = recordedAfterExpression)
+    }
+
     /**
      * Closes the RPC connection to the Corda node
      */
@@ -154,6 +229,9 @@ class CordaStateChangeListenerController {
     lateinit var consentStateListener: CordaStateChangeListener<ConsentState>
 
     @Autowired
+    lateinit var stateFileStorageControl: StateFileStorageControl
+
+    @Autowired
     lateinit var nutsEventPublisher: NutsEventPublisher
 
     @Autowired
@@ -172,8 +250,8 @@ class CordaStateChangeListenerController {
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
-        requestStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::handleRequestStateProduced)
-        consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), ::handleStateProducedEvent)
+        requestStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), stateFileStorageControl, ::handleRequestStateProduced, StateCallbacks::noOpCallback)
+        consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), stateFileStorageControl, ::handleStateProducedEvent, StateCallbacks::noOpCallback)
 
         if (consentBridgeRPCProperties.enabled) {
             requestStateListener.start(ConsentBranch::class.java)

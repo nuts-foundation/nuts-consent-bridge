@@ -35,3 +35,6 @@ _build
 
 # Java profiling heap dumps
 *.hprof
+
+# Various test files
+temp

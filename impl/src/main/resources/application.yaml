@@ -3,6 +3,9 @@ nuts:
     schedule:
       delay: 15 * 60 * 1000
       initial_delay: 1000
+  event:
+    meta:
+      location: "."
 
 spring:
   application:

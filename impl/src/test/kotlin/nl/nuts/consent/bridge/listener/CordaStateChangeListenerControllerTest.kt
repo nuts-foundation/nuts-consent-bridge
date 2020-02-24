@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.rpc.nl.nuts.consent.bridge.listener
+package nl.nuts.consent.bridge.listener
 
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.eq

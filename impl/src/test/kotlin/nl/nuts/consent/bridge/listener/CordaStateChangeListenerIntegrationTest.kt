@@ -35,21 +35,30 @@ import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.*
 import net.corda.testing.node.User
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
+import nl.nuts.consent.bridge.EventMetaProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
+import nl.nuts.consent.bridge.nats.NutsEventListenerTest
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
+import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
+import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
+import np.com.madanpokharel.embed.nats.NatsServerConfig
+import np.com.madanpokharel.embed.nats.NatsStreamingVersion
+import np.com.madanpokharel.embed.nats.ServerType
 import org.junit.*
+import java.io.File
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -109,6 +118,17 @@ class CordaStateChangeListenerIntegrationTest {
                 }
             }.start()
 
+            // nats server
+            val config = EmbeddedNatsConfig.Builder()
+                .withNatsServerConfig(
+                    NatsServerConfig.Builder()
+                        .withServerType(ServerType.NATS_STREAMING)
+                        .withPort(4222)
+                        .withNatsStreamingVersion(NatsStreamingVersion.V0_16_2)
+                        .build()
+                )
+                .build()
+
             blockUntilSet(120000L) {
                 node
             }
@@ -124,11 +144,19 @@ class CordaStateChangeListenerIntegrationTest {
     private var listener : CordaStateChangeListener<DummyState>? = null
     private var smListener : CordaStateMachineListener? = null
     private val eventStateStore = EventStateStore()
+    private val stateFileStorage = StateFileStorageControl()
 
     @Before
     fun setup() {
         val client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
         connection = client.start(USER, PASSWORD, null, null)
+        stateFileStorage.eventMetaProperties = EventMetaProperties("./temp")
+    }
+
+    @BeforeTest
+    fun reset() {
+        // so listener starts starts at 0
+        File("./temp/DummyState.stamp").delete()
     }
 
     @After
@@ -138,9 +166,43 @@ class CordaStateChangeListenerIntegrationTest {
     }
 
     @Test
+    fun `listener is able to publish older states`() {
+        val producedState = AtomicReference<StateAndRef<DummyState>>()
+        listener = CordaStateChangeListener(CordaRPClientWrapper(validProperties!!), stateFileStorage, {
+            producedState.set(it)
+        })
+
+        listener!!.start(DummyState::class.java)
+
+        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
+
+        blockUntilSet {
+            producedState.get()
+        }
+
+        listener!!.stop()
+
+        // clean timestamp file
+        File("./temp/DummyState.stamp").delete()
+
+        val producedStateAgain = AtomicReference<StateAndRef<DummyState>>()
+        listener = CordaStateChangeListener(CordaRPClientWrapper(validProperties!!), stateFileStorage, {
+            producedStateAgain.set(it)
+        })
+
+        listener!!.start(DummyState::class.java)
+
+        blockUntilSet {
+            producedStateAgain.get()
+        }
+
+        assertNotNull(producedStateAgain.get())
+    }
+
+    @Test
     fun `onProduces is called for a new state`() {
         val producedState = AtomicReference<StateAndRef<DummyState>>()
-        listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties!!), {
+        listener = CordaStateChangeListener(CordaRPClientWrapper(validProperties!!), stateFileStorage, {
             producedState.set(it)
         })
         listener!!.start(DummyState::class.java)
@@ -157,7 +219,7 @@ class CordaStateChangeListenerIntegrationTest {
     @Test
     fun `onProduces returns refAndState`() {
         val producedState = AtomicReference<StateAndRef<DummyState>>()
-        listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties!!), {
+        listener = CordaStateChangeListener(CordaRPClientWrapper(validProperties!!), stateFileStorage, {
             producedState.set(it)
         })
         listener!!.start(DummyState::class.java)
@@ -175,7 +237,7 @@ class CordaStateChangeListenerIntegrationTest {
     fun `onConsumes returns refAndState`() {
         val producedState = AtomicReference<StateAndRef<DummyState>>()
         val consumedState = AtomicReference<StateAndRef<DummyState>>()
-        listener = CordaStateChangeListener<DummyState>(CordaRPClientWrapper(validProperties!!), {
+        listener = CordaStateChangeListener(CordaRPClientWrapper(validProperties!!), stateFileStorage, {
             producedState.set(it)
         }, {
             consumedState.set(it)
