@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import io.nats.streaming.Subscription
 import io.nats.streaming.SubscriptionOptions
+import net.corda.core.CordaRuntimeException
 import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
@@ -66,6 +67,9 @@ class NutsEventListener : NutsEventBase() {
                 try {
                     processEvent(event)
                 } catch (e: IOException) { // recoverable
+                    logger.error(e.message, e)
+                    retry(event)
+                } catch (e: CordaRuntimeException) { // recoverable
                     logger.error(e.message, e)
                     retry(event)
                 } catch (e: Exception) { // broken
