@@ -18,6 +18,7 @@
 
 package nl.nuts.consent.bridge.rpc
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.identity.CordaX500Name
@@ -488,8 +489,13 @@ class CordaService {
         return closeConnectionOnError(fun(): SecureHash {
             try {
                 hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
-            } catch (e : FileAlreadyExistsException) {
-                hash = SecureHash.parse(e.file)
+            } catch (e : CordaRuntimeException) {
+                if (e.cause is FileAlreadyExistsException) {
+                    val ex = e.cause as FileAlreadyExistsException
+                    hash = SecureHash.parse(ex.file)
+                } else {
+                    throw e
+                }
             }
             return hash
         })
@@ -605,7 +611,7 @@ class CordaService {
             return block()
         } catch (e: Exception){
             // do your handle actions
-            logger.error(e.message)
+            logger.error(e.message, e)
             cordaRPClientWrapper.close()
             throw e
         }
