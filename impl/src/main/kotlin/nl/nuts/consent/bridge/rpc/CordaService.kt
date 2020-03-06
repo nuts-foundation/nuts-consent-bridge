@@ -163,10 +163,9 @@ class CordaService {
     }
 
     private fun listConsentBranchByUUID(uuid: String) : Vault.Page<ConsentBranch> {
-        return closeConnectionOnError(fun(): Vault.Page<ConsentBranch> {
-            // not autoclose, but reuse instance
-            val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
+        val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
+        return closeConnectionOnError {
             val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
                     linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
                     status = Vault.StateStatus.UNCONSUMED,
@@ -178,7 +177,7 @@ class CordaService {
                     sorting = Sort(emptySet()),
                     contractStateType = ConsentBranch::class.java
             )
-        })
+        }
     }
 
     /**
@@ -272,7 +271,7 @@ class CordaService {
     fun getCipherText(secureHash: SecureHash) : Attachment? {
         val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): Attachment? {
+        return closeConnectionOnError {
             if (!proxy.attachmentExists(secureHash)) {
                 return null
             }
@@ -309,7 +308,7 @@ class CordaService {
             }
 
             return Attachment(m, attachment)
-        })
+        }
     }
 
     /**
@@ -320,14 +319,14 @@ class CordaService {
     fun getAttachment(secureHash: SecureHash) : ByteArray? {
         val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): ByteArray? {
+        return closeConnectionOnError {
             if (!proxy.attachmentExists(secureHash)) {
                 return null
             }
 
             val inputStream = proxy.openAttachment(secureHash)
             return inputStream.readFully()
-        })
+        }
     }
 
     private fun readZipBytes(reader : BufferedInputStream) : ByteArray {
@@ -425,7 +424,7 @@ class CordaService {
         val customCriteria = QueryCriteria.VaultCustomQueryCriteria(customCriteriaI, Vault.StateStatus.UNCONSUMED, setOf(ConsentState::class.java))
         val sortAttribute = SortAttribute.Custom(entityStateClass = ConsentSchemaV1.PersistentConsent::class.java, entityStateColumnName = "externalId")
 
-        return closeConnectionOnError(fun(): ConsentState {
+        return closeConnectionOnError {
             val page: Vault.Page<ConsentState> = proxy.vaultQueryBy(
                 criteria = customCriteria,
                 paging = PageSpecification(),
@@ -445,7 +444,7 @@ class CordaService {
 
             val stateAndRef = page.states.first()
             return stateAndRef.state.data
-        })
+        }
     }
 
 
@@ -486,7 +485,7 @@ class CordaService {
         var hash : SecureHash
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): SecureHash {
+        return closeConnectionOnError {
             try {
                 hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
             } catch (e : CordaRuntimeException) {
@@ -498,7 +497,7 @@ class CordaService {
                 }
             }
             return hash
-        })
+        }
     }
 
     /**
@@ -511,12 +510,12 @@ class CordaService {
     fun signConsentBranch(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): FlowHandle<SignedTransaction> {
+        return closeConnectionOnError {
             return proxy.startFlow(
                 ConsentFlows::SignConsentBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid)),
                 listOf(BridgeToCordappType.convert(partyAttachmentSignature)))
-        })
+        }
     }
 
     /**
@@ -529,12 +528,12 @@ class CordaService {
     fun mergeConsentBranch(uuid: String): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): FlowHandle<SignedTransaction> {
+        return closeConnectionOnError {
             return proxy.startFlow(
                 ConsentFlows::MergeBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid))
             )
-        })
+        }
     }
 
     /**
@@ -545,7 +544,7 @@ class CordaService {
     fun consentBranchByTx(tx: SecureHash) : UUID? {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): UUID? {
+        return closeConnectionOnError {
             val transaction = proxy.internalFindVerifiedTransaction(tx) ?: return null
 
             val criteria = QueryCriteria.VaultQueryCriteria(stateRefs = transaction.inputs, status = Vault.StateStatus.CONSUMED)
@@ -557,7 +556,7 @@ class CordaService {
             }
 
             return results.states[0].state.data.linearId.id
-        })
+        }
     }
 
     /**
@@ -569,7 +568,7 @@ class CordaService {
     fun pingNotary() : PingResult {
         val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): PingResult {
+        return closeConnectionOnError {
             try {
                 val f = proxy.startFlow(DiagnosticFlows::PingNotaryFlow)
 
@@ -578,7 +577,7 @@ class CordaService {
                 return PingResult(false, TIMEOUT_ERROR)
             }
             return PingResult(true)
-        })
+        }
     }
 
     /**
@@ -590,7 +589,7 @@ class CordaService {
     fun pingRandom() : PingResult {
         val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
 
-        return closeConnectionOnError(fun(): PingResult {
+        return closeConnectionOnError {
             try {
                 val f = proxy.startFlow(DiagnosticFlows::PingRandomFlow)
 
@@ -599,7 +598,7 @@ class CordaService {
                 return PingResult(false, TIMEOUT_ERROR)
             }
             return PingResult(true)
-        })
+        }
     }
 
     private fun logError(e:Exception) {
