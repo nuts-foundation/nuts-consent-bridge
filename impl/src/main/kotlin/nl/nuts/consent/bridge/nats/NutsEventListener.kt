@@ -20,10 +20,11 @@ package nl.nuts.consent.bridge.nats
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
-import io.nats.client.Connection
-import io.nats.client.ConnectionListener
-import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import io.nats.streaming.Subscription
+import io.nats.streaming.SubscriptionOptions
+import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.Serialization
+import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.model.FullConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
 import nl.nuts.consent.bridge.rpc.CordaService
@@ -32,17 +33,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.IOException
-import java.lang.IllegalStateException
 import java.util.*
-import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
-import io.nats.client.Nats
-import io.nats.client.Options
-import io.nats.streaming.*
-import nl.nuts.consent.bridge.Constants
-import nl.nuts.consent.bridge.api.NotFoundException
-import org.bouncycastle.crypto.tls.ConnectionEnd.server
-import java.time.Duration
 
 
 /**
@@ -53,7 +45,7 @@ class NutsEventListener : NutsEventBase() {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Autowired
-    lateinit var cordaService : CordaService
+    lateinit var cordaService: CordaService
 
     @Autowired
     lateinit var eventStateStore: EventStateStore
@@ -65,29 +57,38 @@ class NutsEventListener : NutsEventBase() {
 
     override fun initListener() {
         subscription = connection?.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
+
+            logger.trace("Received event with data ${String(it.data)}")
+            var event: Event? = null
+
             try {
-                logger.trace("Received event with data ${String(it.data)}")
-                val e = Serialization.objectMapper().readValue(it.data, Event::class.java)
-                processEvent(e)
-            } catch (e : IOException) {
+                event = Serialization.objectMapper().readValue(it.data, Event::class.java)
+                try {
+                    processEvent(event)
+                } catch (e: IOException) { // recoverable
+                    logger.error(e.message, e)
+                    retry(event)
+                } catch (e: Exception) { // broken
+                    logger.error(e.message, e)
+                    nutsEventPublisher.publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+                }
+            } catch (e: JsonParseException) { // broken
                 logger.error(e.message, e)
-            } catch (e : JsonParseException) {
+                nutsEventPublisher.publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+            } catch (e: JsonMappingException) { // broken
                 logger.error(e.message, e)
-            } catch (e : JsonMappingException) {
-                logger.error(e.message, e)
-            } catch (e : Exception) {
-                logger.error(e.message, e)
+                nutsEventPublisher.publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
             }
         }, SubscriptionOptions.Builder()
-                .startWithLastReceived()
-                .durableName("${Constants.NAME}Durable")
-                .build()
+            .startWithLastReceived()
+            .durableName("${Constants.NAME}Durable")
+            .build()
         )
 
         logger.info("Nats subscription with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
     }
 
-    override fun name() : String {
+    override fun name(): String {
         return "listener"
     }
 
@@ -101,7 +102,13 @@ class NutsEventListener : NutsEventBase() {
         subscription?.close()
     }
 
-    private fun processEvent(e : Event) {
+    private fun retry(e: Event) {
+        e.retryCount++
+        val bytes  = Serialization.objectMapper().writeValueAsBytes(e)
+        nutsEventPublisher.publishToRetry(e.retryCount, bytes)
+    }
+
+    private fun processEvent(e: Event) {
         // todo null checks -> error condition
         when (e.name) {
             EventName.EventConsentRequestConstructed -> {
@@ -121,11 +128,13 @@ class NutsEventListener : NutsEventBase() {
             }
             EventName.EventAttachmentSigned -> {
                 processEventAttachmentSigned(e)
-            } else -> {}
+            }
+            else -> {
+            }
         }
     }
 
-    private fun processEventConsentRequestConstructed(e:Event) {
+    private fun processEventConsentRequestConstructed(e: Event) {
         logger.debug("Processing consentRequest constructed event with data ${Serialization.objectMapper().writeValueAsString(e)}")
 
         val payload = Base64.getDecoder().decode(e.payload)
@@ -146,7 +155,7 @@ class NutsEventListener : NutsEventBase() {
         nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
     }
 
-    private fun processEventConsentRequestInFlight(e:Event) {
+    private fun processEventConsentRequestInFlight(e: Event) {
         logger.debug("Processing consentRequest in flight event with data ${Serialization.objectMapper().writeValueAsString(e)}")
         // when doing replay
         val uuid = UUID.fromString(e.transactionId)
@@ -158,7 +167,7 @@ class NutsEventListener : NutsEventBase() {
         logger.debug("Starting to listen for transaction update for id: ${e.transactionId}")
     }
 
-    private fun processEventInFinalFlight(e:Event) {
+    private fun processEventInFinalFlight(e: Event) {
         logger.debug("Processing consentRequest in final flight event with data ${Serialization.objectMapper().writeValueAsString(e)}")
         // when doing replay
         val uuid = UUID.fromString(e.transactionId)
@@ -203,7 +212,7 @@ class NutsEventListener : NutsEventBase() {
                 // todo should we republish?
                 return
             }
-        } catch (e:NotFoundException) {
+        } catch (e: NotFoundException) {
             // given branch has probably be completed, errored or cancelled already
             // this should have been published by the CordaStateChangeListener
             logger.warn("ConsentBranch missing for UUID: $cId, possible duplicate event, ignoring")

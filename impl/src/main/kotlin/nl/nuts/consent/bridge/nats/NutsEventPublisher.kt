@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service
  */
 @Service
 class NutsEventPublisher : NutsEventBase() {
+
     /**
      * Publishes the given data to the given channel
      *
@@ -33,6 +34,19 @@ class NutsEventPublisher : NutsEventBase() {
      */
     // todo fatal errors
     fun publish(subject:String, data: ByteArray) {
+        if (connected()) {
+            connection?.publish(subject, data)
+        } else {
+            throw IllegalStateException("Nats server not connected")
+        }
+    }
+
+    /**
+     * The event retry count must already have been incremented before this call
+     * The nuts-event-octopus logic handles republishing
+     */
+    fun publishToRetry(retryCount: Int, data: ByteArray) {
+        val subject = "${NATS_CONSENT_RETRY_SUBJECT}-${retryCount}"
         if (connected()) {
             connection?.publish(subject, data)
         } else {

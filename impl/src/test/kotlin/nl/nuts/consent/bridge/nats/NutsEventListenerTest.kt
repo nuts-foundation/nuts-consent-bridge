@@ -18,6 +18,8 @@
 
 package nl.nuts.consent.bridge.nats
 
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.JsonMappingException
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
@@ -27,11 +29,14 @@ import io.nats.client.Nats
 import io.nats.client.Options
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
+import io.nats.streaming.SubscriptionOptions
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.model.ConsentId
@@ -43,6 +48,7 @@ import nl.nuts.consent.bridge.model.Period
 import nl.nuts.consent.bridge.model.SignatureWithKey
 import nl.nuts.consent.bridge.model.SymmetricKey
 import nl.nuts.consent.bridge.rpc.CordaService
+import nl.nuts.consent.bridge.rpc.test.DummyState
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.state.ConsentBranch
 import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
@@ -57,11 +63,14 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.mockito.Mockito.`when`
+import java.io.IOException
 import java.net.ServerSocket
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.test.assertTrue
 
 
 class NutsEventListenerTest {
@@ -303,6 +312,49 @@ class NutsEventListenerTest {
 
         // then
         verify(cordaService).signConsentBranch(any(), any())
+    }
+
+    @Test
+    fun `event is published to retry queue on IOError`() {
+        val producedState = AtomicReference<Boolean>()
+        val subscription = connection?.subscribe(NATS_CONSENT_RETRY_SUBJECT, {
+            producedState.set(true)
+        }, SubscriptionOptions.Builder().build())
+
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
+        //when
+        `when`(cordaService.consentBranchExists(any())).thenThrow(IOException("boom!"))
+
+        val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        Thread.sleep(1000)
+
+        subscription.close(true)
+
+        // then an entry must be available in the retry queue
+        assertTrue(producedState.get())
+    }
+
+    @Test
+    fun `event is published to error queue on json error`() {
+        val producedState = AtomicReference<Boolean>()
+        val subscription = connection?.subscribe(NATS_CONSENT_RETRY_SUBJECT, {
+            producedState.set(true)
+        }, SubscriptionOptions.Builder().build())
+
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, "not json".toByteArray())
+
+        Thread.sleep(1000)
+
+        subscription.close(true)
+
+        // then an entry must be available in the retry queue
+        assertTrue(producedState.get())
     }
 
     private fun event(name : EventName) : Event {
