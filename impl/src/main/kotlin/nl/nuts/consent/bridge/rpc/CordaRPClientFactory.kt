@@ -18,8 +18,11 @@
 
 package nl.nuts.consent.bridge.rpc
 
-import net.corda.client.rpc.*
+import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.client.rpc.CordaRPCConnection
+import net.corda.client.rpc.GracefulReconnect
+import net.corda.client.rpc.RPCException
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.seconds
@@ -36,7 +39,6 @@ import org.springframework.context.annotation.Configuration
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
-
 
 /**
  * abstraction for creating Corda RPC client
@@ -96,11 +98,11 @@ class CordaRPClientWrapper : AutoCloseable {
 
         try {
             connection?.forceClose()
-            connection = null
         } catch (e: Exception) {
             logger.warn("failed to gracefully close the connection: ${e.message}")
         }
 
+        connection = null
         logger.debug("RPC connection closed")
     }
 

@@ -33,6 +33,7 @@ import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.state.ConsentBranch
@@ -248,6 +249,9 @@ class CordaStateChangeListenerController {
     lateinit var cordaService: CordaService
 
     @Autowired
+    lateinit var cordaRPClientFactory: CordaRPClientFactory
+
+    @Autowired
     lateinit var eventstoreProperties: EventStoreProperties
     lateinit var eventApi: EventApi
 
@@ -257,8 +261,8 @@ class CordaStateChangeListenerController {
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
-        requestStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), stateFileStorageControl, ::handleRequestStateProduced, StateCallbacks::noOpCallback)
-        consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), stateFileStorageControl, ::handleStateProducedEvent, StateCallbacks::noOpCallback)
+        requestStateListener = CordaStateChangeListener(cordaRPClientFactory.getObject(), stateFileStorageControl, ::handleRequestStateProduced, StateCallbacks::noOpCallback)
+        consentStateListener = CordaStateChangeListener(cordaRPClientFactory.getObject(), stateFileStorageControl, ::handleStateProducedEvent, StateCallbacks::noOpCallback)
 
         if (consentBridgeRPCProperties.enabled) {
             requestStateListener.start(ConsentBranch::class.java)

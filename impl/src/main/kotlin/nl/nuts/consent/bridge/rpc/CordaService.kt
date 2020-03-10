@@ -111,13 +111,6 @@ class CordaService {
     }
 
     /**
-     * Helper func to get a CordaRPC connection
-     */
-    fun cordaRPClientWrapper() : CordaRPClientWrapper {
-        return cordaRPClientWrapper
-    }
-
-    /**
      * Get a ConsentRequestState given its UUID
      *
      * @param UUID uuid part of the Corda UniqueIdentifier

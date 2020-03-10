@@ -25,6 +25,7 @@ import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
 import org.slf4j.Logger
@@ -143,13 +144,13 @@ class CordaStateMachineListenerController {
     lateinit var cordaStateMachineListener: CordaStateMachineListener
 
     @Autowired
-    lateinit var cordaService:CordaService
-
-    @Autowired
     lateinit var consentBridgeRPCProperties: ConsentBridgeRPCProperties
 
     @Autowired
     lateinit var nutsEventPublisher: NutsEventPublisher
+
+    @Autowired
+    lateinit var cordaRPClientFactory: CordaRPClientFactory
 
     @Autowired
     lateinit var eventStateStore: EventStateStore
@@ -159,7 +160,7 @@ class CordaStateMachineListenerController {
      */
     @PostConstruct
     fun init() {
-        cordaStateMachineListener = CordaStateMachineListener(cordaService.cordaRPClientWrapper(), nutsEventPublisher, eventStateStore)
+        cordaStateMachineListener = CordaStateMachineListener(cordaRPClientFactory.getObject(), nutsEventPublisher, eventStateStore)
 
         if (consentBridgeRPCProperties.enabled) {
             cordaStateMachineListener.start()
