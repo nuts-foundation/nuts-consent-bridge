@@ -91,37 +91,27 @@ class CordaRPClientWrapper : AutoCloseable {
         retryCount = consentBridgeRPCProperties.retryCount
     }
 
-    @Synchronized override fun close() {
-        logger.info("Closing RPC connection")
+    override fun close() {
+        logger.debug("Closing RPC connection")
 
-        connection?.notifyServerAndClose()
-        connection = null
+        try {
+            connection?.forceClose()
+            connection = null
+        } catch (e: Exception) {
+            logger.warn("failed to gracefully close the connection: ${e.message}")
+        }
+
+        logger.debug("RPC connection closed")
     }
 
     /**
      * Not only close the connection but also indicate a new connection should not be made.
      */
-    @Synchronized fun term() {
+    fun term() {
         logger.info("Terminating RPC connection")
 
         shutdown = true
         close()
-    }
-
-    /**
-     * get a handle to the CordaRPCOps object, also connects if needed
-     * @return handle to CordaRPCOps
-     */
-    @Synchronized fun proxy() : CordaRPCOps? {
-        if (shutdown) {
-            throw IllegalStateException("Request for proxy when shutdown is in progress")
-        }
-
-        if (connection == null) {
-            connect()
-        }
-
-        return connection?.proxy
     }
 
     private fun connect() {
@@ -190,6 +180,22 @@ class CordaRPClientWrapper : AutoCloseable {
             // Could not connect this time round - pause before giving another try.
             Thread.sleep(retryInterval.toMillis())
         } while (!shutdown && connection == null)
+    }
+
+    /**
+     * get a handle to the CordaRPCOps object, also connects if needed
+     * @return handle to CordaRPCOps
+     */
+    fun proxy() : CordaRPCOps? {
+        if (shutdown) {
+            throw IllegalStateException("Request for proxy when shutdown is in progress")
+        }
+
+        if (connection == null) {
+            connect()
+        }
+
+        return connection?.proxy
     }
 }
 

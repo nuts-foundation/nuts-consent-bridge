@@ -82,6 +82,8 @@ class NutsEventListener : NutsEventBase() {
             } catch (e: JsonMappingException) { // broken
                 logger.error(e.message, e)
                 nutsEventPublisher.publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+            } catch (e: Exception) { // broken
+                logger.error(e.message, e)
             }
         }, SubscriptionOptions.Builder()
             .startWithLastReceived()
@@ -107,6 +109,8 @@ class NutsEventListener : NutsEventBase() {
     }
 
     private fun retry(e: Event) {
+        logger.debug("Publishing event to retry queue")
+
         e.retryCount++
         val bytes  = Serialization.objectMapper().writeValueAsBytes(e)
         nutsEventPublisher.publishToRetry(e.retryCount, bytes)
