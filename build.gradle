@@ -191,7 +191,7 @@ task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugi
     groupId = "${project.group}"
     id = "registry-client"
     outputDir = "${project.rootDir}/generated-registry-client"
-    inputSpec = "https://nuts-documentation.readthedocs.io/en/0.11.2/_static/nuts-registry.yaml"
+    inputSpec = "https://nuts-documentation.readthedocs.io/en/latest/_static/nuts-registry.yaml"
     verbose = false
     generateApiDocumentation = false
     generateModelDocumentation = false
@@ -214,7 +214,7 @@ task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plu
     groupId = "${project.group}"
     id = "event-store-client"
     outputDir = "${project.rootDir}/generated-event-store-client"
-    inputSpec = "https://nuts-documentation.readthedocs.io/en/0.11.2/_static/nuts-event-store.yaml"
+    inputSpec = "https://nuts-documentation.readthedocs.io/en/latest/_static/nuts-event-store.yaml"
     verbose = false
     generateApiDocumentation = false
     generateModelDocumentation = false

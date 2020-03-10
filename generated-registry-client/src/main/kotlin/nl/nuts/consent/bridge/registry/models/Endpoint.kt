@@ -18,8 +18,8 @@ import com.squareup.moshi.Json
  * @param endpointType URI of the type of endpoint
  * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  * @param status status of the endpoint
- * @param version version number of the endpoint, used to distinguish between upgrades of endpoint
  * @param URL location of the actual en endpoint on the internet
+ * @param properties A property bag, containing extra properties for endpoints
  */
 data class Endpoint (
     /* URI of the type of endpoint */
@@ -28,10 +28,10 @@ data class Endpoint (
     val identifier: kotlin.String,
     /* status of the endpoint */
     val status: Endpoint.Status,
-    /* version number of the endpoint, used to distinguish between upgrades of endpoint */
-    val version: kotlin.String,
     /* location of the actual en endpoint on the internet */
-    val URL: kotlin.String
+    val URL: kotlin.String,
+    /* A property bag, containing extra properties for endpoints */
+    val properties: kotlin.collections.Map<kotlin.String, kotlin.String>? = null
 ) {
 
     /**

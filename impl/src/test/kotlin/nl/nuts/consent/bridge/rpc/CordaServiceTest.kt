@@ -631,7 +631,6 @@ class CordaServiceTest {
                 endpointType = "urn:nuts:endpoint:consent",
                 identifier = "urn:ietf:rfc:1779:O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local",
                 status = Endpoint.Status.active,
-                version = "1.0",
                 URL = "tcp://::1:7886"
         )
     }

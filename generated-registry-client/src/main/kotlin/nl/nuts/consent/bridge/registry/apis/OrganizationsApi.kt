@@ -18,37 +18,6 @@ import nl.nuts.consent.bridge.registry.infrastructure.*
 class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient(basePath) {
 
     /**
-    * Remove organization by id
-    * 
-    * @param id URL encoded identifier 
-    * @return void
-    */
-    fun deregisterOrganization(id: kotlin.String) : Unit {
-        val localVariableBody: kotlin.Any? = null
-        val localVariableQuery: MultiValueMap = mapOf()
-        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
-        val localVariableConfig = RequestConfig(
-            RequestMethod.DELETE,
-            "/api/organization/{id}".replace("{"+"id"+"}", "$id"),
-            query = localVariableQuery,
-            headers = localVariableHeaders
-        )
-        val response = request<Any?>(
-            localVariableConfig,
-            localVariableBody
-        )
-
-        return when (response.responseType) {
-            ResponseType.Success -> Unit
-            ResponseType.Informational -> TODO()
-            ResponseType.Redirection -> TODO()
-            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
-            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
-            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
-        }
-    }
-
-    /**
     * Get organization by id
     * 
     * @param id URL encoded identifier 
@@ -72,37 +41,6 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
 
         return when (response.responseType) {
             ResponseType.Success -> (response as Success<*>).data as Organization
-            ResponseType.Informational -> TODO()
-            ResponseType.Redirection -> TODO()
-            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
-            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
-            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
-        }
-    }
-
-    /**
-    * Add an organization to the registry
-    * Keys can follow the following structures (EC or RSA): &#x60;&#x60;&#x60;json \&quot;keys\&quot;: [{   \&quot;kty\&quot;: \&quot;RSA\&quot;,   \&quot;n\&quot;: \&quot;0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw\&quot;,   \&quot;e\&quot;: \&quot;AQAB\&quot;,   \&quot;alg\&quot;: \&quot;RS256\&quot;,   \&quot;kid\&quot;: \&quot;2011-04-29\&quot;, }] &#x60;&#x60;&#x60;  or  &#x60;&#x60;&#x60;json \&quot;keys\&quot;: [{   \&quot;kty\&quot;: \&quot;EC\&quot;,   \&quot;crv\&quot;: \&quot;P-256\&quot;,   \&quot;x\&quot;: \&quot;MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4\&quot;,   \&quot;y\&quot;: \&quot;4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM\&quot;,   \&quot;kid\&quot;: \&quot;1\&quot;, }] &#x60;&#x60;&#x60; 
-    * @param organization  
-    * @return void
-    */
-    fun registerOrganization(organization: Organization) : Unit {
-        val localVariableBody: kotlin.Any? = organization
-        val localVariableQuery: MultiValueMap = mapOf()
-        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
-        val localVariableConfig = RequestConfig(
-            RequestMethod.POST,
-            "/api/organizations",
-            query = localVariableQuery,
-            headers = localVariableHeaders
-        )
-        val response = request<Any?>(
-            localVariableConfig,
-            localVariableBody
-        )
-
-        return when (response.responseType) {
-            ResponseType.Success -> Unit
             ResponseType.Informational -> TODO()
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")

@@ -12,6 +12,7 @@
 package nl.nuts.consent.bridge.registry.apis
 
 import nl.nuts.consent.bridge.registry.models.Endpoint
+import nl.nuts.consent.bridge.registry.models.Event
 
 import nl.nuts.consent.bridge.registry.infrastructure.*
 
@@ -43,6 +44,39 @@ class EndpointsApi(basePath: kotlin.String = "http://localhost") : ApiClient(bas
 
         return when (response.responseType) {
             ResponseType.Success -> (response as Success<*>).data as kotlin.Array<Endpoint>
+            ResponseType.Informational -> TODO()
+            ResponseType.Redirection -> TODO()
+            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
+            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
+        }
+    }
+
+    /**
+    * Adds an endpoint for this organisation to the registry
+    * 
+    * @param id URL encoded identifier 
+    * @param endpoint  
+    * @return Event
+    */
+    @Suppress("UNCHECKED_CAST")
+    fun registerEndpoint(id: kotlin.String, endpoint: Endpoint) : Event {
+        val localVariableBody: kotlin.Any? = endpoint
+        val localVariableQuery: MultiValueMap = mapOf()
+        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
+        val localVariableConfig = RequestConfig(
+            RequestMethod.POST,
+            "/api/organization/{id}/endpoints".replace("{"+"id"+"}", "$id"),
+            query = localVariableQuery,
+            headers = localVariableHeaders
+        )
+        val response = request<Event>(
+            localVariableConfig,
+            localVariableBody
+        )
+
+        return when (response.responseType) {
+            ResponseType.Success -> (response as Success<*>).data as Event
             ResponseType.Informational -> TODO()
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
