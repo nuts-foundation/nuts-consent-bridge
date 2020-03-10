@@ -25,6 +25,8 @@ import java.lang.IllegalArgumentException
 import javax.validation.constraints.NotNull
 
 const val NATS_CONSENT_REQUEST_SUBJECT = "consentRequest"
+const val NATS_CONSENT_RETRY_SUBJECT = "consentRequestRetry"
+const val NATS_CONSENT_ERROR_SUBJECT = "consentRequestErrored"
 
 /**
  * Kotlin version of the nuts service space event as defined by nuts-event-octopus

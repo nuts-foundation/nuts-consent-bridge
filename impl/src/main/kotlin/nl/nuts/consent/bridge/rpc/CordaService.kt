@@ -111,13 +111,6 @@ class CordaService {
     }
 
     /**
-     * Helper func to get a CordaRPC connection
-     */
-    fun cordaRPClientWrapper() : CordaRPClientWrapper {
-        return cordaRPClientWrapper
-    }
-
-    /**
      * Get a ConsentRequestState given its UUID
      *
      * @param UUID uuid part of the Corda UniqueIdentifier
@@ -165,7 +158,7 @@ class CordaService {
     private fun listConsentBranchByUUID(uuid: String) : Vault.Page<ConsentBranch> {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
                     linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
                     status = Vault.StateStatus.UNCONSUMED,
@@ -271,7 +264,7 @@ class CordaService {
     fun getCipherText(secureHash: SecureHash) : Attachment? {
         val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             if (!proxy.attachmentExists(secureHash)) {
                 return null
             }
@@ -319,7 +312,7 @@ class CordaService {
     fun getAttachment(secureHash: SecureHash) : ByteArray? {
         val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             if (!proxy.attachmentExists(secureHash)) {
                 return null
             }
@@ -395,7 +388,7 @@ class CordaService {
             throw IllegalArgumentException("No available endpoints for given organization ids in registry")
         }
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             // check consistency of nodeNames
             // urn:ietf:rfc:1779:X to X
             val nodeNames = endpoints.map {
@@ -424,7 +417,7 @@ class CordaService {
         val customCriteria = QueryCriteria.VaultCustomQueryCriteria(customCriteriaI, Vault.StateStatus.UNCONSUMED, setOf(ConsentState::class.java))
         val sortAttribute = SortAttribute.Custom(entityStateClass = ConsentSchemaV1.PersistentConsent::class.java, entityStateColumnName = "externalId")
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             val page: Vault.Page<ConsentState> = proxy.vaultQueryBy(
                 criteria = customCriteria,
                 paging = PageSpecification(),
@@ -485,13 +478,14 @@ class CordaService {
         var hash : SecureHash
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             try {
                 hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
             } catch (e : CordaRuntimeException) {
                 if (e.cause is FileAlreadyExistsException) {
                     val ex = e.cause as FileAlreadyExistsException
                     hash = SecureHash.parse(ex.file)
+                    logger.warn("Duplicate attachment, using $hash identifier for existing attachment")
                 } else {
                     throw e
                 }
@@ -510,7 +504,7 @@ class CordaService {
     fun signConsentBranch(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             return proxy.startFlow(
                 ConsentFlows::SignConsentBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid)),
@@ -528,7 +522,7 @@ class CordaService {
     fun mergeConsentBranch(uuid: String): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             return proxy.startFlow(
                 ConsentFlows::MergeBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid))
@@ -544,7 +538,7 @@ class CordaService {
     fun consentBranchByTx(tx: SecureHash) : UUID? {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             val transaction = proxy.internalFindVerifiedTransaction(tx) ?: return null
 
             val criteria = QueryCriteria.VaultQueryCriteria(stateRefs = transaction.inputs, status = Vault.StateStatus.CONSUMED)
@@ -568,7 +562,7 @@ class CordaService {
     fun pingNotary() : PingResult {
         val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             try {
                 val f = proxy.startFlow(DiagnosticFlows::PingNotaryFlow)
 
@@ -589,7 +583,7 @@ class CordaService {
     fun pingRandom() : PingResult {
         val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
 
-        return closeConnectionOnError {
+        closeConnectionOnError {
             try {
                 val f = proxy.startFlow(DiagnosticFlows::PingRandomFlow)
 

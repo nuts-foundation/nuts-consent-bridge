@@ -33,6 +33,7 @@ import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NutsEventPublisher
+import nl.nuts.consent.bridge.rpc.CordaRPClientFactory
 import nl.nuts.consent.bridge.rpc.CordaRPClientWrapper
 import nl.nuts.consent.bridge.rpc.CordaService
 import nl.nuts.consent.state.ConsentBranch
@@ -67,79 +68,86 @@ class CordaStateChangeListener<S : ContractState>(
      * This will initiate the RPC connection and start the observer stream
      */
     fun start(stateClass: Class<S>) {
-        val proxy = cordaRPClientWrapper.proxy()
-        val stateName = stateClass.simpleName
+        try {
+            val proxy = cordaRPClientWrapper.proxy()
+            val stateName = stateClass.simpleName
 
-        if (proxy == null) {
-            logger.warn("Couldn't get proxy, stopping CordaStateChangeListener")
-            shutdown = true
-            return
-        }
-
-        if (shutdown) {
-            proxy.shutdown()
-            return
-        }
-
-        // time criteria
-        var epoch = stateFileStorageControl.readTimestamp(stateName)
-        if (epoch != 0L) {
-            epoch -= 60000L // some overlap for parallel processing
-        }
-
-        val asOfDateTime = Instant.ofEpochMilli(epoch)
-
-        publishMissedProducedStates(proxy, asOfDateTime, stateClass)
-        publishMissedConsumedStates(proxy, asOfDateTime, stateClass)
-
-        // we're caught up
-        val now = System.currentTimeMillis()
-        stateFileStorageControl.writeTimestamp(stateName, now)
-
-        val feed = currentFeed(proxy, Instant.ofEpochMilli(now), stateClass)
-
-        val observable = feed.updates
-
-        // thread safe storage
-        val retryableStateUpdatesSubscription: AtomicReference<Subscription?> = AtomicReference(null)
-
-        // transfer feed events to callback
-        val subscription = observable.subscribe( { update ->
-            logger.debug("Observed ${update.type} state update")
-
-            update.produced.forEach {
-                logger.debug("Observed produced state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
-
-                producedCallback.invoke(it)
-
-                // update latest state, since any timestamp is missing from the Corda side, we store now!
-                stateFileStorageControl.writeTimestamp(stateName, System.currentTimeMillis())
+            if (proxy == null) {
+                logger.warn("Couldn't get proxy, stopping CordaStateChangeListener")
+                shutdown = true
+                return
             }
-            update.consumed.forEach {
-                logger.debug("Observed consumed state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
 
-                consumedCallback.invoke(it)
-
-                // update latest state, since any timestamp is missing from the Corda side, we store now!
-                stateFileStorageControl.writeTimestamp(stateName, System.currentTimeMillis())
+            if (shutdown) {
+                proxy.shutdown()
+                return
             }
-        },
-        { e:Throwable ->
-            logger.error(e.message, e)
-            logger.info("Unsubscribing and disconnecting...")
 
-            // cleanup stuff to make sure we don't leak anything
-            retryableStateUpdatesSubscription.get()?.unsubscribe()
-            cordaRPClientWrapper.close()
+            // time criteria
+            var epoch = stateFileStorageControl.readTimestamp(stateName)
+            if (epoch != 0L) {
+                epoch -= 60000L // some overlap for parallel processing
+            }
 
-            // start again
-            start(stateClass)
-        })
+            val asOfDateTime = Instant.ofEpochMilli(epoch)
 
-        logger.debug("Started CordaStateChangeListener subscription for $stateClass")
+            logger.debug("Finding old produced and consumed states since $epoch")
+            publishMissedProducedStates(proxy, asOfDateTime, stateClass)
+            publishMissedConsumedStates(proxy, asOfDateTime, stateClass)
 
-        // store in atomic reference, so that if the callback errors, the other thread can operate on it safely
-        retryableStateUpdatesSubscription.set(subscription)
+            // we're caught up
+            val now = System.currentTimeMillis()
+            stateFileStorageControl.writeTimestamp(stateName, now)
+
+            val feed = currentFeed(proxy, Instant.ofEpochMilli(now), stateClass)
+
+            val observable = feed.updates
+
+            // thread safe storage
+            val retryableStateUpdatesSubscription: AtomicReference<Subscription?> = AtomicReference(null)
+
+            // transfer feed events to callback
+            val subscription = observable.subscribe({ update ->
+                logger.debug("Observed ${update.type} state update")
+
+                update.produced.forEach {
+                    logger.debug("Observed produced state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
+
+                    producedCallback.invoke(it)
+
+                    // update latest state, since any timestamp is missing from the Corda side, we store now!
+                    stateFileStorageControl.writeTimestamp(stateName, System.currentTimeMillis())
+                }
+                update.consumed.forEach {
+                    logger.debug("Observed consumed state ${it.state.data.javaClass.name} within contract ${it.state.contract}")
+
+                    consumedCallback.invoke(it)
+
+                    // update latest state, since any timestamp is missing from the Corda side, we store now!
+                    stateFileStorageControl.writeTimestamp(stateName, System.currentTimeMillis())
+                }
+            },
+                { e: Throwable ->
+
+                    logger.error(e.message, e)
+                    logger.info("Unsubscribing and disconnecting...")
+
+                    // cleanup stuff to make sure we don't leak anything
+                    retryableStateUpdatesSubscription.get()?.unsubscribe()
+                    cordaRPClientWrapper.close()
+
+                    // start again
+                    start(stateClass)
+                })
+
+            logger.debug("Started CordaStateChangeListener subscription for $stateClass")
+
+            // store in atomic reference, so that if the callback errors, the other thread can operate on it safely
+            retryableStateUpdatesSubscription.set(subscription)
+        } catch (e:Exception) {
+            logger.error("Starting CordaStateChangeListener failed: ${e.message}", e)
+            throw e
+        }
     }
 
     private fun currentFeed(proxy: CordaRPCOps, asOfDateTime: Instant, stateClass: Class<S>): DataFeed<Vault.Page<S>, Vault.Update<S>> {
@@ -241,6 +249,9 @@ class CordaStateChangeListenerController {
     lateinit var cordaService: CordaService
 
     @Autowired
+    lateinit var cordaRPClientFactory: CordaRPClientFactory
+
+    @Autowired
     lateinit var eventstoreProperties: EventStoreProperties
     lateinit var eventApi: EventApi
 
@@ -250,8 +261,8 @@ class CordaStateChangeListenerController {
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
-        requestStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), stateFileStorageControl, ::handleRequestStateProduced, StateCallbacks::noOpCallback)
-        consentStateListener = CordaStateChangeListener(cordaService.cordaRPClientWrapper(), stateFileStorageControl, ::handleStateProducedEvent, StateCallbacks::noOpCallback)
+        requestStateListener = CordaStateChangeListener(cordaRPClientFactory.getObject(), stateFileStorageControl, ::handleRequestStateProduced, StateCallbacks::noOpCallback)
+        consentStateListener = CordaStateChangeListener(cordaRPClientFactory.getObject(), stateFileStorageControl, ::handleStateProducedEvent, StateCallbacks::noOpCallback)
 
         if (consentBridgeRPCProperties.enabled) {
             requestStateListener.start(ConsentBranch::class.java)
