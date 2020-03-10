@@ -58,6 +58,7 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.mockito.Mockito.`when`
+import java.io.IOException
 import java.net.ServerSocket
 import java.time.OffsetDateTime
 import java.util.*
@@ -326,8 +327,37 @@ class NutsEventListenerTest {
     }
 
     @Test
+    fun `event is published to error queue on unknown exception`() {
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.randomUUID())
+
+        //when
+        `when`(cordaService.consentBranchExists(any())).thenThrow(IllegalStateException("boom!"))
+
+        val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
+
+        Thread.sleep(1000)
+
+        // then an entry must be available in the retry queue
+        verify(nutsEventListener.nutsEventPublisher).publish(eq(NATS_CONSENT_ERROR_SUBJECT), any())
+    }
+
+    @Test
     fun `event is published to error queue on json error`() {
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, "not json".toByteArray())
+
+        Thread.sleep(1000)
+
+        // then an entry must be available in the retry queue
+        verify(nutsEventListener.nutsEventPublisher).publish(eq(NATS_CONSENT_ERROR_SUBJECT), any())
+    }
+
+    @Test
+    fun `event is published to error queue on unknown json error`() {
+        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, "[]".toByteArray())
 
         Thread.sleep(1000)
 

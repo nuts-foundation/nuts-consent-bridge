@@ -66,9 +66,6 @@ class NutsEventListener : NutsEventBase() {
                 event = Serialization.objectMapper().readValue(it.data, Event::class.java)
                 try {
                     processEvent(event)
-                } catch (e: IOException) { // recoverable
-                    logger.error(e.message, e)
-                    retry(event)
                 } catch (e: CordaRuntimeException) { // recoverable
                     logger.error(e.message, e)
                     retry(event)
