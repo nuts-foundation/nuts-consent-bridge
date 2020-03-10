@@ -96,13 +96,9 @@ class CordaRPClientWrapper : AutoCloseable {
     override fun close() {
         logger.debug("Closing RPC connection")
 
-        try {
-            connection?.forceClose()
-        } catch (e: Exception) {
-            logger.warn("failed to gracefully close the connection: ${e.message}")
-        }
-
+        connection?.forceClose()
         connection = null
+
         logger.debug("RPC connection closed")
     }
 

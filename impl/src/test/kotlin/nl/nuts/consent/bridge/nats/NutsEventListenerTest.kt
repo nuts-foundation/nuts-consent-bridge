@@ -28,7 +28,6 @@ import io.nats.client.Nats
 import io.nats.client.Options
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
-import io.nats.streaming.SubscriptionOptions
 import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
@@ -59,14 +58,11 @@ import org.junit.Before
 import org.junit.BeforeClass
 import org.junit.Test
 import org.mockito.Mockito.`when`
-import java.io.IOException
 import java.net.ServerSocket
 import java.time.OffsetDateTime
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.test.assertTrue
 
 
 class NutsEventListenerTest {
