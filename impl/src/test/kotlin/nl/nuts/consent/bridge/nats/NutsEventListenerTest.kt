@@ -110,6 +110,7 @@ class NutsEventListenerTest {
         // client connection listener
         val listener = ConnectionListener { conn, type ->
             when(type) {
+                ConnectionListener.Events.RECONNECTED,
                 ConnectionListener.Events.CONNECTED -> {
                     // notify
                     cf.natsConnection = conn

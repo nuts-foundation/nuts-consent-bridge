@@ -91,7 +91,7 @@ class CordaRPClientWrapper : AutoCloseable {
         retryCount = consentBridgeRPCProperties.retryCount
     }
 
-    override fun close() {
+    @Synchronized override fun close() {
         logger.info("Closing RPC connection")
 
         connection?.notifyServerAndClose()
@@ -101,7 +101,7 @@ class CordaRPClientWrapper : AutoCloseable {
     /**
      * Not only close the connection but also indicate a new connection should not be made.
      */
-    fun term() {
+    @Synchronized fun term() {
         logger.info("Terminating RPC connection")
 
         shutdown = true
@@ -158,7 +158,8 @@ class CordaRPClientWrapper : AutoCloseable {
                     val unvalidatedConnection = client.start(
                             username = consentBridgeRPCProperties.user,
                             password = consentBridgeRPCProperties.password,
-                            gracefulReconnect = gracefulReconnect
+                            //gracefulReconnect = gracefulReconnect
+                            gracefulReconnect = null
                     )
 
                     // Check connection is truly operational before returning it.

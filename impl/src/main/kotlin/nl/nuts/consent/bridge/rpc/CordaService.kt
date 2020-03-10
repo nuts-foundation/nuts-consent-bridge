@@ -18,18 +18,20 @@
 
 package nl.nuts.consent.bridge.rpc
 
+import net.corda.core.CordaRuntimeException
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
-import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.internal.readFully
-import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.messaging.startFlow
 import net.corda.core.messaging.vaultQueryBy
 import net.corda.core.node.services.Vault
-import net.corda.core.node.services.vault.*
+import net.corda.core.node.services.vault.PageSpecification
+import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
+import net.corda.core.node.services.vault.SortAttribute
+import net.corda.core.node.services.vault.builder
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.seconds
@@ -53,8 +55,6 @@ import nl.nuts.consent.state.ConsentState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.actuate.health.Health
-import org.springframework.boot.actuate.health.HealthIndicator
 import org.springframework.stereotype.Service
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -163,20 +163,21 @@ class CordaService {
     }
 
     private fun listConsentBranchByUUID(uuid: String) : Vault.Page<ConsentBranch> {
-        // not autoclose, but reuse instance
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
-                linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
-                status = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes = setOf(nl.nuts.consent.state.ConsentBranch::class.java))
+        return closeConnectionOnError {
+            val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
+                    linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
+                    status = Vault.StateStatus.UNCONSUMED,
+                    contractStateTypes = setOf(nl.nuts.consent.state.ConsentBranch::class.java))
 
-        return proxy.vaultQueryBy(
-                criteria = criteria,
-                paging = PageSpecification(),
-                sorting = Sort(emptySet()),
-                contractStateType = ConsentBranch::class.java
-        )
+            return proxy.vaultQueryBy(
+                    criteria = criteria,
+                    paging = PageSpecification(),
+                    sorting = Sort(emptySet()),
+                    contractStateType = ConsentBranch::class.java
+            )
+        }
     }
 
     /**
@@ -269,42 +270,45 @@ class CordaService {
      */
     fun getCipherText(secureHash: SecureHash) : Attachment? {
         val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
-        if(!proxy.attachmentExists(secureHash)) {
-            return null
+
+        return closeConnectionOnError {
+            if (!proxy.attachmentExists(secureHash)) {
+                return null
+            }
+
+            val zipInputStream = ZipInputStream(proxy.openAttachment(secureHash))
+
+            var metadata: ConsentMetadata? = null
+            var attachment = ByteArray(0)
+
+            zipInputStream.use {
+                do {
+                    var entry: ZipEntry? = zipInputStream.nextEntry
+
+                    if (entry == null) {
+                        break
+                    }
+
+                    if (entry.name.endsWith(".json")) {
+                        val reader = zipInputStream.bufferedReader()
+                        val content = reader.readText()
+                        metadata = Serialization.objectMapper().readValue(content, ConsentMetadata::class.java)
+                    } else if (entry.name.endsWith(".bin")) {
+                        attachment = readZipBytes(zipInputStream.buffered())
+
+                        logger.trace("Retrieved cipherText from Corda containing:")
+                        logger.trace(Base64.getEncoder().encodeToString(attachment))
+                    }
+                } while (entry != null)
+            }
+
+            val m = metadata ?: throw IllegalStateException("attachment does not contain a valid metadata file")
+            if (attachment.isEmpty()) {
+                throw IllegalStateException("attachment does not contain a valid binary file")
+            }
+
+            return Attachment(m, attachment)
         }
-
-        val zipInputStream = ZipInputStream(proxy.openAttachment(secureHash))
-
-        var metadata: ConsentMetadata? = null
-        var attachment = ByteArray(0)
-
-        zipInputStream.use {
-            do {
-                var entry: ZipEntry? = zipInputStream.nextEntry
-
-                if (entry == null) {
-                    break
-                }
-
-                if (entry.name.endsWith(".json")) {
-                    val reader = zipInputStream.bufferedReader()
-                    val content = reader.readText()
-                    metadata = Serialization.objectMapper().readValue(content, ConsentMetadata::class.java)
-                } else if (entry.name.endsWith(".bin")) {
-                    attachment = readZipBytes(zipInputStream.buffered())
-
-                    logger.trace("Retrieved cipherText from Corda containing:")
-                    logger.trace(Base64.getEncoder().encodeToString(attachment))
-                }
-            } while (entry != null)
-        }
-
-        val m = metadata ?: throw IllegalStateException("attachment does not contain a valid metadata file")
-        if (attachment.isEmpty()) {
-            throw IllegalStateException("attachment does not contain a valid binary file")
-        }
-
-        return Attachment(m, attachment)
     }
 
     /**
@@ -314,12 +318,15 @@ class CordaService {
      */
     fun getAttachment(secureHash: SecureHash) : ByteArray? {
         val proxy =  cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
-        if(!proxy.attachmentExists(secureHash)) {
-            return null
-        }
 
-        val inputStream = proxy.openAttachment(secureHash)
-        return inputStream.readFully()
+        return closeConnectionOnError {
+            if (!proxy.attachmentExists(secureHash)) {
+                return null
+            }
+
+            val inputStream = proxy.openAttachment(secureHash)
+            return inputStream.readFully()
+        }
     }
 
     private fun readZipBytes(reader : BufferedInputStream) : ByteArray {
@@ -347,7 +354,7 @@ class CordaService {
      * @throws IllegalStateException when an RPC connection could not be made
      */
     fun createConsentBranch(newConsentRequestState: FullConsentRequestState): FlowHandle<SignedTransaction> {
-        logger.debug("createConsentBranch() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
+        //logger.debug("createConsentBranch() with {}", Serialization.objectMapper().writeValueAsString(newConsentRequestState))
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
         val externalId = newConsentRequestState.consentId.externalId ?: throw IllegalArgumentException("consentRequestState.consentId.externalId can not be empty")
@@ -388,22 +395,25 @@ class CordaService {
             throw IllegalArgumentException("No available endpoints for given organization ids in registry")
         }
 
-        // check consistency of nodeNames
-        // urn:ietf:rfc:1779:X to X
-        val nodeNames = endpoints.map {
-            val name = CordaX500Name.parse(it.identifier.split(":").last())
-            proxy.wellKnownPartyFromX500Name(name) ?: throw IllegalStateException("Party with name $name does not exist in the network")
-            name
-        }.toSet()
+        return closeConnectionOnError {
+            // check consistency of nodeNames
+            // urn:ietf:rfc:1779:X to X
+            val nodeNames = endpoints.map {
+                val name = CordaX500Name.parse(it.identifier.split(":").last())
+                proxy.wellKnownPartyFromX500Name(name)
+                    ?: throw IllegalStateException("Party with name $name does not exist in the network")
+                name
+            }.toSet()
 
-        // start flow
-        return proxy.startFlow(
+            // start flow
+            return proxy.startFlow(
                 ConsentFlows::CreateConsentBranch,
                 UUID.fromString(newConsentRequestState.consentId.UUID),
                 consentState.linearId,
                 hashes,
                 orgIds.toSet(),
                 nodeNames)
+        }
     }
 
     private fun findCurrentConsentState(externalId: String) : ConsentState {
@@ -414,25 +424,27 @@ class CordaService {
         val customCriteria = QueryCriteria.VaultCustomQueryCriteria(customCriteriaI, Vault.StateStatus.UNCONSUMED, setOf(ConsentState::class.java))
         val sortAttribute = SortAttribute.Custom(entityStateClass = ConsentSchemaV1.PersistentConsent::class.java, entityStateColumnName = "externalId")
 
-        val page : Vault.Page<ConsentState> = proxy.vaultQueryBy(
+        return closeConnectionOnError {
+            val page: Vault.Page<ConsentState> = proxy.vaultQueryBy(
                 criteria = customCriteria,
                 paging = PageSpecification(),
                 sorting = Sort(setOf(Sort.SortColumn(sortAttribute, Sort.Direction.DESC))),
                 contractStateType = ConsentState::class.java
-        )
+            )
 
-        if (page.states.isEmpty()) {
-            // create Genesis
-            val f = proxy.startFlow(
+            if (page.states.isEmpty()) {
+                // create Genesis
+                val f = proxy.startFlow(
                     ConsentFlows::CreateGenesisConsentState,
                     externalId)
 
-            val tx = f.returnValue.getOrThrow(15.seconds)
-            return tx.coreTransaction.outputsOfType<ConsentState>().first()
-        }
+                val tx = f.returnValue.getOrThrow(15.seconds)
+                return tx.coreTransaction.outputsOfType<ConsentState>().first()
+            }
 
-        val stateAndRef = page.states.first()
-        return stateAndRef.state.data
+            val stateAndRef = page.states.first()
+            return stateAndRef.state.data
+        }
     }
 
 
@@ -472,12 +484,20 @@ class CordaService {
     private fun uploadAttachment(data: ByteArray) : SecureHash {
         var hash : SecureHash
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
-        try {
-            hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
-        } catch (e : FileAlreadyExistsException) {
-            hash = SecureHash.parse(e.file)
+
+        return closeConnectionOnError {
+            try {
+                hash = proxy.uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
+            } catch (e : CordaRuntimeException) {
+                if (e.cause is FileAlreadyExistsException) {
+                    val ex = e.cause as FileAlreadyExistsException
+                    hash = SecureHash.parse(ex.file)
+                } else {
+                    throw e
+                }
+            }
+            return hash
         }
-        return hash
     }
 
     /**
@@ -490,10 +510,12 @@ class CordaService {
     fun signConsentBranch(uuid: String, partyAttachmentSignature: PartyAttachmentSignature): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return proxy.startFlow(
+        return closeConnectionOnError {
+            return proxy.startFlow(
                 ConsentFlows::SignConsentBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid)),
                 listOf(BridgeToCordappType.convert(partyAttachmentSignature)))
+        }
     }
 
     /**
@@ -506,10 +528,12 @@ class CordaService {
     fun mergeConsentBranch(uuid: String): FlowHandle<SignedTransaction> {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        return proxy.startFlow(
+        return closeConnectionOnError {
+            return proxy.startFlow(
                 ConsentFlows::MergeBranch,
                 UniqueIdentifier(id = UUID.fromString(uuid))
-        )
+            )
+        }
     }
 
     /**
@@ -520,17 +544,19 @@ class CordaService {
     fun consentBranchByTx(tx: SecureHash) : UUID? {
         val proxy = cordaRPClientWrapper.proxy() ?: throw IllegalStateException(RPC_PROXY_ERROR)
 
-        val transaction = proxy.internalFindVerifiedTransaction(tx) ?: return null
+        return closeConnectionOnError {
+            val transaction = proxy.internalFindVerifiedTransaction(tx) ?: return null
 
-        val criteria = QueryCriteria.VaultQueryCriteria(stateRefs = transaction.inputs, status = Vault.StateStatus.CONSUMED)
-        val results = proxy.vaultQueryBy<ConsentBranch>(criteria)
+            val criteria = QueryCriteria.VaultQueryCriteria(stateRefs = transaction.inputs, status = Vault.StateStatus.CONSUMED)
+            val results = proxy.vaultQueryBy<ConsentBranch>(criteria)
 
-        if (results.states.size != 1) {
-            logger.debug("Found multiple consumed ConsentBranch states for tx: $tx")
-            return null
+            if (results.states.size != 1) {
+                logger.debug("Found multiple consumed ConsentBranch states for tx: $tx")
+                return null
+            }
+
+            return results.states[0].state.data.linearId.id
         }
-
-        return results.states[0].state.data.linearId.id
     }
 
     /**
@@ -542,14 +568,16 @@ class CordaService {
     fun pingNotary() : PingResult {
         val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
 
-        try {
-            val f = proxy.startFlow(DiagnosticFlows::PingNotaryFlow)
+        return closeConnectionOnError {
+            try {
+                val f = proxy.startFlow(DiagnosticFlows::PingNotaryFlow)
 
-            f.returnValue.get(10, TimeUnit.SECONDS)
-        } catch (e: ExecutionException) {
-            return PingResult(false, TIMEOUT_ERROR)
+                f.returnValue.get(10, TimeUnit.SECONDS)
+            } catch (e: ExecutionException) {
+                return PingResult(false, TIMEOUT_ERROR)
+            }
+            return PingResult(true)
         }
-        return PingResult(true)
     }
 
     /**
@@ -561,14 +589,31 @@ class CordaService {
     fun pingRandom() : PingResult {
         val proxy = cordaRPClientWrapper.proxy() ?: return PingResult(false, RPC_PROXY_ERROR)
 
-        try {
-            val f = proxy.startFlow(DiagnosticFlows::PingRandomFlow)
+        return closeConnectionOnError {
+            try {
+                val f = proxy.startFlow(DiagnosticFlows::PingRandomFlow)
 
-            f.returnValue.get(10, TimeUnit.SECONDS)
-        } catch (e: ExecutionException) {
-            return PingResult(false, TIMEOUT_ERROR)
+                f.returnValue.get(10, TimeUnit.SECONDS)
+            } catch (e: ExecutionException) {
+                return PingResult(false, TIMEOUT_ERROR)
+            }
+            return PingResult(true)
         }
-        return PingResult(true)
+    }
+
+    private fun logError(e:Exception) {
+        logger.error(e.message)
+    }
+
+    private inline fun <R> closeConnectionOnError(block: () -> R): R {
+        try{
+            return block()
+        } catch (e: Exception){
+            // do your handle actions
+            logger.error(e.message, e)
+            cordaRPClientWrapper.close()
+            throw e
+        }
     }
 
     /**

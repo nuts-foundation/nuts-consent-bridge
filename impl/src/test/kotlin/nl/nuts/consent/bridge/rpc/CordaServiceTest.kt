@@ -20,6 +20,7 @@ package nl.nuts.consent.bridge.rpc
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.nhaarman.mockito_kotlin.*
+import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.TransactionState
@@ -29,7 +30,9 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
 import net.corda.core.messaging.*
 import net.corda.core.node.services.Vault
+import net.corda.core.node.services.vault.PageSpecification
 import net.corda.core.node.services.vault.QueryCriteria
+import net.corda.core.node.services.vault.Sort
 import net.corda.core.transactions.CoreTransaction
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.utilities.getOrThrow
@@ -88,34 +91,132 @@ class CordaServiceTest {
     }
 
     @Test
+    fun `getAttachment - RPC connection is closed when RpcOps raises exception`() {
+        val hash = SecureHash.parse(VALID_HEX)
+
+        `when`(cordaRPCOps.attachmentExists(hash)).thenThrow(CordaRuntimeException("boom!"))
+
+        assertFailsWith<CordaRuntimeException> {
+            cordaService.getAttachment(hash)
+        }
+
+        // check connection is closed
+        verify(cordaRPClientWrapper).close()
+    }
+
+    @Test
+    fun `getCipherText - RPC connection is closed when RpcOps raises exception`() {
+        val hash = SecureHash.parse(VALID_HEX)
+
+        `when`(cordaRPCOps.attachmentExists(hash)).thenThrow(CordaRuntimeException("boom!"))
+
+        assertFailsWith<CordaRuntimeException> {
+            cordaService.getCipherText(hash)
+        }
+
+        // check connection is closed
+        verify(cordaRPClientWrapper).close()
+    }
+
+    @Test
+    fun `consentBranchByUUID - RPC connection is closed when RpcOps raises exception`() {
+        `when`(cordaRPCOps.vaultQueryBy(any(), any(), any(), eq(ConsentBranch::class.java))).thenThrow(CordaRuntimeException("boom!"))
+
+        assertFailsWith<CordaRuntimeException> {
+            cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
+        }
+
+        // check connection is closed
+        verify(cordaRPClientWrapper).close()
+    }
+
+    @Test
+    fun `createConsentBranch - RPC connection is closed when RpcOps raises exception`() {
+        val newConsentBranch = newConsentBranch()
+        val id = UniqueIdentifier(externalId = "externalId")
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenThrow(CordaRuntimeException("boom!"))
+        `when`(cordaRPCOps.startFlow(
+            ConsentFlows::CreateConsentBranch,
+            UUID.fromString(newConsentBranch.consentId.UUID),
+            id,
+            setOf(SecureHash.allOnesHash),
+            setOf("legalEntity"),
+            setOf(cordaName)
+        )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, id))
+
+
+        assertFailsWith<CordaRuntimeException> {
+            cordaService.createConsentBranch(newConsentBranch)
+        }
+
+        // check connection is closed
+        verify(cordaRPClientWrapper).close()
+    }
+
+    @Test
+    fun `uploadAttachment - RPC connection is closed when RpcOps raises exception`() {
+        val id = UniqueIdentifier(externalId = "externalId")
+        val newConsentBranch = newConsentBranch()
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(CordaRuntimeException("boom!"))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.vaultQueryBy(any(), any(), any(), eq(ConsentState::class.java))).thenReturn(statePage(1, id))
+
+        assertFailsWith<CordaRuntimeException> {
+            cordaService.createConsentBranch(newConsentBranch)
+        }
+
+        // check connection is closed
+        verify(cordaRPClientWrapper).close()
+    }
+
+    @Test
+    fun `findCurrentConsentState - RPC connection is closed when RpcOps raises exception`() {
+        val newConsentBranch = newConsentBranch()
+
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaRPCOps.vaultQueryBy(any(),any(),any(),eq(ConsentState::class.java))).thenThrow(CordaRuntimeException("boom!"))
+
+        assertFailsWith<CordaRuntimeException> {
+            cordaService.createConsentBranch(newConsentBranch)
+        }
+
+        // check connection is closed
+        verify(cordaRPClientWrapper).close()
+    }
+
+    @Test
     fun `ConsentBranchByUUID throws NotFoundException when proxy returns empty states`() {
-        `when`(cordaRPCOps.vaultQueryBy<ConsentBranch>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
                 contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(0))
 
-        try {
+        assertFailsWith<NotFoundException> {
             cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
-            fail("Exception should have been raised")
-        } catch (e: NotFoundException) {
-            // suc6
         }
     }
 
     @Test
     fun `ConsentBranchByUUID throws IllegalStateException when proxy returns more than 1 state`() {
-        `when`(cordaRPCOps.vaultQueryBy<ConsentBranch>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
                 contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(2))
 
-        try {
+        assertFailsWith<IllegalStateException> {
             cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
-            fail("Exception should have been raised")
-        } catch (e: IllegalStateException) {
-            // suc6
         }
     }
 
@@ -365,7 +466,7 @@ class CordaServiceTest {
         val newConsentBranch = newConsentBranch()
         val id = UniqueIdentifier(externalId = "externalId")
 
-        `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(DuplicateAttachmentException(SecureHash.allOnesHash.toString()))
+        `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(CordaRuntimeException("", DuplicateAttachmentException(SecureHash.allOnesHash.toString())))
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
         `when`(cordaRPCOps.startFlow(
