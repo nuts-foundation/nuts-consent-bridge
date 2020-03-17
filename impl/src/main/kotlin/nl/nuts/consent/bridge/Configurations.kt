@@ -32,7 +32,7 @@ data class ConsentBridgeRPCProperties(
         var port:Int = 7887,
         var user:String = "admin",
         var password:String = "nuts",
-        var retryIntervalSeconds:Int = 5,
+        var retryIntervalSeconds:Int = 10,
         var retryCount:Int = -1,
         var enabled:Boolean = false)
 
@@ -43,7 +43,9 @@ data class ConsentBridgeRPCProperties(
 @ConfigurationProperties("nuts.consent.nats")
 data class ConsentBridgeNatsProperties(
         var address:String = "nats://localhost:4222",
-        var cluster:String = "test-cluster")
+        var cluster:String = "test-cluster",
+        var retryCount:Int = -1,
+        var retryIntervalSeconds:Int = 10 )
 
 /**
  * Configuration data class for registry API settings
@@ -75,7 +77,7 @@ class GeneralConfiguration
 @ConfigurationProperties("nuts.consent.schedule")
 data class SchedulerProperties(
     var delay: Long = 15 * 60 * 1000,
-    var initialDelay: Long =  1000
+    var initialDelay: Long =  30000
 )
 
 /**

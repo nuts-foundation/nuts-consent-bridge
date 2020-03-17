@@ -1,6 +1,6 @@
 /*
  * Nuts consent bridge
- * Copyright (C) 2019 Nuts community
+ * Copyright (C) 2020 Nuts community
  *
  *  This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,48 +16,86 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.nats
+package nl.nuts.consent.bridge.pipelines
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import io.nats.streaming.Subscription
 import io.nats.streaming.SubscriptionOptions
 import net.corda.core.CordaRuntimeException
+import net.corda.core.utilities.seconds
+import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
+import nl.nuts.consent.bridge.io.MasterSlaveConnection
 import nl.nuts.consent.bridge.model.FullConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
-import nl.nuts.consent.bridge.rpc.CordaService
+import nl.nuts.consent.bridge.nats.Event
+import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.nats.EventStateStore
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_ERROR_SUBJECT
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_RETRY_SUBJECT
+import nl.nuts.consent.bridge.nats.NatsManagedConnection
+import nl.nuts.consent.bridge.corda.CordaManagedConnection
+import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
+import nl.nuts.consent.bridge.corda.CordaService
+import nl.nuts.consent.bridge.nats.NatsManagedConnectionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.io.IOException
 import java.util.*
+import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 
-
 /**
- * Control class for linking CordaStateChangeListener to publisher topics.
+ * Handles events from Nats, event listener is stopped when Corda connection is closed.
+ * Stopping subscriptions is to make sure retries are not wasted on during a connection problem (just 1)
  */
 @Service
-class NutsEventListener : NutsEventBase() {
+class NatsToCordaPipeline {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Autowired
+    lateinit var natsManagedConnectionFactory: NatsManagedConnectionFactory
+    lateinit var natsManagedConnection: NatsManagedConnection
+
+    @Autowired
+    lateinit var cordaManagedConnectionFactory: CordaManagedConnectionFactory
+    lateinit var cordaManagedConnection: CordaManagedConnection
+
+    lateinit var masterSlaveConnection: MasterSlaveConnection
     lateinit var cordaService: CordaService
 
     @Autowired
     lateinit var eventStateStore: EventStateStore
 
-    var subscription: Subscription? = null
-
     @Autowired
-    lateinit var nutsEventPublisher: NutsEventPublisher
+    lateinit var consentRegistryProperties: ConsentRegistryProperties
 
-    override fun initListener() {
-        subscription = connection?.subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
+    private var subscription: Subscription? = null
+
+    @PostConstruct
+    fun init() {
+        natsManagedConnection = natsManagedConnectionFactory.`object`
+        cordaManagedConnection = cordaManagedConnectionFactory.`object`
+
+        masterSlaveConnection = MasterSlaveConnection(cordaManagedConnection, natsManagedConnection)
+
+        cordaService = CordaService(cordaManagedConnection, consentRegistryProperties)
+
+        cordaManagedConnection.name = "natsRPC"
+        natsManagedConnection.name = "listener"
+        natsManagedConnection.onConnected = {startListeners()}
+        natsManagedConnection.onDisconnected = {stopListeners()}
+
+        masterSlaveConnection.connect()
+    }
+
+    private fun startListeners() {
+        subscription = natsManagedConnection.getConnection().subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
 
             logger.trace("Received event with data ${String(it.data)}")
             var event: Event? = null
@@ -71,19 +109,20 @@ class NutsEventListener : NutsEventBase() {
                     retry(event)
                 } catch (e: Exception) { // broken
                     logger.error(e.message, e)
-                    nutsEventPublisher.publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+                    publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
                 }
             } catch (e: JsonParseException) { // broken
                 logger.error(e.message, e)
-                nutsEventPublisher.publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+                publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
             } catch (e: JsonMappingException) { // broken
                 logger.error(e.message, e)
-                nutsEventPublisher.publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+                publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
             } catch (e: Exception) { // broken
                 logger.error(e.message, e)
             }
         }, SubscriptionOptions.Builder()
             .startWithLastReceived()
+            .ackWait(5.seconds)
             .durableName("${Constants.NAME}Durable")
             .build()
         )
@@ -91,26 +130,42 @@ class NutsEventListener : NutsEventBase() {
         logger.info("Nats subscription with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
     }
 
-    override fun name(): String {
-        return "listener"
-    }
-
-    /**
-     * stop subscription
-     */
-    @PreDestroy
-    override fun destroy() {
-        logger.debug("Closing subscription at Nats (queue remains)")
-
+    private fun stopListeners() {
         subscription?.close()
     }
 
+    @PreDestroy
+    fun destroy() {
+        stopListeners()
+
+        masterSlaveConnection.terminate()
+    }
+
+    /**
+     * Publishes the given data to the given channel
+     */
+    private fun publish(subject:String, data: ByteArray) {
+        natsManagedConnection.getConnection().publish(subject, data)
+    }
+
+    /**
+     * The event retry count must already have been incremented before this call
+     * The nuts-event-octopus logic handles republishing
+     */
+    private fun retry(retryCount: Int, data: ByteArray) {
+        val subject = "$NATS_CONSENT_RETRY_SUBJECT-${retryCount}"
+        publish(subject, data)
+    }
+
+    /**
+     * Publish given event to retry queue, increment retryCount
+     */
     private fun retry(e: Event) {
         logger.debug("Publishing event to retry queue")
 
         e.retryCount++
         val bytes  = Serialization.objectMapper().writeValueAsBytes(e)
-        nutsEventPublisher.publishToRetry(e.retryCount, bytes)
+        retry(e.retryCount, bytes)
     }
 
     private fun processEvent(e: Event) {
@@ -157,7 +212,7 @@ class NutsEventListener : NutsEventBase() {
         e.transactionId = handle.id.uuid.toString()
 
         eventStateStore.put(handle.id.uuid, e)
-        nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
+        publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
     }
 
     private fun processEventConsentRequestInFlight(e: Event) {
@@ -230,6 +285,6 @@ class NutsEventListener : NutsEventBase() {
         e.transactionId = handle.id.uuid.toString()
 
         eventStateStore.put(handle.id.uuid, e)
-        nutsEventPublisher.publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
+        publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
     }
 }

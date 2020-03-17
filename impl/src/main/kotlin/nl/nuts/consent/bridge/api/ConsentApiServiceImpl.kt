@@ -19,13 +19,17 @@
 package nl.nuts.consent.bridge.api
 
 import net.corda.core.crypto.SecureHash
+import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.conversion.CordappToBridgeType.Companion.convert
+import nl.nuts.consent.bridge.corda.CordaManagedConnection
+import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
+import nl.nuts.consent.bridge.corda.CordaService
 import nl.nuts.consent.bridge.model.FullConsentRequestState
-import nl.nuts.consent.bridge.rpc.CordaService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import javax.annotation.PostConstruct
 
 /**
  * Concrete implementation of the ConsentApiService. This class connects our custom logic to the generated API's
@@ -35,7 +39,19 @@ class ConsentApiServiceImpl : ConsentApiService {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     @Autowired
-    lateinit var cordaService : CordaService
+    lateinit var cordaManagedConnectionFactory: CordaManagedConnectionFactory
+
+    @Autowired
+    lateinit var consentRegistryProperties: ConsentRegistryProperties
+
+    protected lateinit var cordaService: CordaService
+
+    @PostConstruct
+    fun init() {
+        val cordaManagedConnection = cordaManagedConnectionFactory.`object`
+        cordaManagedConnection.name = "api"
+        cordaService = CordaService(cordaManagedConnection, consentRegistryProperties)
+    }
 
     /**
      * Get the attachment by its secure hash

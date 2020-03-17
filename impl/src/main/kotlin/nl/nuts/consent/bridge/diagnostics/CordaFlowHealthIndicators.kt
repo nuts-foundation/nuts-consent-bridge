@@ -18,8 +18,11 @@
 
 package nl.nuts.consent.bridge.diagnostics
 
+import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.SchedulerProperties
-import nl.nuts.consent.bridge.rpc.CordaService
+import nl.nuts.consent.bridge.corda.CordaManagedConnection
+import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
+import nl.nuts.consent.bridge.corda.CordaService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.actuate.health.Health
 import org.springframework.boot.actuate.health.HealthIndicator
@@ -27,6 +30,8 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import javax.annotation.PostConstruct
+import javax.annotation.PreDestroy
 import kotlin.math.floor
 
 
@@ -40,7 +45,26 @@ abstract class FlowHealthIndicator : HealthIndicator {
     protected lateinit var schedulerProperties: SchedulerProperties
 
     @Autowired
+    lateinit var cordaManagedConnectionFactory: CordaManagedConnectionFactory
+
+    @Autowired
+    lateinit var consentRegistryProperties: ConsentRegistryProperties
+
     protected lateinit var cordaService: CordaService
+    protected lateinit var cordaManagedConnection: CordaManagedConnection
+
+    @PostConstruct
+    fun init() {
+        cordaManagedConnection = cordaManagedConnectionFactory.`object`
+        cordaManagedConnection.name = "health"
+        cordaService = CordaService(cordaManagedConnection, consentRegistryProperties)
+        cordaManagedConnection.connect()
+    }
+
+    @PreDestroy
+    fun destroy() {
+        cordaManagedConnection?.terminate()
+    }
 
     override fun health(): Health {
         var now = System.currentTimeMillis()
@@ -96,5 +120,23 @@ class CordaRandomPingHealthIndicator : CordaHealthIndicator, FlowHealthIndicator
     override fun doFlowHealthCheck() : CordaService.PingResult {
         lastCheck = cordaService.pingRandom()
         return lastCheck
+    }
+}
+
+/**
+ * Simple check to know if a Corda RPC Connection can be established
+ */
+class CordaConnectionHealthIndicator : HealthIndicator {
+
+    @Autowired
+    lateinit var cordaManagedConnectionFactory: CordaManagedConnectionFactory
+
+    override fun health(): Health {
+        try {
+            cordaManagedConnectionFactory.getObject().getConnection()?.close() // throws exc
+            return Health.up().build()
+        } catch (e: IllegalStateException) {
+            return Health.down(e).build()
+        }
     }
 }

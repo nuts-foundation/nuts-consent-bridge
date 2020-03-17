@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.listener
+package nl.nuts.consent.bridge.corda
 
 import nl.nuts.consent.bridge.EventMetaProperties
 import org.springframework.beans.factory.annotation.Autowired

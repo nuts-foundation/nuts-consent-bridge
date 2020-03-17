@@ -41,6 +41,8 @@ import net.corda.nodeapi.exceptions.DuplicateAttachmentException
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
+import nl.nuts.consent.bridge.corda.CordaManagedConnection
+import nl.nuts.consent.bridge.corda.CordaService
 import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.infrastructure.ClientException
@@ -73,7 +75,7 @@ import kotlin.test.assertFailsWith
 class CordaServiceTest {
 
     val cordaRPCOps: CordaRPCOps = mock()
-    val cordaRPClientWrapper: CordaRPClientWrapper = mock {
+    val cordaManagedConnection: CordaManagedConnection = mock {
         on(it.proxy()) doReturn cordaRPCOps
     }
 
@@ -85,8 +87,7 @@ class CordaServiceTest {
 
     @Before
     fun setup() {
-        cordaService = CordaService()
-        cordaService.cordaRPClientWrapper = cordaRPClientWrapper
+        cordaService = CordaService(cordaManagedConnection, mock())
         cordaService.endpointsApi = mock()
     }
 
