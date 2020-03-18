@@ -167,33 +167,6 @@ class NatsToCordaPipelineIntegrationTest {
     }
 
     @Test
-    fun `events survive shutdowns`() {
-        val t: FlowHandle<SignedTransaction> = mock()
-        val st: StateMachineRunId = mock()
-        `when`(t.id).thenReturn(st)
-        `when`(st.uuid).thenReturn(UUID.randomUUID())
-
-        //when
-        `when`(cordaService.createConsentBranch(any())).thenReturn(t)
-        `when`(cordaService.consentBranchExists(any())).thenReturn(false)
-        val e = Serialization.objectMapper().writeValueAsBytes(newConsentRequestStateAsEvent())
-
-        // disconnect nats listeners
-        natsManagedConnection.disconnect()
-
-        // publish
-        connection.publish(NATS_CONSENT_REQUEST_SUBJECT, e)
-
-        // simulate connection being back
-        natsManagedConnection.onConnected()
-
-        Thread.sleep(2000)
-
-        // then
-        verify(cordaService).createConsentBranch(any())
-    }
-
-    @Test
     fun `event is published to error queue on json error`() {
         // given
         val streamingConnection: StreamingConnection = mock()
