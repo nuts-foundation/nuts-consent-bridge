@@ -187,7 +187,7 @@ class NatsToCordaPipelineIntegrationTest {
         // simulate connection being back
         natsManagedConnection.onConnected()
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         // then
         verify(cordaService).createConsentBranch(any())
@@ -204,7 +204,7 @@ class NatsToCordaPipelineIntegrationTest {
         // when
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, "not json".toByteArray())
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         // then an entry must be available in the retry queue
         verify(streamingConnection).publish(eq(NATS_CONSENT_ERROR_SUBJECT), any())
@@ -221,7 +221,7 @@ class NatsToCordaPipelineIntegrationTest {
         // when
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, "[]".toByteArray())
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         // then an entry must be available in the retry queue
         verify(streamingConnection).publish(eq(NATS_CONSENT_ERROR_SUBJECT), any())
@@ -243,7 +243,7 @@ class NatsToCordaPipelineIntegrationTest {
         var event = Serialization.objectMapper().writeValueAsString(newConsentRequestStateAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, event.toByteArray())
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         // then an entry must be available in the retry queue
         verify(streamingConnection).publish(eq("consentRequestRetry-1"), any())
@@ -265,7 +265,7 @@ class NatsToCordaPipelineIntegrationTest {
         var event = Serialization.objectMapper().writeValueAsString(newConsentRequestStateAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, event.toByteArray())
 
-        Thread.sleep(1000)
+        Thread.sleep(2000)
 
         // then an entry must be available in the retry queue
         verify(streamingConnection).publish(eq(NATS_CONSENT_ERROR_SUBJECT), any())
