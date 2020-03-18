@@ -20,7 +20,7 @@ package nl.nuts.consent.bridge.diagnostics
 
 import com.nhaarman.mockito_kotlin.mock
 import nl.nuts.consent.bridge.SchedulerProperties
-import nl.nuts.consent.bridge.rpc.CordaService
+import nl.nuts.consent.bridge.corda.CordaService
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`

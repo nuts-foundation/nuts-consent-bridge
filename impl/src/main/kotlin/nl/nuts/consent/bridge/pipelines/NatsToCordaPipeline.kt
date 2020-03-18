@@ -168,7 +168,7 @@ class NatsToCordaPipeline {
         retry(e.retryCount, bytes)
     }
 
-    private fun processEvent(e: Event) {
+    fun processEvent(e: Event) {
         // todo null checks -> error condition
         when (e.name) {
             EventName.EventConsentRequestConstructed -> {
