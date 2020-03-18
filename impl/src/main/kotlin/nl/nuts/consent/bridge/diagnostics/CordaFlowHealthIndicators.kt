@@ -126,6 +126,7 @@ class CordaRandomPingHealthIndicator : CordaHealthIndicator, FlowHealthIndicator
 /**
  * Simple check to know if a Corda RPC Connection can be established
  */
+@Component
 class CordaConnectionHealthIndicator : HealthIndicator {
 
     @Autowired

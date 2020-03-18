@@ -50,12 +50,10 @@ class StatusApiTest {
         val response: ResponseEntity<String> = statusApi.diagnostics()
 
         assertEquals(HttpStatus.OK, response.statusCode)
-        // TODO: CI has some kind of timing issue/race condition causing the test to be run before the listeners connect
-        assertTrue(response.body.contains("nutsEventPublisher="))
-        assertTrue(response.body.contains("nutsEventListener="))
+        assertTrue(response.body.contains("nats=DOWN"))
         // since no Corda node is running
         assertTrue(response.body.contains("General status=DOWN"))
-        assertTrue(response.body.contains("cordaRPCClientFactory=DOWN"))
+        assertTrue(response.body.contains("cordaConnection=DOWN"))
         // default these 2 start with UP
         assertTrue(response.body.contains("cordaNotaryPing=UP"))
         assertTrue(response.body.contains("cordaRandomPing=UP"))

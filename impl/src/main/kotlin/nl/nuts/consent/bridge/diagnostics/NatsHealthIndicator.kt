@@ -22,11 +22,13 @@ import nl.nuts.consent.bridge.nats.NatsManagedConnection
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.actuate.health.Health
 import org.springframework.boot.actuate.health.HealthIndicator
+import org.springframework.stereotype.Component
 
 
 /**
  * Simple check to know if a Nats Connection can be established
  */
+@Component
 class NatsHealthIndicator : HealthIndicator {
 
     @Autowired
