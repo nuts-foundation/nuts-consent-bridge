@@ -18,10 +18,14 @@
 
 package nl.nuts.consent.bridge.pipelines
 
+import io.nats.client.ConnectionListener
+import io.nats.client.Nats
+import io.nats.client.Options
+import io.nats.streaming.StreamingConnection
+import io.nats.streaming.StreamingConnectionFactory
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.messaging.startFlow
 import net.corda.node.services.Permissions
 import net.corda.testing.core.ALICE_NAME
@@ -29,35 +33,39 @@ import net.corda.testing.driver.*
 import net.corda.testing.node.User
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
-import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.EventMetaProperties
-import nl.nuts.consent.bridge.EventStoreProperties
+import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
 import nl.nuts.consent.bridge.corda.StateFileStorageControl
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
+import nl.nuts.consent.bridge.nats.EventStateStore
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_ERROR_SUBJECT
 import nl.nuts.consent.bridge.nats.NatsManagedConnectionFactory
-import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
-import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
-import nl.nuts.consent.bridge.rpc.test.DummyState
+import nl.nuts.consent.bridge.rpc.test.DummyFlow
 import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
 import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
 import np.com.madanpokharel.embed.nats.NatsServerConfig
 import np.com.madanpokharel.embed.nats.NatsStreamingVersion
 import np.com.madanpokharel.embed.nats.ServerType
-import org.junit.*
+import org.junit.After
+import org.junit.AfterClass
+import org.junit.Before
+import org.junit.BeforeClass
+import org.junit.Test
 import java.io.File
 import java.net.ServerSocket
 import java.util.*
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.TimeUnit
 import kotlin.test.BeforeTest
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 /**
  * These tests are quite slow....
  */
-class CordaStateChangeToNatsPipelineIntegrationTest {
+class CordaStateMachineToNatsPipelineIntegrationTest {
     companion object {
         const val USER = "user1"
         const val PASSWORD = "test"
@@ -77,7 +85,18 @@ class CordaStateChangeToNatsPipelineIntegrationTest {
             return x
         }
 
-        var connection: CordaRPCConnection? = null
+        fun blockUntilNull(waitTime: Long = 10000L, check: () -> Any?) : Any? {
+            val begin = System.currentTimeMillis()
+            var x: Any? = null
+            while(true) {
+                Thread.sleep(10)
+                if (System.currentTimeMillis() - begin > waitTime) break
+                x = check() ?: break
+            }
+            return x
+        }
+
+        var rpcConnection: CordaRPCConnection? = null
         var validProperties : ConsentBridgeRPCProperties? = null
         var node: NodeHandle? = null
 
@@ -115,6 +134,7 @@ class CordaStateChangeToNatsPipelineIntegrationTest {
             natsServer = EmbeddedNatsServer(config)
             natsServer?.startServer()
 
+            // wait for corda node
             blockUntilSet(120000L) {
                 node
             }
@@ -128,14 +148,42 @@ class CordaStateChangeToNatsPipelineIntegrationTest {
         }
     }
 
-    private var pipeline : CordaStateChangeToNatsPipeline<DummyState>? = null
+    private var pipeline : CordaStateMachineToNatsPipeline? = null
+    private val eventStateStore = EventStateStore()
     private val stateFileStorage = StateFileStorageControl()
+    lateinit var connection: StreamingConnection
 
     @Before
     fun setup() {
         val client = CordaRPCClient(node!!.rpcAddress, CordaRPCClientConfiguration.DEFAULT.copy(maxReconnectAttempts = 1))
-        connection = client.start(USER, PASSWORD, null, null)
+        rpcConnection = client.start(USER, PASSWORD, null, null)
         stateFileStorage.eventMetaProperties = EventMetaProperties("./temp")
+
+        val cf = StreamingConnectionFactory("test-cluster", "cordaBridgeTest-${Integer.toHexString(Random().nextInt())}")
+        val l = CountDownLatch(1)
+
+        // client connection listener
+        val listener = ConnectionListener { conn, type ->
+            when(type) {
+                ConnectionListener.Events.RECONNECTED,
+                ConnectionListener.Events.CONNECTED -> {
+                    // notify
+                    cf.natsConnection = conn
+                    connection = cf.createConnection()
+                    l.countDown()
+                }
+            }
+        }
+
+        // client
+        val o = Options.Builder()
+            .server(natsServer?.natsUrl)
+            .maxReconnects(-1)
+            .connectionListener(listener)
+            .build()
+        Nats.connectAsynchronously(o, false)
+
+        l.await(10, TimeUnit.SECONDS)
     }
 
     @BeforeTest
@@ -147,27 +195,12 @@ class CordaStateChangeToNatsPipelineIntegrationTest {
     @After
     fun cleanup() {
         pipeline?.destroy()
-        connection?.close()
+        connection.close()
+        rpcConnection?.close()
     }
 
-    private fun createPipeline(producedState: AtomicReference<StateAndRef<DummyState>>, consumedState: AtomicReference<StateAndRef<DummyState>>): CordaStateChangeToNatsPipeline<DummyState> {
-        pipeline = object : CordaStateChangeToNatsPipeline<DummyState>() {
-            override fun name(): String {
-                return "test"
-            }
-
-            override fun stateClass(): Class<DummyState> {
-                return DummyState::class.java
-            }
-
-            override fun stateProduced(stateAndRef: StateAndRef<DummyState>) {
-                producedState.set(stateAndRef)
-            }
-
-            override fun stateConsumed(stateAndRef: StateAndRef<DummyState>) {
-                consumedState.set(stateAndRef)
-            }
-        }
+    private fun createPipeline(): CordaStateMachineToNatsPipeline {
+        pipeline = CordaStateMachineToNatsPipeline()
 
         // nats connections
         val natsManagedConnectionFactory = NatsManagedConnectionFactory()
@@ -179,83 +212,36 @@ class CordaStateChangeToNatsPipelineIntegrationTest {
         cordaManagedConnectionFactory.consentBridgeRPCProperties = validProperties!!
         pipeline?.cordaManagedConnectionFactory = cordaManagedConnectionFactory
 
-        // eventApi
-        pipeline?.eventstoreProperties = EventStoreProperties()
-
-        // registry api
-        pipeline?.consentRegistryProperties = ConsentRegistryProperties()
-
         // stateFileStorage
-        pipeline?.stateFileStorageControl = stateFileStorage
+        pipeline?.eventStateStore = eventStateStore
 
         return pipeline!!
     }
 
     @Test
-    fun `listener is able to publish older states`() {
-        val producedState = AtomicReference<StateAndRef<DummyState>>()
-        pipeline = createPipeline(producedState, AtomicReference<StateAndRef<DummyState>>())
+    fun `event is published on state machine error`() {
+        val uuid: UUID = UUID.randomUUID()
+        val eventIn = event(EventName.EventConsentRequestInFlight, uuid)
+        var eventOut: Event? = null
+        pipeline = createPipeline()
         pipeline?.init()
 
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
-
-        blockUntilSet {
-            producedState.get()
+        connection.subscribe(NATS_CONSENT_ERROR_SUBJECT) {
+            eventOut = Serialization.objectMapper().readValue(it.data, Event::class.java)
         }
 
-        pipeline!!.cordaManagedConnection.onDisconnected()
+        val handle = rpcConnection!!.proxy.startFlow(DummyFlow::ErrorFlow)
+        eventStateStore.put(handle.id.uuid, eventIn)
 
-        // clean timestamp file
-        File("./temp/DummyState.stamp").delete()
-        producedState.set(null)
-
-        pipeline!!.cordaManagedConnection.onConnected()
-
-        blockUntilSet {
-            producedState.get()
+        // wait for it
+        blockUntilNull {
+            eventStateStore.get(handle.id.uuid)
         }
 
-        assertNotNull(producedState.get())
-    }
-
-    @Test
-    fun `onProduces is called for a new state`() {
-        val producedState = AtomicReference<StateAndRef<DummyState>>()
-        pipeline = createPipeline(producedState, AtomicReference<StateAndRef<DummyState>>())
-        pipeline?.init()
-
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
-
-        blockUntilSet {
-            producedState.get()
-        }
-
-        assertNotNull(producedState.get())
-    }
-
-    @Test
-    fun `onConsumes returns refAndState`() {
-        val producedState = AtomicReference<StateAndRef<DummyState>>()
-        val consumedState = AtomicReference<StateAndRef<DummyState>>()
-        pipeline = createPipeline(producedState, consumedState)
-        pipeline?.init()
-
-        // produce 1 state
-        connection!!.proxy.startFlow(::ProduceFlow).returnValue.get()
-
-        blockUntilSet {
-            producedState.get()
-        }
-        assertNotNull(producedState.get())
-
-        // consume 1 state
-        val signedTransaction = connection!!.proxy.startFlow(::ConsumeFlow, producedState.get()).returnValue.get()
-        assertNotNull(signedTransaction)
-
-        blockUntilSet {
-            consumedState.get()
-        }
-        assertNotNull(consumedState.get())
+        // verify updated event
+        assertEquals(EventName.EventConsentRequestInFlight, eventOut?.name)
+        assertNotNull(eventOut?.error)
+        assertEquals("", eventOut?.error)
     }
 
     private fun event(name: EventName, uuid: UUID) : Event {
