@@ -160,15 +160,12 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
                 }
             },
                 { e: Throwable ->
+                    // todo this might stop the listeners even when connection remains, monitor for a specific exception?
                     logger.error(e.message, e)
-                    logger.info("Unsubscribing and disconnecting...")
+                    logger.info("Removing corda observable")
 
                     // cleanup stuff to make sure we don't leak anything
                     stopListeners()
-                    cordaManagedConnection.disconnect()
-
-                    // start again
-                    cordaManagedConnection.connect()
                 })
 
             logger.debug("Started CordaStateChangeListener subscription for ${stateClass()}")

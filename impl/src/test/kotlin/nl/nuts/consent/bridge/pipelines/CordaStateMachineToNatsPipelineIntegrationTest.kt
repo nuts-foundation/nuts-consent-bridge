@@ -61,6 +61,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
  * These tests are quite slow....
@@ -238,10 +239,14 @@ class CordaStateMachineToNatsPipelineIntegrationTest {
             eventStateStore.get(handle.id.uuid)
         }
 
+        blockUntilSet {
+            eventOut
+        }
+
         // verify updated event
         assertEquals(EventName.EventConsentRequestInFlight, eventOut?.name)
         assertNotNull(eventOut?.error)
-        assertEquals("", eventOut?.error)
+        assertTrue(eventOut?.error?.contains("error") ?: false)
     }
 
     private fun event(name: EventName, uuid: UUID) : Event {

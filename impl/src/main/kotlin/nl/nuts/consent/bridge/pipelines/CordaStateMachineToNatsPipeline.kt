@@ -119,15 +119,11 @@ class CordaStateMachineToNatsPipeline {
                 { e: Throwable ->
                     // an error occurred in the slave connection, close and reconnect
                     logger.error(e.message)
-                    logger.info("Unsubscribing and disconnecting...")
+                    logger.info("Removing observables")
 
                     // cleanup stuff to make sure we don't leak anything
                     synchronized(cordaManagedConnection) {
                         stopListeners()
-                        cordaManagedConnection.disconnect()
-
-                        // start again
-                        cordaManagedConnection.connect()
                     }
                 })
         } catch (e: IllegalStateException) {
