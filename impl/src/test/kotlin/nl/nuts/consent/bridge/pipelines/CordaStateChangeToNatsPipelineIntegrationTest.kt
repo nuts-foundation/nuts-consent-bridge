@@ -23,12 +23,7 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.messaging.startFlow
-import net.corda.node.services.Permissions
-import net.corda.testing.core.ALICE_NAME
-import net.corda.testing.driver.*
-import net.corda.testing.node.User
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
-import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.EventMetaProperties
 import nl.nuts.consent.bridge.EventStoreProperties
@@ -40,16 +35,9 @@ import nl.nuts.consent.bridge.nats.NatsManagedConnectionFactory
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
 import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
 import nl.nuts.consent.bridge.rpc.test.DummyState
-import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
-import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
-import np.com.madanpokharel.embed.nats.NatsServerConfig
-import np.com.madanpokharel.embed.nats.NatsStreamingVersion
-import np.com.madanpokharel.embed.nats.ServerType
 import org.junit.*
 import java.io.File
-import java.net.ServerSocket
 import java.util.*
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.BeforeTest
 import kotlin.test.assertNotNull
@@ -57,77 +45,8 @@ import kotlin.test.assertNotNull
 /**
  * These tests are quite slow....
  */
-class CordaStateChangeToNatsPipelineIntegrationTest {
-    companion object {
-        const val USER = "user1"
-        const val PASSWORD = "test"
-        val rpcUser = User(USER, PASSWORD, permissions = setOf(Permissions.all()))
-        var port = 4222
-        var natsServer: EmbeddedNatsServer? = null
-
-        fun blockUntilSet(waitTime: Long = 10000L, check: () -> Any?) : Any? {
-            val begin = System.currentTimeMillis()
-            var x: Any? = null
-            while(true) {
-                Thread.sleep(10)
-                if (System.currentTimeMillis() - begin > waitTime) break
-                x = check() ?: continue
-                break
-            }
-            return x
-        }
-
-        var connection: CordaRPCConnection? = null
-        var validProperties : ConsentBridgeRPCProperties? = null
-        var node: NodeHandle? = null
-
-        val waitForTests = CountDownLatch(1)
-        val waitForDriver = CountDownLatch(1)
-
-        @BeforeClass
-        @JvmStatic fun runNodes() {
-            Thread {
-                // blocking call
-                driver(DriverParameters(
-                        extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
-                        startNodesInProcess = true
-                )) {
-                    val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))
-                    node = nodeF.get()
-                    val address = node!!.rpcAddress
-                    validProperties = ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)
-                    waitForTests.await()
-                    waitForDriver.countDown()
-                }
-            }.start()
-
-            // nats server
-            ServerSocket(0).use { NatsToCordaPipelineIntegrationTest.port = it.localPort }
-            val config = EmbeddedNatsConfig.Builder()
-                .withNatsServerConfig(
-                    NatsServerConfig.Builder()
-                        .withServerType(ServerType.NATS_STREAMING)
-                        .withPort(port)
-                        .withNatsStreamingVersion(NatsStreamingVersion.V0_16_2)
-                        .build()
-                )
-                .build()
-            natsServer = EmbeddedNatsServer(config)
-            natsServer?.startServer()
-
-            blockUntilSet(120000L) {
-                node
-            }
-        }
-
-        @AfterClass
-        @JvmStatic fun tearDown() {
-            natsServer?.stopServer()
-            waitForTests.countDown()
-            waitForDriver.await()
-        }
-    }
-
+class CordaStateChangeToNatsPipelineIntegrationTest : NodeBasedIntegrationTest() {
+    private var connection: CordaRPCConnection? = null
     private var pipeline : CordaStateChangeToNatsPipeline<DummyState>? = null
     private val stateFileStorage = StateFileStorageControl()
 
@@ -171,7 +90,7 @@ class CordaStateChangeToNatsPipelineIntegrationTest {
 
         // nats connections
         val natsManagedConnectionFactory = NatsManagedConnectionFactory()
-        natsManagedConnectionFactory.consentBridgeNatsProperties = ConsentBridgeNatsProperties(address = "nats://localhost:$port", retryIntervalSeconds = 1)
+        natsManagedConnectionFactory.consentBridgeNatsProperties = ConsentBridgeNatsProperties(address = "nats://localhost:${port}", retryIntervalSeconds = 1)
         pipeline?.natsManagedConnectionFactory = natsManagedConnectionFactory
 
         //corda connections

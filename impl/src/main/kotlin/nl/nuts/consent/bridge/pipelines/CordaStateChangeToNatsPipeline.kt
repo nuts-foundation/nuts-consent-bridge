@@ -279,7 +279,7 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
      */
     protected fun publish(subject: String, data: ByteArray) {
         try {
-            natsManagedConnection.getConnection().publish(subject, data) { s, e ->
+            natsManagedConnection.getConnection().publish(subject, data) { _, e ->
                 if (e != null) {
                     logger.error("Unable to publish: ${e.message}")
                     resetConnection()

@@ -122,9 +122,7 @@ class CordaStateMachineToNatsPipeline {
                     logger.info("Removing observables")
 
                     // cleanup stuff to make sure we don't leak anything
-                    synchronized(cordaManagedConnection) {
-                        stopListeners()
-                    }
+                    stopListeners()
                 })
         } catch (e: IllegalStateException) {
             logger.error("Unexpected exception when starting listener: ${e.message}")
