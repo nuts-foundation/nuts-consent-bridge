@@ -77,6 +77,9 @@ class NatsToCordaPipeline {
 
     private var subscription: Subscription? = null
 
+    /**
+     * Setup the masterSlave connection manager
+     */
     @PostConstruct
     fun init() {
         natsManagedConnection = natsManagedConnectionFactory.`object`
@@ -134,6 +137,9 @@ class NatsToCordaPipeline {
         subscription?.close()
     }
 
+    /**
+     * Some cleanup
+     */
     @PreDestroy
     fun destroy() {
         stopListeners()

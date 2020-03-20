@@ -23,6 +23,9 @@ import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.messaging.startFlow
+import net.corda.node.services.Permissions
+import net.corda.node.services.statemachine.CountUpDownLatch
+import net.corda.testing.node.User
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.EventMetaProperties
@@ -32,9 +35,10 @@ import nl.nuts.consent.bridge.corda.StateFileStorageControl
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NatsManagedConnectionFactory
-import nl.nuts.consent.bridge.rpc.test.DummyFlow.ConsumeFlow
-import nl.nuts.consent.bridge.rpc.test.DummyFlow.ProduceFlow
-import nl.nuts.consent.bridge.rpc.test.DummyState
+import nl.nuts.consent.bridge.corda.test.DummyFlow.ConsumeFlow
+import nl.nuts.consent.bridge.corda.test.DummyFlow.ProduceFlow
+import nl.nuts.consent.bridge.corda.test.DummyState
+import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
 import org.junit.*
 import java.io.File
 import java.util.*

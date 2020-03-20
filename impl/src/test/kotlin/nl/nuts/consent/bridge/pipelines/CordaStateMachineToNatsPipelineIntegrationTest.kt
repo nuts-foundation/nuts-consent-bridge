@@ -37,7 +37,7 @@ import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_ERROR_SUBJECT
 import nl.nuts.consent.bridge.nats.NatsManagedConnectionFactory
-import nl.nuts.consent.bridge.rpc.test.DummyFlow
+import nl.nuts.consent.bridge.corda.test.DummyFlow
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -76,7 +76,7 @@ class CordaStateMachineToNatsPipelineIntegrationTest : NodeBasedIntegrationTest(
             when(type) {
                 ConnectionListener.Events.RECONNECTED,
                 ConnectionListener.Events.CONNECTED -> {
-                    // notify
+                    // notifyCordaStateChangeToNatsPipelineIntegrationTest
                     cf.natsConnection = conn
                     connection = cf.createConnection()
                     l.countDown()

@@ -18,8 +18,10 @@
 
 package nl.nuts.consent.bridge.pipelines
 
-import net.corda.testing.core.ALICE_NAME
+import net.corda.cliutils.printError
 import net.corda.node.services.Permissions
+import net.corda.node.services.statemachine.CountUpDownLatch
+import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
@@ -34,13 +36,15 @@ import org.junit.BeforeClass
 import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
 
-abstract class NodeBasedIntegrationTest {
+open class NodeBasedIntegrationTest {
     companion object {
         const val USER = "user1"
         const val PASSWORD = "test"
         val rpcUser = User(USER, PASSWORD, permissions = setOf(Permissions.all()))
         var port = 4222
         var natsServer: EmbeddedNatsServer? = null
+
+        val countDownLatch = CountDownLatch(1)
 
         fun blockUntilSet(waitTime: Long = 10000L, check: () -> Any?) : Any? {
             val begin = System.currentTimeMillis()
@@ -68,8 +72,6 @@ abstract class NodeBasedIntegrationTest {
         var validProperties : ConsentBridgeRPCProperties? = null
         var node: NodeHandle? = null
 
-        val waitForTests = CountDownLatch(1)
-
         var running: Boolean = false
 
         @BeforeClass
@@ -78,7 +80,7 @@ abstract class NodeBasedIntegrationTest {
                 Thread {
                     // blocking call
                     driver(DriverParameters(
-                        extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.rpc.test"),
+                        extraCordappPackagesToScan = listOf("nl.nuts.consent.bridge.corda.test"),
                         startNodesInProcess = true
                     )) {
                         val nodeF = startNode(providedName = ALICE_NAME, rpcUsers = listOf(rpcUser))
@@ -87,7 +89,7 @@ abstract class NodeBasedIntegrationTest {
                         validProperties = ConsentBridgeRPCProperties(address.host, address.port, USER, PASSWORD, 1)
 
                         // we leave everything running till the process exits
-                        waitForTests.await()
+                        countDownLatch.await()
                     }
                 }.start()
 
@@ -105,10 +107,12 @@ abstract class NodeBasedIntegrationTest {
                 natsServer = EmbeddedNatsServer(config)
                 natsServer?.startServer()
 
-                blockUntilSet(120000L) {
+                running = true
+
+                blockUntilSet(120000) {
                     node
                 }
-                running = true
             }
         }
-    }}
+    }
+}

@@ -62,6 +62,9 @@ class CordaStateMachineToNatsPipeline {
 
     var subscription: Subscription? = null
 
+    /**
+     * Setup the masterSlave connection manager
+     */
     @PostConstruct
     fun init() {
         natsManagedConnection = natsManagedConnectionFactory.`object`

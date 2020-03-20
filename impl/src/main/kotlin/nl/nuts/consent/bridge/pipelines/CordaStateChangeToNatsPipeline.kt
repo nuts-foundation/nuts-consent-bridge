@@ -106,6 +106,9 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
      */
     abstract fun stateConsumed(stateAndRef: StateAndRef<S>)
 
+    /**
+     * Setup the masterSlave connection manager
+     */
     @PostConstruct
     fun init() {
         eventApi = EventApi(eventstoreProperties.url)
