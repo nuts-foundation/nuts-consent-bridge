@@ -278,6 +278,9 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
         )
     }
 
+    /**
+     * stops listeners and terminates connection
+     */
     @PreDestroy
     fun destroy() {
         stopListeners()
@@ -291,7 +294,7 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
     }
 
     /**
-     * Publishes the given data to the given channel
+     * Publishes event to specific topic
      */
     protected fun publish(subject: String, data: ByteArray) {
         try {

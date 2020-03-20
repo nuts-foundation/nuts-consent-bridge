@@ -136,6 +136,9 @@ class CordaStateMachineToNatsPipeline {
         subscription?.unsubscribe()
     }
 
+    /**
+     * Stop listeners and terminates connection
+     */
     @PreDestroy
     fun destroy() {
         stopListeners()
@@ -143,9 +146,6 @@ class CordaStateMachineToNatsPipeline {
         masterSlaveConnection.terminate()
     }
 
-    /**
-     * Publishes the given data to the given channel
-     */
     private fun publish(subject: String, data: ByteArray) {
         natsManagedConnection.getConnection().publish(subject, data)
     }

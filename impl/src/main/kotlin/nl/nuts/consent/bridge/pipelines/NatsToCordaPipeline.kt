@@ -147,25 +147,15 @@ class NatsToCordaPipeline {
         masterSlaveConnection.terminate()
     }
 
-    /**
-     * Publishes the given data to the given channel
-     */
     private fun publish(subject:String, data: ByteArray) {
         natsManagedConnection.getConnection().publish(subject, data)
     }
 
-    /**
-     * The event retry count must already have been incremented before this call
-     * The nuts-event-octopus logic handles republishing
-     */
     private fun retry(retryCount: Int, data: ByteArray) {
         val subject = "$NATS_CONSENT_RETRY_SUBJECT-${retryCount}"
         publish(subject, data)
     }
 
-    /**
-     * Publish given event to retry queue, increment retryCount
-     */
     private fun retry(e: Event) {
         logger.debug("Publishing event to retry queue")
 
@@ -174,6 +164,9 @@ class NatsToCordaPipeline {
         retry(e.retryCount, bytes)
     }
 
+    /**
+     * delegates specific events to specific functions
+     */
     fun processEvent(e: Event) {
         // todo null checks -> error condition
         when (e.name) {
