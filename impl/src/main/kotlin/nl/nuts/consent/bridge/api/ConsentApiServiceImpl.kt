@@ -46,6 +46,9 @@ class ConsentApiServiceImpl : ConsentApiService {
 
     protected lateinit var cordaService: CordaService
 
+    /**
+     * initialize the service, sets the correct name on the acquired corda connection
+     */
     @PostConstruct
     fun init() {
         val cordaManagedConnection = cordaManagedConnectionFactory.`object`

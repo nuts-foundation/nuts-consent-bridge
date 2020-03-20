@@ -123,10 +123,16 @@ class CordaManagedConnection(val consentBridgeRPCProperties: ConsentBridgeRPCPro
         logger.info("Corda RPC connection terminated for $name")
     }
 
+    /**
+     * Helper function to get the RPCOps from a connection
+     */
     fun proxy(): CordaRPCOps {
         return getConnection().proxy
     }
 
+    /**
+     * Get the established connection or an IllegalStateException
+     */
     fun getConnection() : CordaRPCConnection {
         if (connection == null) {
             throw IllegalStateException(noConnectionReason)

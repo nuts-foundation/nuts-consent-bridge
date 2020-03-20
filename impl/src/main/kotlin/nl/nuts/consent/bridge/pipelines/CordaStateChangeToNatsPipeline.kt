@@ -86,11 +86,24 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
 
     var subscription: Subscription? = null
 
+    /**
+     * The name of the pipeline, also used on the name of the connections and in logging
+     */
     abstract fun name(): String
 
+    /**
+     * Class object for generics
+     */
     abstract fun stateClass(): Class<S>
 
+    /**
+     * callback for when a state produces event is observed
+     */
     abstract fun stateProduced(stateAndRef: StateAndRef<S>)
+
+    /**
+     * callback for when a state consumed event is observed
+     */
     abstract fun stateConsumed(stateAndRef: StateAndRef<S>)
 
     @PostConstruct

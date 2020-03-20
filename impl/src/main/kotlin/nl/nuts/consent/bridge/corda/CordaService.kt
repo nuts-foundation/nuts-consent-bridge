@@ -65,7 +65,6 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-const val RPC_PROXY_ERROR = "Could not get a proxy to Corda RPC"
 const val TIMEOUT_ERROR = "Operation timed out"
 
 /**
@@ -486,53 +485,10 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
     }
 
     /**
-     * Start the PingNotaryFlow
-     * Expects answer within 10 seconds
-     *
-     * @return PingResult with success as true/false and an error description when false
-     */
-    fun pingNotary() : PingResult {
-        try {
-            val f = proxy().startFlow(DiagnosticFlows::PingNotaryFlow)
-
-            f.returnValue.get(10, TimeUnit.SECONDS)
-        } catch (e: ExecutionException) {
-            return PingResult(false, TIMEOUT_ERROR)
-        }
-        return PingResult(true)
-    }
-
-    /**
-     * Start the PingRandomFlow
-     * Expects answer within 10 seconds
-     *
-     * @return PingResult with success as true/false and an error description when false
-     */
-    fun pingRandom() : PingResult {
-        try {
-            val f = proxy().startFlow(DiagnosticFlows::PingRandomFlow)
-
-            f.returnValue.get(10, TimeUnit.SECONDS)
-        } catch (e: ExecutionException) {
-            return PingResult(false, TIMEOUT_ERROR)
-        }
-        return PingResult(true)
-    }
-
-    /**
      * helper class, represents the attachment zip
      */
     data class Attachment (
         val metadata: ConsentMetadata,
         val data: ByteArray
-    )
-
-    /**
-     * Helper for storing result of ping action
-     */
-    data class PingResult (
-        val success: Boolean,
-        val error: String = "",
-        val timestamp: Long = System.currentTimeMillis()
     )
 }

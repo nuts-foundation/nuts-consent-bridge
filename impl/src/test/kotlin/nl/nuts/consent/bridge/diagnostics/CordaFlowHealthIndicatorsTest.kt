@@ -19,13 +19,23 @@
 package nl.nuts.consent.bridge.diagnostics
 
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.core.concurrent.CordaFuture
+import net.corda.core.flows.StateMachineRunId
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.FlowHandle
+import net.corda.core.messaging.startFlow
 import nl.nuts.consent.bridge.SchedulerProperties
-import nl.nuts.consent.bridge.corda.CordaService
+import nl.nuts.consent.bridge.corda.CordaManagedConnection
+import nl.nuts.consent.flow.DiagnosticFlows
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
 import org.springframework.boot.actuate.health.Status
 import org.springframework.test.util.ReflectionTestUtils
+import java.lang.UnsupportedOperationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import kotlin.math.floor
 import kotlin.test.assertEquals
 
@@ -33,17 +43,17 @@ class CordaFlowHealthIndicatorsTest {
     lateinit var cordaNotaryPingHealthIndicator: CordaNotaryPingHealthIndicator
     lateinit var cordaRandomPingHealthIndicator: CordaRandomPingHealthIndicator
     lateinit var schedulerProperties: SchedulerProperties
-
-    private var cordaService: CordaService = mock()
+    lateinit var cordaManagedConnection: CordaManagedConnection
 
     @Before
     fun setup() {
         cordaNotaryPingHealthIndicator = CordaNotaryPingHealthIndicator()
         cordaRandomPingHealthIndicator = CordaRandomPingHealthIndicator()
+        cordaManagedConnection = mock()
         schedulerProperties = SchedulerProperties()
 
         listOf(cordaNotaryPingHealthIndicator, cordaRandomPingHealthIndicator).forEach {
-            ReflectionTestUtils.setField(it, "cordaService", cordaService)
+            ReflectionTestUtils.setField(it, "cordaManagedConnection", cordaManagedConnection)
             ReflectionTestUtils.setField(it, "schedulerProperties", schedulerProperties)
         }
     }
@@ -51,7 +61,9 @@ class CordaFlowHealthIndicatorsTest {
     @Test
     fun `correct notary ping returns UP status`() {
         // given
-        `when`(cordaService.pingNotary()).thenReturn(CordaService.PingResult(true))
+        val proxy:CordaRPCOps = mock()
+        `when`(cordaManagedConnection.proxy()).thenReturn(proxy)
+        `when`(proxy.startFlow(DiagnosticFlows::PingNotaryFlow)).thenReturn(pingResult(true))
 
         // when
         cordaNotaryPingHealthIndicator.doFlowHealthCheck()
@@ -64,7 +76,9 @@ class CordaFlowHealthIndicatorsTest {
     @Test
     fun `incorrect notary ping returns DOWN status`() {
         // given
-        `when`(cordaService.pingNotary()).thenReturn(CordaService.PingResult(false, "error"))
+        val proxy:CordaRPCOps = mock()
+        `when`(cordaManagedConnection.proxy()).thenReturn(proxy)
+        `when`(proxy.startFlow(DiagnosticFlows::PingNotaryFlow)).thenReturn(pingResult(false))
 
         // when
         cordaNotaryPingHealthIndicator.doFlowHealthCheck()
@@ -72,20 +86,20 @@ class CordaFlowHealthIndicatorsTest {
         // then
         val h = cordaNotaryPingHealthIndicator.health()
         assertEquals(Status.DOWN, h.status)
-        assertEquals("error", h.details["reason"])
+        assertEquals("Operation timed out", h.details["reason"])
     }
 
     @Test
     fun `stale notary ping returns DOWN status`() {
         // given
         val age = floor((2 * schedulerProperties.delay + 30000)/60000.0).toInt()
-        `when`(cordaService.pingNotary()).thenReturn(CordaService.PingResult(true, "", System.currentTimeMillis() - (2 * schedulerProperties.delay + 30000)))
+        cordaNotaryPingHealthIndicator.lastCheck = PingResult(true, "",
+            System.currentTimeMillis() - (2 * schedulerProperties.delay + 30000))
 
         // when
-        cordaNotaryPingHealthIndicator.doFlowHealthCheck()
+        val h = cordaNotaryPingHealthIndicator.health()
 
         // then
-        val h = cordaNotaryPingHealthIndicator.health()
         assertEquals(Status.DOWN, h.status)
         assertEquals("latest successful check was ${age} minutes ago", h.details["reason"])
     }
@@ -93,7 +107,9 @@ class CordaFlowHealthIndicatorsTest {
     @Test
     fun `correct random ping returns UP status`() {
         // given
-        `when`(cordaService.pingRandom()).thenReturn(CordaService.PingResult(true))
+        val proxy:CordaRPCOps = mock()
+        `when`(cordaManagedConnection.proxy()).thenReturn(proxy)
+        `when`(proxy.startFlow(DiagnosticFlows::PingRandomFlow)).thenReturn(pingResult(true))
 
         // when
         cordaRandomPingHealthIndicator.doFlowHealthCheck()
@@ -101,5 +117,35 @@ class CordaFlowHealthIndicatorsTest {
         // then
         val h = cordaRandomPingHealthIndicator.health()
         assertEquals(Status.UP, h.status)
+    }
+
+    private fun pingResult(success:Boolean) : FlowHandle<Unit> {
+        val cf: CordaFuture<Unit> = object : CordaFuture<Unit> {
+            override fun cancel(mayInterruptIfRunning: Boolean) = true
+
+            override fun get() {
+                if (!success) {
+                    throw ExecutionException("", null)
+                }
+            }
+
+            override fun get(timeout: Long, unit: TimeUnit) = get()
+            override fun isCancelled() = false
+            override fun isDone() = false
+            override fun <W> then(callback: (CordaFuture<Unit>) -> W) { }
+
+            override fun toCompletableFuture(): CompletableFuture<Unit> {
+                throw UnsupportedOperationException()
+            }
+        }
+
+        return object : FlowHandle<Unit>{
+            override val id: StateMachineRunId = mock()
+            override val returnValue: CordaFuture<Unit> = cf
+
+            override fun close() {
+                TODO("Not yet implemented")
+            }
+        }
     }
 }

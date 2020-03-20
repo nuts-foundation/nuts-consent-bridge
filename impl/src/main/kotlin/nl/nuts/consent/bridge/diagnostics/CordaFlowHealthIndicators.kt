@@ -18,11 +18,14 @@
 
 package nl.nuts.consent.bridge.diagnostics
 
+import net.corda.core.messaging.startFlow
 import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.SchedulerProperties
 import nl.nuts.consent.bridge.corda.CordaManagedConnection
 import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
 import nl.nuts.consent.bridge.corda.CordaService
+import nl.nuts.consent.bridge.corda.TIMEOUT_ERROR
+import nl.nuts.consent.flow.DiagnosticFlows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.actuate.health.Health
 import org.springframework.boot.actuate.health.HealthIndicator
@@ -30,6 +33,8 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
 import kotlin.math.floor
@@ -39,7 +44,7 @@ import kotlin.math.floor
  * Shared class for logic calling Corda Flows
  */
 abstract class FlowHealthIndicator : HealthIndicator {
-    var lastCheck : CordaService.PingResult = CordaService.PingResult(true)
+    var lastCheck : PingResult = PingResult(true)
 
     @Autowired
     protected lateinit var schedulerProperties: SchedulerProperties
@@ -47,20 +52,21 @@ abstract class FlowHealthIndicator : HealthIndicator {
     @Autowired
     lateinit var cordaManagedConnectionFactory: CordaManagedConnectionFactory
 
-    @Autowired
-    lateinit var consentRegistryProperties: ConsentRegistryProperties
-
-    protected lateinit var cordaService: CordaService
     protected lateinit var cordaManagedConnection: CordaManagedConnection
 
+    /**
+     * Init corda managed connection
+     */
     @PostConstruct
     fun init() {
         cordaManagedConnection = cordaManagedConnectionFactory.`object`
         cordaManagedConnection.name = "health"
-        cordaService = CordaService(cordaManagedConnection, consentRegistryProperties)
         cordaManagedConnection.connect()
     }
 
+    /**
+     * Terminate corda connection before destroying bean
+     */
     @PreDestroy
     fun destroy() {
         cordaManagedConnection?.terminate()
@@ -88,7 +94,7 @@ interface CordaHealthIndicator {
     /**
      * Scheduled function calling the actual Corda flow. Runs async which allows for a larger timeout.
      */
-    fun doFlowHealthCheck() : CordaService.PingResult;
+    fun doFlowHealthCheck() : PingResult;
 }
 
 /**
@@ -101,9 +107,26 @@ class CordaNotaryPingHealthIndicator : CordaHealthIndicator, FlowHealthIndicator
 
     @Async
     @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
-    override fun doFlowHealthCheck() : CordaService.PingResult {
-        lastCheck = cordaService.pingNotary()
+    override fun doFlowHealthCheck() : PingResult {
+        lastCheck = pingNotary()
         return lastCheck
+    }
+
+    /**
+     * Start the PingNotaryFlow
+     * Expects answer within 10 seconds
+     *
+     * @return PingResult with success as true/false and an error description when false
+     */
+    fun pingNotary() : PingResult {
+        try {
+            val f = cordaManagedConnection.proxy().startFlow(DiagnosticFlows::PingNotaryFlow)
+
+            f.returnValue.get(10, TimeUnit.SECONDS)
+        } catch (e: ExecutionException) {
+            return PingResult(false, TIMEOUT_ERROR)
+        }
+        return PingResult(true)
     }
 }
 
@@ -117,11 +140,37 @@ class CordaRandomPingHealthIndicator : CordaHealthIndicator, FlowHealthIndicator
 
     @Async
     @Scheduled(fixedDelayString = "#{schedulerProperties.delay}", initialDelayString = "#{schedulerProperties.initialDelay}")
-    override fun doFlowHealthCheck() : CordaService.PingResult {
-        lastCheck = cordaService.pingRandom()
+    override fun doFlowHealthCheck() : PingResult {
+        lastCheck = pingRandom()
         return lastCheck
     }
+
+    /**
+     * Start the PingRandomFlow
+     * Expects answer within 10 seconds
+     *
+     * @return PingResult with success as true/false and an error description when false
+     */
+    fun pingRandom() : PingResult {
+        try {
+            val f = cordaManagedConnection.proxy().startFlow(DiagnosticFlows::PingRandomFlow)
+
+            f.returnValue.get(10, TimeUnit.SECONDS)
+        } catch (e: ExecutionException) {
+            return PingResult(false, TIMEOUT_ERROR)
+        }
+        return PingResult(true)
+    }
 }
+
+/**
+ * Helper for storing result of ping action
+ */
+data class PingResult (
+    val success: Boolean,
+    val error: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)
 
 /**
  * Simple check to know if a Corda RPC Connection can be established

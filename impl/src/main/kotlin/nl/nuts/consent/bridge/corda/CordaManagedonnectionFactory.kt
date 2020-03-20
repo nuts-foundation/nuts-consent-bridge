@@ -53,6 +53,10 @@ class CordaManagedConnectionFactory : AbstractFactoryBean<CordaManagedConnection
  */
 @Configuration
 class CordaRPCConnectionConfiguration {
+
+    /**
+     * Create a new CordaManagedConnectionFactory
+     */
     @Bean
     fun cordaManagedConnectionFactory() : CordaManagedConnectionFactory {
         return CordaManagedConnectionFactory()

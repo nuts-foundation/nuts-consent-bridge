@@ -53,6 +53,10 @@ class NatsManagedConnectionFactory : AbstractFactoryBean<NatsManagedConnection>(
  */
 @Configuration
 class NatsConnectionConfiguration {
+
+    /**
+     * Create new NatsManagedConnectionFactory
+     */
     @Bean
     fun natsManagedConnectionFactory() : NatsManagedConnectionFactory {
         return NatsManagedConnectionFactory()

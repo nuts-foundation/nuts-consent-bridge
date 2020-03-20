@@ -78,6 +78,9 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
         }
     }
 
+    /**
+     * Get the active connection or throw an IllegalStateException
+     */
     fun getConnection() : StreamingConnection {
         if (connection == null) {
             throw IllegalStateException()
