@@ -49,3 +49,9 @@ It'll return some json displaying the current status of the various services
 .. code-block:: json
 
     {"status":"DOWN","details":{"nutsEventListener":{"status":"UP"},"nutsEventPublisher":{"status":"UP"},"&cordaRPCClientFactory":{"status":"DOWN"}}}
+
+Docker monitoring
+*****************
+
+A docker `HEALTHCHECK` is available on the image, it runs `curl localhost:8080/status`.
+This can be connected to your favourite monitoring software. Output can be checked by using `docker inspect --format='{{json .State.Health}}' container`

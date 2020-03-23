@@ -5,5 +5,9 @@
 
 FROM adoptopenjdk/openjdk11:alpine-slim
 COPY impl/build/libs/consent-bridge-*.jar /opt/nuts/consent-bridge.jar
+
+HEALTHCHECK --start-period=60s --timeout=5s --interval=10s \
+    CMD curl -f http://localhost:8080/status || exit 1
+
 EXPOSE 8080 5563
 CMD ["java", "-jar", "/opt/nuts/consent-bridge.jar", "--spring.config.location=file:/opt/nuts/application.properties"]
