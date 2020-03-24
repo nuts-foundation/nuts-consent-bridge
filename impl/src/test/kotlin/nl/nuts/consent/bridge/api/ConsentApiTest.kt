@@ -21,7 +21,7 @@ package nl.nuts.consent.bridge.api
 import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
-import nl.nuts.consent.bridge.rpc.CordaService
+import nl.nuts.consent.bridge.corda.CordaService
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
@@ -36,7 +36,6 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
 import org.springframework.test.util.ReflectionTestUtils
-import java.time.LocalDate
 import java.time.OffsetDateTime
 import kotlin.test.assertEquals
 import kotlin.test.fail

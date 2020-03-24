@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.rpc.test
+package nl.nuts.consent.bridge.corda.test
 
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract

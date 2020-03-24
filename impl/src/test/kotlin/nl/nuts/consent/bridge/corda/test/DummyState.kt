@@ -16,11 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.rpc.test
+package nl.nuts.consent.bridge.corda.test
 
 import net.corda.core.contracts.BelongsToContract
 import net.corda.core.contracts.ContractState
 import net.corda.core.identity.AbstractParty
 
-@BelongsToContract(nl.nuts.consent.bridge.rpc.test.DummyContract::class)
+@BelongsToContract(DummyContract::class)
 class DummyState(override val participants: List<AbstractParty>) : ContractState

@@ -21,6 +21,13 @@ apply plugin: 'org.springframework.boot'
 
 archivesBaseName="consent-bridge"
 
+test {
+    //we want display the following test events
+    testLogging {
+        events 'PASSED', 'FAILED', 'SKIPPED'
+    }
+}
+
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}")
     implementation "io.nats:java-nats-streaming:$stanVersion"

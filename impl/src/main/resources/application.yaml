@@ -1,8 +1,8 @@
 nuts:
   consent:
     schedule:
-      delay: 15 * 60 * 1000
-      initial_delay: 1000
+      delay: 900000
+      initial_delay: 30000
   event:
     meta:
       location: "."
