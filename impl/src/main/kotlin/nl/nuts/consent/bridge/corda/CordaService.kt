@@ -66,6 +66,7 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 const val TIMEOUT_ERROR = "Operation timed out"
+const val ENDPOINT_TYPE = "urn:oid:1.3.6.1.4.1.54851.2:consent"
 
 /**
  * Collection of all Corda related logic. Primarily uses the CordaRPC functionality.
@@ -340,10 +341,13 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
         }
 
         // todo orgIds for all attachments must be the same!
-
-        // todo: magic string
+        // todo: disabled strict search to allow for searching for both endpoint types.
+        // todo: also skipping check if every org has an endpoint
         val orgIds = newConsentRequestState.legalEntities
-        val endpoints = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent", true)
+        val endpoints1 = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent", false)
+        val endpoints2 = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), ENDPOINT_TYPE, false)
+
+        val endpoints = endpoints1 + endpoints2
 
         if (endpoints.isEmpty()) {
             throw IllegalArgumentException("No available endpoints for given organization ids in registry")
