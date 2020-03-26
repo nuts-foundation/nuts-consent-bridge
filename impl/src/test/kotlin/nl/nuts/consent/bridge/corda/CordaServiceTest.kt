@@ -423,7 +423,7 @@ class CordaServiceTest {
     }
 
     @Test
-    fun `newConsentBranch raises on missing endpoints`() {
+    fun `newConsentBranch raises on no endpoints`() {
         val newConsentBranch = newConsentBranch()
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
@@ -434,6 +434,33 @@ class CordaServiceTest {
                 paging = any(),
                 sorting = any(),
                 contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
+
+        assertFailsWith<IllegalArgumentException> {
+            cordaService.createConsentBranch(newConsentBranch)
+        }
+    }
+
+    @Test
+    fun `newConsentBranch raises on missing endpoints`() {
+        val newConsentBranch = newConsentBranch()
+        val e = endpoint()
+        val endpoint = Endpoint(
+            organization = "unknown",
+            identifier = e.identifier,
+            endpointType = e.endpointType,
+            properties = e.properties,
+            status = e.status,
+            URL = e.URL
+        )
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint))
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
 
         assertFailsWith<IllegalArgumentException> {
             cordaService.createConsentBranch(newConsentBranch)
@@ -486,6 +513,7 @@ class CordaServiceTest {
 
     private fun endpoint() : Endpoint {
         return Endpoint(
+                organization = "legalEntity",
                 endpointType = "urn:nuts:endpoint:consent",
                 identifier = "urn:ietf:rfc:1779:O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local",
                 status = Endpoint.Status.active,

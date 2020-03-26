@@ -15,6 +15,7 @@ package nl.nuts.consent.bridge.registry.models
 import com.squareup.moshi.Json
 /**
  * 
+ * @param organization Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  * @param endpointType URI of the type of endpoint
  * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  * @param status status of the endpoint
@@ -22,6 +23,8 @@ import com.squareup.moshi.Json
  * @param properties A property bag, containing extra properties for endpoints
  */
 data class Endpoint (
+    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
+    val organization: kotlin.String,
     /* URI of the type of endpoint */
     val endpointType: kotlin.String,
     /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */

@@ -342,15 +342,17 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
 
         // todo orgIds for all attachments must be the same!
         // todo: disabled strict search to allow for searching for both endpoint types.
-        // todo: also skipping check if every org has an endpoint
         val orgIds = newConsentRequestState.legalEntities
         val endpoints1 = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), "urn:nuts:endpoint:consent", false)
         val endpoints2 = endpointsApi.endpointsByOrganisationId(orgIds.toTypedArray(), ENDPOINT_TYPE, false)
 
         val endpoints = endpoints1 + endpoints2
 
-        if (endpoints.isEmpty()) {
-            throw IllegalArgumentException("No available endpoints for given organization ids in registry")
+        // create a map from org to endpoint
+        val endpointMap = endpoints.map { it.organization to it }.toMap()
+
+        if (!endpointMap.keys.containsAll(orgIds)) {
+            throw IllegalArgumentException("Not all given organizations have a consent endpoint in the registry")
         }
 
         // check consistency of nodeNames

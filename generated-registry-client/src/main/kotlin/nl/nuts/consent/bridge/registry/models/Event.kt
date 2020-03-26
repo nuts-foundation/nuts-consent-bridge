@@ -16,6 +16,7 @@ package nl.nuts.consent.bridge.registry.models
  * 
  * @param type type of the event
  * @param issuedAt timestamp at which the event happened
+ * @param signature JWS (JSON Web Signature) securing the payload's authenticity and integrity.
  * @param payload payload of the event
  */
 data class Event (
@@ -23,6 +24,8 @@ data class Event (
     val type: kotlin.String? = null,
     /* timestamp at which the event happened */
     val issuedAt: java.time.LocalDateTime? = null,
+    /* JWS (JSON Web Signature) securing the payload's authenticity and integrity. */
+    val signature: kotlin.String? = null,
     /* payload of the event */
     val payload: kotlin.Any? = null
 ) {
