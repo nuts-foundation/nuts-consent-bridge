@@ -6,6 +6,8 @@
 FROM adoptopenjdk/openjdk11:alpine
 COPY impl/build/libs/consent-bridge-*.jar /opt/nuts/consent-bridge.jar
 
+RUN apk add curl
+
 HEALTHCHECK --start-period=60s --timeout=5s --interval=10s \
     CMD curl -f http://localhost:8080/status || exit 1
 
