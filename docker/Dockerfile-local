@@ -3,7 +3,7 @@
 #COPY / .
 #RUN ./gradlew bootJar
 
-FROM adoptopenjdk/openjdk11:alpine-slim
+FROM adoptopenjdk/openjdk11:alpine
 COPY impl/build/libs/consent-bridge-*.jar /opt/nuts/consent-bridge.jar
 
 HEALTHCHECK --start-period=60s --timeout=5s --interval=10s \
