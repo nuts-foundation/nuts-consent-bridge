@@ -112,7 +112,7 @@ class CordaServiceTest {
 
     @Test
     fun `ConsentBranchByUUID state data on success`() {
-        `when`(cordaRPCOps.vaultQueryBy<ConsentBranch>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
@@ -252,11 +252,11 @@ class CordaServiceTest {
     fun `newConsentBranch raises for inconsistent legalEntitites`() {
         val newConsentBranch = newConsentBranch(emptyList())
 
-        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
+                contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
 
         assertFailsWith<IllegalArgumentException> {
             cordaService.createConsentBranch(newConsentBranch)
@@ -269,14 +269,14 @@ class CordaServiceTest {
         val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(null)
         // simulate Genesis block
-        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, id))
+                contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, id))
 
         assertFailsWith<IllegalStateException> {
             cordaService.createConsentBranch(newConsentBranch)
@@ -289,7 +289,7 @@ class CordaServiceTest {
         val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
@@ -298,13 +298,13 @@ class CordaServiceTest {
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
                 setOf(cordaName)
-        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+        )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
-        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, id))
+                contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, id))
 
         val handle = cordaService.createConsentBranch(newConsentBranch)
 
@@ -324,7 +324,7 @@ class CordaServiceTest {
         `when`(coreTxMock.outputsOfType<ConsentState>()).thenReturn(listOf(ConsentState(uuid = id, version = 1)))
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
@@ -333,18 +333,18 @@ class CordaServiceTest {
                 setOf(SecureHash.allOnesHash),
                 setOf("legalEntity"),
                 setOf(cordaName)
-        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+        )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
-        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(0, id))
+                contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(0, id))
         // create genesis block
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateGenesisConsentState,
                 "externalId"
-        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), futureMock))
+        )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), futureMock))
 
         val handle = cordaService.createConsentBranch(newConsentBranch)
 
@@ -357,7 +357,7 @@ class CordaServiceTest {
         val id = UniqueIdentifier(externalId = "externalId")
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenThrow(CordaRuntimeException("", DuplicateAttachmentException(SecureHash.allOnesHash.toString())))
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(arrayOf(endpoint()))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::CreateConsentBranch,
@@ -423,17 +423,44 @@ class CordaServiceTest {
     }
 
     @Test
-    fun `newConsentBranch raises on missing endpoints`() {
+    fun `newConsentBranch raises on no endpoints`() {
         val newConsentBranch = newConsentBranch()
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenReturn(emptyArray())
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(emptyArray())
         // simulate Genesis block
-        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
+                contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
+
+        assertFailsWith<IllegalArgumentException> {
+            cordaService.createConsentBranch(newConsentBranch)
+        }
+    }
+
+    @Test
+    fun `newConsentBranch raises on missing endpoints`() {
+        val newConsentBranch = newConsentBranch()
+        val e = endpoint()
+        val endpoint = Endpoint(
+            organization = "unknown",
+            identifier = e.identifier,
+            endpointType = e.endpointType,
+            properties = e.properties,
+            status = e.status,
+            URL = e.URL
+        )
+
+        `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint))
+        // simulate Genesis block
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
 
         assertFailsWith<IllegalArgumentException> {
             cordaService.createConsentBranch(newConsentBranch)
@@ -445,13 +472,13 @@ class CordaServiceTest {
         val newConsentBranch = newConsentBranch()
 
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
-        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), eq("urn:nuts:endpoint:consent"), eq(true))).thenThrow(ClientException("organization with id X does not have an endpoint of type urn:nuts:endpoint:consen"))
+        `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenThrow(ClientException("organization with id X does not have an endpoint of type urn:nuts:endpoint:consen"))
         // simulate Genesis block
-        `when`(cordaRPCOps.vaultQueryBy<nl.nuts.consent.state.ConsentState>(
+        `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),
                 paging = any(),
                 sorting = any(),
-                contractStateType = eq(nl.nuts.consent.state.ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
+                contractStateType = eq(ConsentState::class.java))).thenReturn(statePage(1, UniqueIdentifier()))
 
         assertFailsWith<ClientException> {
             cordaService.createConsentBranch(newConsentBranch)
@@ -486,6 +513,7 @@ class CordaServiceTest {
 
     private fun endpoint() : Endpoint {
         return Endpoint(
+                organization = "legalEntity",
                 endpointType = "urn:nuts:endpoint:consent",
                 identifier = "urn:ietf:rfc:1779:O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local",
                 status = Endpoint.Status.active,
