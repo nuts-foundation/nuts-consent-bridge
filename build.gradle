@@ -21,15 +21,11 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-//        maven {
-//            url "https://plugins.gradle.org/m2/"
-//        }
     }
 
     ext {
         kotlinVersion = '1.2.71'
-        cordaVersion = '4.3'
-//        cordaGradlePluginsVersion = '5.0.4'
+        cordaVersion = '4.4'
         springBootVersion = '2.1.11.RELEASE'
         openApiPluginVersion = '3.3.4'
         nutsVersion = project.version
@@ -38,8 +34,6 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlinVersion"
-//        classpath "gradle.plugin.net.corda.plugins:cordapp:$cordaGradlePluginsVersion"
-//        classpath "net.corda.plugins:cordformation:$cordaGradlePluginsVersion"
         classpath "org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion"
         classpath "org.openapitools:openapi-generator-gradle-plugin:$openApiPluginVersion"
     }
@@ -50,8 +44,8 @@ ext {
     slf4jVersion = '1.7.25'
     log4jVersion = '2.9.1'
     wiremockVersion = '2.23.2'
-    stanVersion = '2.1.6'
-    natsVersion = '2.5.2' // >2.6 requires jdk11!
+    stanVersion = '2.2.3'
+    natsVersion = '2.6.6'
 }
 
 allprojects {
@@ -60,7 +54,7 @@ allprojects {
         mavenCentral()
         jcenter()
         maven {
-            url "https://ci-artifactory.corda.r3cev.com/artifactory/corda-releases/"
+            url "https://software.r3.com/artifactory/corda"
         }
         maven {
             url "https://repo.gradle.org/gradle/libs-releases/"
@@ -127,7 +121,7 @@ allprojects {
             "com.lmax**;picocli**;liquibase**;com.github.benmanes**;org.json**;org.postgresql**;nonapi.io.github.classgraph**;)"
 
     test {
-        jvmArgs "-javaagent:${project.rootDir}/lib/quasar-core-0.7.10.jar=${excludePackagePattern}",
+        jvmArgs "-javaagent:${project.rootDir}/lib/quasar-core-0.7.12_r3.jar=${excludePackagePattern}",
                 "-Dco.paralleluniverse.fibers.verifyInstrumentation=false"
         environment SPRING_PROFILES_ACTIVE: environment.SPRING_PROFILES_ACTIVE ?: "test"
         enableAssertions = false
