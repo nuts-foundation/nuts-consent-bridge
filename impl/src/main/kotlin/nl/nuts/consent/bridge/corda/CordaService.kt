@@ -438,7 +438,16 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
     }
 
     private fun uploadAttachment(data: ByteArray) : SecureHash {
-        return proxy().uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
+        // check if exists
+        var hash: SecureHash = SecureHash.sha256(data)
+        logger.debug("Checking for existing attachment with hash $hash")
+        if (!proxy().attachmentExists(hash)) {
+            val uploadedHash = proxy().uploadAttachment(BufferedInputStream(ByteArrayInputStream(data)))
+            logger.debug("Uploaded attachment got hash: $uploadedHash")
+            hash = uploadedHash // mainly for test
+        }
+
+        return hash
     }
 
     /**

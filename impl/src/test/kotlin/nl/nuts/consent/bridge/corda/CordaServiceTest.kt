@@ -288,6 +288,7 @@ class CordaServiceTest {
         val newConsentBranch = newConsentBranch()
         val id = UniqueIdentifier(externalId = "externalId")
 
+        `when`(cordaRPCOps.attachmentExists(any())).thenReturn(false)
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
@@ -323,6 +324,7 @@ class CordaServiceTest {
         `when`(txMock.coreTransaction).thenReturn(coreTxMock)
         `when`(coreTxMock.outputsOfType<ConsentState>()).thenReturn(listOf(ConsentState(uuid = id, version = 1)))
 
+        `when`(cordaRPCOps.attachmentExists(any())).thenReturn(false)
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
         `when`(cordaRPCOps.wellKnownPartyFromX500Name(cordaName)).thenReturn(mock())
