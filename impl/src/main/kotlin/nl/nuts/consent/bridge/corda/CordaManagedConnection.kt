@@ -18,6 +18,7 @@
 
 package nl.nuts.consent.bridge.corda
 
+import net.corda.client.rpc.ConnectionFailureException
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
@@ -47,38 +48,55 @@ class CordaManagedConnection(val consentBridgeRPCProperties: ConsentBridgeRPCPro
     private var noConnectionReason: String? = "starting up"
     private var watchdog: Thread? = null
 
-    var name: String = "unknown corda"
+    var name: String? = "unknown corda"
 
     private fun startThread() {
         watchdog = Thread {
-            while(!terminate) {
-                synchronized(this) {
-                    if (connection != null) {
-                        try {
-                            val nodeInfo = connection?.proxy?.nodeInfo()
-                            require(nodeInfo?.legalIdentitiesAndCerts?.isNotEmpty() ?: false)
-                        } catch (e: IllegalArgumentException) {
-                            noConnectionReason = e.message
-                            logger.error("Corda RPC connection lost for $name: ${e.message}")
-                            connection = null
-                            this.onDisconnected()
-                        }
-                    } else if (tryToConnect) {
-                        try {
-                            connectToCorda()
-                            logger.info("Corda RPC connection established for $name")
-                            this.onConnected()
-                        } catch (e: IOException) {
-                            noConnectionReason = e.message // if host is unreachable
-                        } catch (secEx: ActiveMQSecurityException) {
-                            // Incorrect credentials
-                            noConnectionReason = secEx.message
-                        } catch (ex: RPCException) {
-                            noConnectionReason = ex.message
+            try {
+                while (!terminate) {
+                    synchronized(this) {
+                        if (connection != null) {
+                            try {
+                                val nodeInfo = connection?.proxy?.nodeInfo()
+                                require(nodeInfo?.legalIdentitiesAndCerts?.isNotEmpty() ?: false)
+                            } catch (e: IllegalArgumentException) {
+                                noConnectionReason = e.message
+                                logger.error("Corda RPC connection lost for $name: ${e.message}")
+                                connection = null
+                                this.onDisconnected()
+                            } catch (e: ConnectionFailureException) {
+                                noConnectionReason = e.message
+                                logger.error("Corda RPC connection lost for $name: ${e.message}")
+                                connection = null
+                                this.onDisconnected()
+                            } catch (e:RPCException) {
+                                noConnectionReason = e.message
+                                logger.error("Corda RPC connection lost for $name: ${e.message}")
+                                connection = null
+                                this.onDisconnected()
+                            }
+                        } else if (tryToConnect) {
+                            try {
+                                connectToCorda()
+                                logger.info("Corda RPC connection established for $name")
+                                this.onConnected()
+                            } catch (e: IOException) {
+                                logger.debug("IOException: ${e.message} while trying to connect to Corda for $name")
+                                noConnectionReason = e.message // if host is unreachable
+                            } catch (secEx: ActiveMQSecurityException) {
+                                // Incorrect credentials
+                                logger.debug("ActiveMQSecurityException: ${secEx.message} while trying to connect to Corda for $name")
+                                noConnectionReason = secEx.message
+                            } catch (ex: RPCException) {
+                                logger.debug("RPCException: ${ex.message} while trying to connect to Corda for $name")
+                                noConnectionReason = ex.message
+                            }
                         }
                     }
+                    Thread.sleep(consentBridgeRPCProperties.retryIntervalSeconds.seconds.toMillis())
                 }
-                Thread.sleep(consentBridgeRPCProperties.retryIntervalSeconds.seconds.toMillis())
+            } catch (e: Exception) {
+                logger.error("unexpected exception in watchdog for $name: ${e.message}", e)
             }
         }
         watchdog?.start()

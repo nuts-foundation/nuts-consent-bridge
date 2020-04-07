@@ -28,6 +28,10 @@ import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
+import nl.nuts.consent.bridge.corda.CordaManagedConnection
+import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
+import nl.nuts.consent.bridge.corda.CordaService
+import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.io.MasterSlaveConnection
 import nl.nuts.consent.bridge.model.FullConsentRequestState
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
@@ -38,14 +42,12 @@ import nl.nuts.consent.bridge.nats.NATS_CONSENT_ERROR_SUBJECT
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_RETRY_SUBJECT
 import nl.nuts.consent.bridge.nats.NatsManagedConnection
-import nl.nuts.consent.bridge.corda.CordaManagedConnection
-import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
-import nl.nuts.consent.bridge.corda.CordaService
 import nl.nuts.consent.bridge.nats.NatsManagedConnectionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import java.time.Instant
 import java.util.*
 import javax.annotation.PostConstruct
 import javax.annotation.PreDestroy
@@ -61,6 +63,7 @@ class NatsToCordaPipeline {
     @Autowired
     lateinit var natsManagedConnectionFactory: NatsManagedConnectionFactory
     lateinit var natsManagedConnection: NatsManagedConnection
+    lateinit var publisherConnection: NatsManagedConnection
 
     @Autowired
     lateinit var cordaManagedConnectionFactory: CordaManagedConnectionFactory
@@ -73,6 +76,9 @@ class NatsToCordaPipeline {
     lateinit var eventStateStore: EventStateStore
 
     @Autowired
+    lateinit var stateFileStorageControl: StateFileStorageControl
+
+    @Autowired
     lateinit var consentRegistryProperties: ConsentRegistryProperties
 
     private var subscription: Subscription? = null
@@ -83,6 +89,7 @@ class NatsToCordaPipeline {
     @PostConstruct
     fun init() {
         natsManagedConnection = natsManagedConnectionFactory.`object`
+        publisherConnection = natsManagedConnectionFactory.`object`
         cordaManagedConnection = cordaManagedConnectionFactory.`object`
 
         masterSlaveConnection = MasterSlaveConnection(cordaManagedConnection, natsManagedConnection)
@@ -90,14 +97,24 @@ class NatsToCordaPipeline {
         cordaService = CordaService(cordaManagedConnection, consentRegistryProperties)
 
         cordaManagedConnection.name = "natsRPC"
-        natsManagedConnection.name = "listener"
+        publisherConnection.name = "retry-publisher"
+        natsManagedConnection.name = "event-listener"
         natsManagedConnection.onConnected = {startListeners()}
-        natsManagedConnection.onDisconnected = {stopListeners()}
+        natsManagedConnection.onDisconnected = {}
 
+        publisherConnection.connect()
         masterSlaveConnection.connect()
     }
 
     private fun startListeners() {
+        // starting point
+        var epoch = stateFileStorageControl.readTimestamp(NATS_CONSENT_REQUEST_SUBJECT)
+        if (epoch != 0L) {
+            epoch -= 10000L // some overlap for parallel processing
+        }
+        val startingTime = Instant.ofEpochMilli(epoch)
+
+        // getConnection may raise, but only on broken connection, the reconnect logic will then call startListeners again after a connection is made
         subscription = natsManagedConnection.getConnection().subscribe(NATS_CONSENT_REQUEST_SUBJECT, {
 
             logger.trace("Received event with data ${String(it.data)}")
@@ -108,6 +125,9 @@ class NatsToCordaPipeline {
                 try {
                     processEvent(event)
                 } catch (e: CordaRuntimeException) { // recoverable
+                    logger.error(e.message, e)
+                    retry(event)
+                } catch (e: IllegalStateException) { // recoverable, connection problem
                     logger.error(e.message, e)
                     retry(event)
                 } catch (e: Exception) { // broken
@@ -124,7 +144,7 @@ class NatsToCordaPipeline {
                 logger.error(e.message, e)
             }
         }, SubscriptionOptions.Builder()
-            .startWithLastReceived()
+            .startAtTime(startingTime)
             .ackWait(5.seconds)
             .durableName("${Constants.NAME}Durable")
             .build()
@@ -132,36 +152,30 @@ class NatsToCordaPipeline {
 
         logger.info("Nats subscription with subject {} added", NATS_CONSENT_REQUEST_SUBJECT)
     }
-
-    private fun stopListeners() {
-        subscription?.close()
-    }
-
     /**
      * Some cleanup
      */
     @PreDestroy
     fun destroy() {
-        stopListeners()
-
         masterSlaveConnection.terminate()
+        publisherConnection.terminate()
     }
 
     private fun publish(subject:String, data: ByteArray) {
-        natsManagedConnection.getConnection().publish(subject, data)
+        publisherConnection.getConnection().publish(subject, data)
     }
 
     private fun retry(retryCount: Int, data: ByteArray) {
+        logger.debug("Publishing event to retry queue, retryCount: $retryCount")
+
         val subject = "$NATS_CONSENT_RETRY_SUBJECT-${retryCount}"
         publish(subject, data)
     }
 
     private fun retry(e: Event) {
-        logger.debug("Publishing event to retry queue")
-
-        e.retryCount++
-        val bytes  = Serialization.objectMapper().writeValueAsBytes(e)
-        retry(e.retryCount, bytes)
+        val newEvent = e.copy(retryCount = e.retryCount + 1)
+        val bytes  = Serialization.objectMapper().writeValueAsBytes(newEvent)
+        retry(newEvent.retryCount, bytes)
     }
 
     /**
@@ -191,6 +205,7 @@ class NatsToCordaPipeline {
             else -> {
             }
         }
+        stateFileStorageControl.writeTimestamp(NATS_CONSENT_REQUEST_SUBJECT, System.currentTimeMillis())
     }
 
     private fun processEventConsentRequestConstructed(e: Event) {

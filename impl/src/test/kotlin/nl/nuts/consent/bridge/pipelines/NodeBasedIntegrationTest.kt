@@ -18,22 +18,15 @@
 
 package nl.nuts.consent.bridge.pipelines
 
-import net.corda.cliutils.printError
 import net.corda.node.services.Permissions
-import net.corda.node.services.statemachine.CountUpDownLatch
 import net.corda.testing.core.ALICE_NAME
 import net.corda.testing.driver.DriverParameters
 import net.corda.testing.driver.NodeHandle
 import net.corda.testing.driver.driver
 import net.corda.testing.node.User
 import nl.nuts.consent.bridge.ConsentBridgeRPCProperties
-import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
-import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
-import np.com.madanpokharel.embed.nats.NatsServerConfig
-import np.com.madanpokharel.embed.nats.NatsStreamingVersion
-import np.com.madanpokharel.embed.nats.ServerType
+import org.junit.AfterClass
 import org.junit.BeforeClass
-import java.net.ServerSocket
 import java.util.concurrent.CountDownLatch
 
 open class NodeBasedIntegrationTest {
@@ -42,7 +35,6 @@ open class NodeBasedIntegrationTest {
         const val PASSWORD = "test"
         val rpcUser = User(USER, PASSWORD, permissions = setOf(Permissions.all()))
         var port = 4222
-        var natsServer: EmbeddedNatsServer? = null
 
         val countDownLatch = CountDownLatch(1)
 
@@ -92,20 +84,6 @@ open class NodeBasedIntegrationTest {
                         countDownLatch.await()
                     }
                 }.start()
-
-                // nats server
-                ServerSocket(0).use { NatsToCordaPipelineIntegrationTest.port = it.localPort }
-                val config = EmbeddedNatsConfig.Builder()
-                    .withNatsServerConfig(
-                        NatsServerConfig.Builder()
-                            .withServerType(ServerType.NATS_STREAMING)
-                            .withPort(port)
-                            .withNatsStreamingVersion(NatsStreamingVersion.V0_16_2)
-                            .build()
-                    )
-                    .build()
-                natsServer = EmbeddedNatsServer(config)
-                natsServer?.startServer()
 
                 running = true
 

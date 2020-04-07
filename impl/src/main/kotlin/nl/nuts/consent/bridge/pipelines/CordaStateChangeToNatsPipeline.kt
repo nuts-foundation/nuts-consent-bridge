@@ -36,7 +36,7 @@ import nl.nuts.consent.bridge.EventStoreProperties
 import nl.nuts.consent.bridge.corda.CordaManagedConnection
 import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
 import nl.nuts.consent.bridge.corda.CordaService
-import nl.nuts.consent.bridge.corda.StateFileStorageControl
+import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.events.apis.EventApi
 import nl.nuts.consent.bridge.io.MasterSlaveConnection
 import nl.nuts.consent.bridge.nats.Event
@@ -177,7 +177,7 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
             },
                 { e: Throwable ->
                     // todo this might stop the listeners even when connection remains, monitor for a specific exception?
-                    logger.error(e.message, e)
+                    logger.error(e.message)
                     logger.info("Removing corda observable")
 
                     // cleanup stuff to make sure we don't leak anything
