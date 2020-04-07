@@ -22,11 +22,14 @@ import io.nats.client.Nats
 import io.nats.client.Options
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
+import io.nats.streaming.SubscriptionOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.seconds
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.EventMetaProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
@@ -113,17 +116,15 @@ class CordaStateMachineToNatsPipelineIntegrationTest : NodeBasedIntegrationTest(
         pipeline = createPipeline()
         pipeline?.init()
 
-        connection.subscribe(NATS_CONSENT_ERROR_SUBJECT) {
+        connection.subscribe(NATS_CONSENT_ERROR_SUBJECT, {
             eventOut = Serialization.objectMapper().readValue(it.data, Event::class.java)
-        }
+        },  SubscriptionOptions.Builder().startWithLastReceived().build())
+
+        // wait a bit
+        Thread.sleep(100L)
 
         val handle = rpcConnection!!.proxy.startFlow(DummyFlow::ErrorFlow)
         eventStateStore.put(handle.id.uuid, eventIn)
-
-        // wait for it
-        blockUntilNull {
-            eventStateStore.get(handle.id.uuid)
-        }
 
         blockUntilSet {
             eventOut
