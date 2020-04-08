@@ -91,6 +91,7 @@ class CordaStateMachineToNatsPipelineIntegrationTest : NodeBasedIntegrationTest(
 
     private fun createPipeline(): CordaStateMachineToNatsPipeline {
         pipeline = CordaStateMachineToNatsPipeline()
+        pipeline?.name = "smTest"
 
         // nats connections
         val natsManagedConnectionFactory = NatsManagedConnectionFactory()

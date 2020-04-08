@@ -80,9 +80,7 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
                 // only create connection once, from there auto-reconnect handles all
                 // otherwise dupl clientID and dupl subscriptions
                 // if (connection == null) {
-                logger.debug("SETTING CONNECTION")
                 connection = cf?.createConnection()
-                logger.debug("CONNECTION SET")
                 // }
                 this.onConnected()
             } catch (e: Exception) {
