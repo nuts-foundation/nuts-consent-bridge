@@ -229,8 +229,8 @@ class NatsToCordaPipeline {
         publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
     }
 
-    private fun processEventConsentRequestInFlight(e: Event) {
-        logger.debug("Processing consentRequest in flight event with data ${Serialization.objectMapper().writeValueAsString(e)}")
+    private fun processEventInStateStore(e: Event) {
+        logger.debug("Processing ${e.name} event with data ${Serialization.objectMapper().writeValueAsString(e)}")
         // when doing replay
         val uuid = UUID.fromString(e.transactionId)
         val existingEvent = eventStateStore.get(uuid)
@@ -241,16 +241,12 @@ class NatsToCordaPipeline {
         logger.debug("Starting to listen for transaction update for id: ${e.transactionId}")
     }
 
-    private fun processEventInFinalFlight(e: Event) {
-        logger.debug("Processing consentRequest in final flight event with data ${Serialization.objectMapper().writeValueAsString(e)}")
-        // when doing replay
-        val uuid = UUID.fromString(e.transactionId)
-        val existingEvent = eventStateStore.get(uuid)
-        if (existingEvent == null) {
-            eventStateStore.put(uuid, e)
-        }
+    private fun processEventConsentRequestInFlight(e: Event) {
+        processEventInStateStore(e)
+    }
 
-        logger.debug("Starting to listen for transaction update for id: ${e.transactionId}")
+    private fun processEventInFinalFlight(e: Event) {
+        processEventInStateStore(e)
     }
 
     private fun processEventAllSignaturesPresent(e: Event) {
@@ -261,9 +257,9 @@ class NatsToCordaPipeline {
             // this node is the initiator, finalize flow
             val handle = cordaService.mergeConsentBranch(cId)
 
-            e.name = EventName.EventInFinalFlight
-            e.transactionId = handle.id.uuid.toString()
-            eventStateStore.put(handle.id.uuid, e)
+            val eCopy = e.copy(name = EventName.EventInFinalFlight, transactionId = handle.id.uuid.toString())
+
+            eventStateStore.put(handle.id.uuid, eCopy)
 
             // todo publish as inFlight
         }

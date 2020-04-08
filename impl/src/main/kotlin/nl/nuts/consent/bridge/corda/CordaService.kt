@@ -119,7 +119,7 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
             throw IllegalStateException("Too many states found with linearId $UUID")
         }
 
-        return false
+        return true
     }
 
     private fun proxy(): CordaRPCOps = cordaManagedConnection.proxy()
@@ -128,7 +128,7 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
         val criteria = QueryCriteria.LinearStateQueryCriteria(participants = null,
                 linearId = listOf(UniqueIdentifier(null, UUID.fromString(uuid))),
                 status = Vault.StateStatus.UNCONSUMED,
-                contractStateTypes = setOf(nl.nuts.consent.state.ConsentBranch::class.java))
+                contractStateTypes = setOf(ConsentBranch::class.java))
 
         return proxy().vaultQueryBy(
                 criteria = criteria,

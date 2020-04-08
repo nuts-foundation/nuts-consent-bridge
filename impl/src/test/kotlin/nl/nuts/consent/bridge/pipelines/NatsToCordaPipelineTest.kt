@@ -51,8 +51,13 @@ import nl.nuts.consent.state.ConsentBranch
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
+import java.lang.IllegalArgumentException
 import java.time.OffsetDateTime
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 
 class NatsToCordaPipelineTest {
@@ -206,16 +211,79 @@ class NatsToCordaPipelineTest {
         verify(cordaService).signConsentBranch(any(), any())
     }
 
+    @Test
+    fun `consentRequestInFlight event is put in store when unknown`() {
+        val uuid = UUID.randomUUID()
+        val event = event(EventName.EventConsentRequestInFlight, uuid.toString())
+
+        assertNull(natsToCordaPipeline.eventStateStore.get(uuid))
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertNotNull(natsToCordaPipeline.eventStateStore.get(uuid))
+    }
+
+    @Test
+    fun `EventInFinalFlight event is ignored when known`() {
+        val uuid = UUID.randomUUID()
+        val knownEvent = event(EventName.EventCompleted, uuid.toString())
+        val event = event(EventName.EventInFinalFlight, uuid.toString())
+
+        natsToCordaPipeline.eventStateStore.put(uuid, knownEvent)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertEquals(EventName.EventCompleted, natsToCordaPipeline.eventStateStore.get(uuid)?.name)
+    }
+
+    @Test
+    fun `allSignaturesPresent is ignored when not initiator`() {
+        val event = event(EventName.EventAllSignaturesPresent).copy(initiatorLegalEntity = null)
+
+        natsToCordaPipeline.processEvent(event)
+
+        verifyZeroInteractions(cordaService)
+    }
+
+    @Test
+    fun `allSignaturesPresent raises when consentId is null`() {
+        val event = event(EventName.EventAllSignaturesPresent).copy(consentId = null)
+
+        assertFailsWith(IllegalStateException::class) {
+            natsToCordaPipeline.processEvent(event)
+        }
+    }
+
+    @Test
+    fun `allSignaturesPresent calls mergeConsentBranch`() {
+        val uuid = UUID.randomUUID()
+        val event = event(EventName.EventAllSignaturesPresent, uuid.toString())
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(uuid)
+        `when`(cordaService.mergeConsentBranch(any())).thenReturn(t)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertEquals(EventName.EventInFinalFlight, natsToCordaPipeline.eventStateStore.get(uuid)?.name)
+    }
+
     private fun event(name : EventName) : Event {
+        return event(name, UUID.randomUUID().toString())
+    }
+
+    private fun event(name : EventName, uuid: String) : Event {
         return Event(
-            UUID = "1111-2222-33334444-5555-6666",
+            UUID = uuid,
             name = name,
             retryCount = 0,
             externalId = "uuid",
             initiatorLegalEntity = "custodian",
             payload = "",
             consentId = "consentUuid",
-            error = null
+            error = null,
+            transactionId = uuid
         )
     }
 
