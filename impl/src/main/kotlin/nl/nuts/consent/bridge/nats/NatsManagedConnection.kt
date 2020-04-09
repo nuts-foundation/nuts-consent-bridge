@@ -76,12 +76,7 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
             logger.info("$name connected to Nats server")
             try {
                 cf?.natsConnection = conn
-
-                // only create connection once, from there auto-reconnect handles all
-                // otherwise dupl clientID and dupl subscriptions
-                // if (connection == null) {
                 connection = cf?.createConnection()
-                // }
                 this.onConnected()
             } catch (e: Exception) {
                 logger.error(e.message, e)

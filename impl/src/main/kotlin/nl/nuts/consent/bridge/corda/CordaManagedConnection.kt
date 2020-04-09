@@ -42,94 +42,8 @@ class CordaManagedConnection(val consentBridgeRPCProperties: ConsentBridgeRPCPro
 
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
     private var cordaConnectionWatchdog: CordaConnectionWatchdog? = null
-    //private var retryCount = consentBridgeRPCProperties.retryCount
 
     var name: String? = "unknown corda"
-
-    class CordaConnectionWatchdog(var managedConnection: CordaManagedConnection, var delay: Long, var onConnected: () -> Unit, var onDisconnected: () -> Unit, var onError: () -> Unit = {}): Runnable {
-        private val logger: Logger = LoggerFactory.getLogger(this::class.java)
-        private var terminate = false
-        private var tryToConnect = true
-        private var connection: CordaRPCConnection? = null
-
-        var noConnectionReason: String? = "starting up"
-        fun pause() {
-            synchronized(this) {
-                tryToConnect = false
-            }
-        }
-
-        fun resume() {
-            synchronized(this) {
-                tryToConnect = true
-            }
-        }
-
-        fun terminate() {
-            synchronized(this) {
-                closeConnection()
-                terminate = true
-                tryToConnect = false
-            }
-        }
-
-        fun getConnection(): CordaRPCConnection? {
-            synchronized(this) {
-                return connection
-            }
-        }
-
-        fun closeConnection() {
-            synchronized(this) {
-                connection?.forceClose()
-                connection = null
-            }
-        }
-
-        override fun run() {
-            try {
-                while (!terminate) {
-                    synchronized(this) {
-                        if (connection != null) {
-                            try {
-                                val nodeInfo = connection?.proxy?.nodeInfo()
-                                require(nodeInfo?.legalIdentitiesAndCerts?.isNotEmpty() ?: false)
-                            } catch (e: Exception) {
-                                when (e) {
-                                    is IllegalArgumentException, is ConnectionFailureException, is RPCException -> {
-                                        noConnectionReason = e.message
-                                        logger.error("Corda RPC connection lost for $managedConnection.name: ${e.message}")
-                                        connection = null
-                                        onDisconnected()
-                                    }
-                                    else -> throw e
-                                }
-                            }
-                        } else if (tryToConnect) {
-                            try {
-                                noConnectionReason = null
-                                connection = managedConnection.connectToCorda()
-                                logger.info("Corda RPC connection established for ${managedConnection.name}")
-                                onConnected()
-                            } catch (e: Exception) {
-                                when (e) {
-                                    is IOException, is ActiveMQSecurityException, is RPCException -> {
-                                        onError()
-                                        logger.debug("${e::class.simpleName}: ${e.message} while trying to connect to Corda for ${managedConnection.name}")
-                                        noConnectionReason = e.message
-                                    }
-                                    else -> throw e
-                                }
-                            }
-                        }
-                    }
-                    Thread.sleep(delay)
-                }
-            } catch (e: Exception) {
-                logger.error("unexpected exception in watchdog for ${managedConnection.name}: ${e.message}", e)
-            }
-        }
-    }
 
     fun noConnectionReason(): String? {
         return cordaConnectionWatchdog?.noConnectionReason
@@ -137,7 +51,9 @@ class CordaManagedConnection(val consentBridgeRPCProperties: ConsentBridgeRPCPro
 
     private fun startThread() {
         cordaConnectionWatchdog = CordaConnectionWatchdog(this, consentBridgeRPCProperties.retryIntervalSeconds.seconds.toMillis(), this.onConnected, this.onDisconnected)
-        Thread(cordaConnectionWatchdog).start()
+        val t = Thread(cordaConnectionWatchdog)
+        t.isDaemon = true
+        t.start()
     }
 
     override fun disconnect() {
@@ -190,6 +106,9 @@ class CordaManagedConnection(val consentBridgeRPCProperties: ConsentBridgeRPCPro
         return cordaConnectionWatchdog?.getConnection() ?: throw IllegalStateException(noConnectionReason())
     }
 
+    /**
+     * Create the actual connection to the Corda RPC endpoint
+     */
     fun connectToCorda(): CordaRPCConnection {
         val nodeAddress = NetworkHostAndPort(consentBridgeRPCProperties.host, consentBridgeRPCProperties.port)
 
@@ -221,5 +140,119 @@ class CordaManagedConnection(val consentBridgeRPCProperties: ConsentBridgeRPCPro
 
         // suc6
         return unvalidatedConnection
+    }
+
+    /**
+     * The watchdog is a separate thread that keeps an eye on the connection. If it should connect, it'll try to connect
+     * If it should disconnect, it will disconnect. If errors occur (using a check method) it'll disconnect and signal that it has disconnected. It'll also signal when a connection has been made. These signals are given to the constructor as callback functions.
+     */
+    class CordaConnectionWatchdog(var managedConnection: CordaManagedConnection, var delay: Long, var onConnected: () -> Unit, var onDisconnected: () -> Unit, var onError: () -> Unit = {}): Runnable {
+        private val logger: Logger = LoggerFactory.getLogger(this::class.java)
+        private var terminate = false
+        private var tryToConnect = true
+        private var connection: CordaRPCConnection? = null
+
+        /**
+         * a reason for why a connection is unavailable
+         */
+        var noConnectionReason: String? = "starting up"
+
+        /**
+         * Pause the reconnect sequence
+         */
+        fun pause() {
+            synchronized(this) {
+                tryToConnect = false
+            }
+        }
+
+        /**
+         * Resume the reconnect sequence
+         */
+        fun resume() {
+            synchronized(this) {
+                tryToConnect = true
+            }
+        }
+
+        /**
+         * Disconnect and close everything, stop the thread
+         */
+        fun terminate() {
+            synchronized(this) {
+                closeConnection()
+                terminate = true
+                tryToConnect = false
+            }
+        }
+
+        /**
+         * return the underlying Corda connection
+         */
+        fun getConnection(): CordaRPCConnection? {
+            synchronized(this) {
+                return connection
+            }
+        }
+
+        /**
+         * Close the underlying connection, if the thread is not paused, it'll try to reconnect.
+         */
+        fun closeConnection() {
+            synchronized(this) {
+                connection?.forceClose()
+                connection = null
+            }
+        }
+
+        /**
+         * Starts the main loop.
+         * It consists of two parts:
+         *  - if a connection is made, it'll monitor the live connection
+         *  - if no connection is established, it'll try to reconnect
+         */
+        override fun run() {
+            try {
+                while (!terminate) {
+                    synchronized(this) {
+                        if (connection != null) {
+                            try {
+                                val nodeInfo = connection?.proxy?.nodeInfo()
+                                require(nodeInfo?.legalIdentitiesAndCerts?.isNotEmpty() ?: false)
+                            } catch (e: Exception) {
+                                when (e) {
+                                    is IllegalArgumentException, is ConnectionFailureException, is RPCException -> {
+                                        noConnectionReason = e.message
+                                        logger.error("Corda RPC connection lost for $managedConnection.name: ${e.message}")
+                                        connection = null
+                                        onDisconnected()
+                                    }
+                                    else -> throw e
+                                }
+                            }
+                        } else if (tryToConnect) {
+                            try {
+                                noConnectionReason = null
+                                connection = managedConnection.connectToCorda()
+                                logger.info("Corda RPC connection established for ${managedConnection.name}")
+                                onConnected()
+                            } catch (e: Exception) {
+                                when (e) {
+                                    is IOException, is ActiveMQSecurityException, is RPCException -> {
+                                        onError()
+                                        logger.debug("${e::class.simpleName}: ${e.message} while trying to connect to Corda for ${managedConnection.name}")
+                                        noConnectionReason = e.message
+                                    }
+                                    else -> throw e
+                                }
+                            }
+                        }
+                    }
+                    Thread.sleep(delay)
+                }
+            } catch (e: Exception) {
+                logger.error("unexpected exception in watchdog for ${managedConnection.name}: ${e.message}", e)
+            }
+        }
     }
 }
