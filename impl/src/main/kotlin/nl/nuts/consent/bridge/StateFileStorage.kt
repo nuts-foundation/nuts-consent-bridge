@@ -16,15 +16,13 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.corda
+package nl.nuts.consent.bridge
 
-import nl.nuts.consent.bridge.EventMetaProperties
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.io.EOFException
 import java.io.File
 import java.io.RandomAccessFile
-import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 
 private const val FILE_EXTENSION = "stamp"

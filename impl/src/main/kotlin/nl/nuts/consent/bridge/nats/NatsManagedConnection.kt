@@ -39,6 +39,7 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
     private var connection: StreamingConnection? = null
 
     var cf: StreamingConnectionFactory? = null
+    var connectionOptions: Options
     var listener: ConnectionListener
     var terminated = false
     var name: String = "unknown nats"
@@ -49,32 +50,38 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
                 ConnectionListener.Events.CONNECTED -> {
                     onConnected(conn)
                 }
-                ConnectionListener.Events.CLOSED -> logger.info("$name connection closed")
+                ConnectionListener.Events.CLOSED -> logger.info("$name: connection closed")
                 ConnectionListener.Events.DISCONNECTED -> {
                     onDisconnected()
-                    logger.trace("Nats disconnected")
+                    logger.debug("$name: nats disconnected")
                 }
                 ConnectionListener.Events.RECONNECTED -> {
                     onConnected(conn)
                 }
-                ConnectionListener.Events.RESUBSCRIBED -> logger.trace("Nats subscription resubscribed")
+                ConnectionListener.Events.RESUBSCRIBED -> logger.debug("$name: nats subscription resubscribed")
             }
         }
+
+        connectionOptions = Options.Builder()
+            .server(consentBridgeNatsProperties.address)
+            .maxReconnects(consentBridgeNatsProperties.retryCount)
+            .connectionListener(listener)
+            .reconnectWait(consentBridgeNatsProperties.retryIntervalSeconds.seconds)
+            .pingInterval(consentBridgeNatsProperties.retryIntervalSeconds.seconds)
+            .build()
     }
 
     private fun onConnected(conn : Connection) {
-        logger.info("$name connected to Nats server")
-        try {
-            cf?.natsConnection = conn
-
-            // only create connection once, from there auto-reconnect handles all
-            if (connection == null) {
+        synchronized(this) {
+            logger.info("$name connected to Nats server")
+            try {
+                cf?.natsConnection = conn
                 connection = cf?.createConnection()
+                this.onConnected()
+            } catch (e: Exception) {
+                logger.error(e.message, e)
+                throw e
             }
-            this.onConnected()
-        } catch (e: Exception) {
-            logger.error(e.message, e)
-            throw e
         }
     }
 
@@ -83,7 +90,7 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
      */
     fun getConnection() : StreamingConnection {
         if (connection == null) {
-            throw IllegalStateException()
+            throw IllegalStateException("$name: connection is null")
         }
         return connection!!
     }
@@ -91,11 +98,15 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
     override fun disconnect() {
         logger.debug("Closing $name connection")
 
-        // NOP just signal to stop subscriptions via onDisconnected
-        // connection?.close()
+        synchronized(this) {
+            logger.debug("SETTING CONNECTION TO NULL")
+            connection?.natsConnection?.close()
+            connection = null
+            logger.debug("CONNECTION SET TO NULL")
 
-        logger.info("$name closed")
-        this.onDisconnected()
+            logger.info("$name closed")
+            this.onDisconnected()
+        }
     }
 
     override fun connect() {
@@ -104,19 +115,21 @@ class NatsManagedConnection(val consentBridgeNatsProperties: ConsentBridgeNatsPr
         }
 
         logger.debug("Connecting $name to Nats cluster ${consentBridgeNatsProperties.cluster}")
-        // we only connect once
-        if (cf == null) {
-            cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "${Constants.NAME}-${name}")
-            cf?.ackTimeout = 5.seconds
 
-            val o = Options.Builder()
-                .server(consentBridgeNatsProperties.address)
-                .maxReconnects(consentBridgeNatsProperties.retryCount)
-                .connectionListener(listener)
-                .pingInterval(consentBridgeNatsProperties.retryIntervalSeconds.seconds)
-                .build()
+        synchronized(this) {
+            // we only connect once
+            if (cf == null) {
+                cf = StreamingConnectionFactory(consentBridgeNatsProperties.cluster, "${Constants.NAME}-${name}")
+                cf?.ackTimeout = 5.seconds
+            }
 
-            Nats.connectAsynchronously(o, true)
+            if (connection == null) {
+                Nats.connectAsynchronously(connectionOptions, true)
+            } else {
+                // connect will be called from the master connection after it re-established the connection
+                // it therefore must restart the stopped listeners
+                this.onConnected()
+            }
         }
     }
 

@@ -16,9 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package nl.nuts.consent.bridge.corda
+package nl.nuts.consent.bridge
 
 import nl.nuts.consent.bridge.EventMetaProperties
+import nl.nuts.consent.bridge.StateFileStorageControl
 import org.junit.Test
 import java.io.File
 import java.util.*

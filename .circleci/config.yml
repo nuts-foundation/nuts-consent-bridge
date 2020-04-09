@@ -14,6 +14,12 @@ jobs:
     steps:
       - checkout
 
+      - run: curl -L https://github.com/nats-io/nats-streaming-server/releases/download/v0.17.0/nats-streaming-server-v0.17.0-linux-amd64.zip -o nats-streaming-server.zip
+      - run: unzip nats-streaming-server.zip -d tmp
+      - run:
+          command: tmp/nats-streaming-server-v0.17.0-linux-amd64/nats-streaming-server
+          background: true
+
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "build.gradle" }}
@@ -26,7 +32,7 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "build.gradle" }}
 
-      - run: ./gradlew test
+      - run: ./gradlew test --info
 
       - run: ./gradlew codeCoverageReport
 

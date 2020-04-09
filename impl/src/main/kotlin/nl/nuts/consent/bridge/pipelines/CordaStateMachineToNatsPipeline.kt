@@ -62,6 +62,8 @@ class CordaStateMachineToNatsPipeline {
 
     var subscription: Subscription? = null
 
+    var name = "sm"
+
     /**
      * Setup the masterSlave connection manager
      */
@@ -72,8 +74,8 @@ class CordaStateMachineToNatsPipeline {
 
         masterSlaveConnection = MasterSlaveConnection(natsManagedConnection, cordaManagedConnection)
 
-        cordaManagedConnection.name = "smObserver"
-        natsManagedConnection.name = "smPublisher"
+        cordaManagedConnection.name = "${name}Observer"
+        natsManagedConnection.name = "${name}Publisher"
         cordaManagedConnection.onConnected = { startListeners() }
         cordaManagedConnection.onDisconnected = { stopListeners() }
 

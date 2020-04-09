@@ -85,6 +85,48 @@ class CordaServiceTest {
     }
 
     @Test
+    fun `ConsentBranchExists returns false when proxy returns empty states`() {
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(0))
+
+        assertFalse(cordaService.consentBranchExists("1111-2222-33334444-5555-6666"))
+    }
+
+    @Test
+    fun `ConsentBranchExists returns true when proxy returns 1 state`() {
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(1))
+
+        assertTrue(cordaService.consentBranchExists("1111-2222-33334444-5555-6666"))
+    }
+
+    @Test
+    fun `ConsentBranchExists raises when proxy returns gt1 states`() {
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(2))
+
+        assertFailsWith<IllegalStateException> {
+            cordaService.consentBranchExists("1111-2222-33334444-5555-6666")
+        }
+    }
+
+    @Test
+    fun `getAttachment returns null if attachment doesn't exist`() {
+        `when`(cordaRPCOps.attachmentExists(any())).thenReturn(false)
+
+        assertNull(cordaService.getAttachment(SecureHash.allOnesHash))
+    }
+
+    @Test
     fun `ConsentBranchByUUID throws NotFoundException when proxy returns empty states`() {
         `when`(cordaRPCOps.vaultQueryBy(
                 criteria = any(),

@@ -18,20 +18,22 @@
 
 package nl.nuts.consent.bridge.pipelines
 
-import io.nats.client.ConnectionListener
 import io.nats.client.Nats
 import io.nats.client.Options
 import io.nats.streaming.StreamingConnection
 import io.nats.streaming.StreamingConnectionFactory
+import io.nats.streaming.SubscriptionOptions
 import net.corda.client.rpc.CordaRPCClient
 import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.client.rpc.CordaRPCConnection
 import net.corda.core.messaging.startFlow
+import net.corda.core.utilities.seconds
 import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
+import nl.nuts.consent.bridge.Constants
 import nl.nuts.consent.bridge.EventMetaProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
-import nl.nuts.consent.bridge.corda.StateFileStorageControl
+import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
@@ -43,8 +45,6 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.util.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -69,30 +69,11 @@ class CordaStateMachineToNatsPipelineIntegrationTest : NodeBasedIntegrationTest(
         stateFileStorage.eventMetaProperties = EventMetaProperties("./temp")
 
         val cf = StreamingConnectionFactory("test-cluster", "cordaBridgeTest-${Integer.toHexString(random.nextInt())}")
-        val l = CountDownLatch(1)
-
-        // client connection listener
-        val listener = ConnectionListener { conn, type ->
-            when(type) {
-                ConnectionListener.Events.RECONNECTED,
-                ConnectionListener.Events.CONNECTED -> {
-                    // notifyCordaStateChangeToNatsPipelineIntegrationTest
-                    cf.natsConnection = conn
-                    connection = cf.createConnection()
-                    l.countDown()
-                }
-            }
-        }
 
         // client
-        val o = Options.Builder()
-            .server(natsServer?.natsUrl)
-            .maxReconnects(-1)
-            .connectionListener(listener)
-            .build()
-        Nats.connectAsynchronously(o, false)
-
-        l.await(10, TimeUnit.SECONDS)
+        val o = Options.Builder().server("localhost:$port").build()
+        cf.natsConnection = Nats.connect(o)
+        connection = cf.createConnection()
     }
 
     @BeforeTest
@@ -110,6 +91,7 @@ class CordaStateMachineToNatsPipelineIntegrationTest : NodeBasedIntegrationTest(
 
     private fun createPipeline(): CordaStateMachineToNatsPipeline {
         pipeline = CordaStateMachineToNatsPipeline()
+        pipeline?.name = "smTest"
 
         // nats connections
         val natsManagedConnectionFactory = NatsManagedConnectionFactory()
@@ -135,17 +117,15 @@ class CordaStateMachineToNatsPipelineIntegrationTest : NodeBasedIntegrationTest(
         pipeline = createPipeline()
         pipeline?.init()
 
-        connection.subscribe(NATS_CONSENT_ERROR_SUBJECT) {
+        connection.subscribe(NATS_CONSENT_ERROR_SUBJECT, {
             eventOut = Serialization.objectMapper().readValue(it.data, Event::class.java)
-        }
+        },  SubscriptionOptions.Builder().startWithLastReceived().build())
+
+        // wait a bit
+        Thread.sleep(100L)
 
         val handle = rpcConnection!!.proxy.startFlow(DummyFlow::ErrorFlow)
         eventStateStore.put(handle.id.uuid, eventIn)
-
-        // wait for it
-        blockUntilNull {
-            eventStateStore.get(handle.id.uuid)
-        }
 
         blockUntilSet {
             eventOut

@@ -24,21 +24,15 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.verifyZeroInteractions
-import io.nats.client.ConnectionListener
-import io.nats.client.Nats
-import io.nats.client.Options
-import io.nats.streaming.StreamingConnection
-import io.nats.streaming.StreamingConnectionFactory
-import net.corda.core.CordaRuntimeException
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.transactions.SignedTransaction
-import nl.nuts.consent.bridge.ConsentBridgeNatsProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.corda.CordaManagedConnection
 import nl.nuts.consent.bridge.corda.CordaService
+import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.model.ConsentId
 import nl.nuts.consent.bridge.model.ConsentRecord
 import nl.nuts.consent.bridge.model.Domain
@@ -50,43 +44,41 @@ import nl.nuts.consent.bridge.model.SymmetricKey
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
-import nl.nuts.consent.bridge.nats.NATS_CONSENT_ERROR_SUBJECT
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.bridge.nats.NatsManagedConnection
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.state.ConsentBranch
-import np.com.madanpokharel.embed.nats.EmbeddedNatsConfig
-import np.com.madanpokharel.embed.nats.EmbeddedNatsServer
-import np.com.madanpokharel.embed.nats.NatsServerConfig
-import np.com.madanpokharel.embed.nats.NatsStreamingVersion
-import np.com.madanpokharel.embed.nats.ServerType
-import org.junit.After
-import org.junit.AfterClass
 import org.junit.Before
-import org.junit.BeforeClass
 import org.junit.Test
 import org.mockito.Mockito.`when`
-import java.net.ServerSocket
+import java.lang.IllegalArgumentException
 import java.time.OffsetDateTime
 import java.util.*
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 
 class NatsToCordaPipelineTest {
 
     lateinit var natsToCordaPipeline: NatsToCordaPipeline
     lateinit var cordaService: CordaService
+    lateinit var publisherConnection: NatsManagedConnection
     lateinit var natsManagedConnection: NatsManagedConnection
     lateinit var cordaManagedConnection: CordaManagedConnection
+    lateinit var stateFileStorageControl: StateFileStorageControl
 
     @Before
     fun setup() {
         cordaService = mock()
+        publisherConnection = mock()
         natsManagedConnection = mock()
         cordaManagedConnection = mock()
+        stateFileStorageControl = mock()
         natsToCordaPipeline = initNewListener()
 
+        `when`(publisherConnection.getConnection()).thenReturn(mock())
         `when`(natsManagedConnection.getConnection()).thenReturn(mock())
     }
 
@@ -94,8 +86,10 @@ class NatsToCordaPipelineTest {
         val natsToCordaPipeline = NatsToCordaPipeline()
         natsToCordaPipeline.cordaService = cordaService
         natsToCordaPipeline.eventStateStore = EventStateStore()
-        natsToCordaPipeline.natsManagedConnection = natsManagedConnection
+        natsToCordaPipeline.natsManagedConnection = mock()
+        natsToCordaPipeline.publisherConnection = publisherConnection
         natsToCordaPipeline.cordaManagedConnection = cordaManagedConnection
+        natsToCordaPipeline.stateFileStorageControl = stateFileStorageControl
 
         return natsToCordaPipeline
     }
@@ -107,6 +101,15 @@ class NatsToCordaPipelineTest {
 
         // then
         verifyZeroInteractions(natsManagedConnection, cordaManagedConnection, cordaService)
+    }
+
+    @Test
+    fun `timestamp is updated`() {
+        //when
+        natsToCordaPipeline.processEvent(event(EventName.EventCompleted))
+
+        // then
+        verify(stateFileStorageControl).writeTimestamp(eq(NATS_CONSENT_REQUEST_SUBJECT), any())
     }
 
     @Test
@@ -208,16 +211,79 @@ class NatsToCordaPipelineTest {
         verify(cordaService).signConsentBranch(any(), any())
     }
 
+    @Test
+    fun `consentRequestInFlight event is put in store when unknown`() {
+        val uuid = UUID.randomUUID()
+        val event = event(EventName.EventConsentRequestInFlight, uuid.toString())
+
+        assertNull(natsToCordaPipeline.eventStateStore.get(uuid))
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertNotNull(natsToCordaPipeline.eventStateStore.get(uuid))
+    }
+
+    @Test
+    fun `EventInFinalFlight event is ignored when known`() {
+        val uuid = UUID.randomUUID()
+        val knownEvent = event(EventName.EventCompleted, uuid.toString())
+        val event = event(EventName.EventInFinalFlight, uuid.toString())
+
+        natsToCordaPipeline.eventStateStore.put(uuid, knownEvent)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertEquals(EventName.EventCompleted, natsToCordaPipeline.eventStateStore.get(uuid)?.name)
+    }
+
+    @Test
+    fun `allSignaturesPresent is ignored when not initiator`() {
+        val event = event(EventName.EventAllSignaturesPresent).copy(initiatorLegalEntity = null)
+
+        natsToCordaPipeline.processEvent(event)
+
+        verifyZeroInteractions(cordaService)
+    }
+
+    @Test
+    fun `allSignaturesPresent raises when consentId is null`() {
+        val event = event(EventName.EventAllSignaturesPresent).copy(consentId = null)
+
+        assertFailsWith(IllegalStateException::class) {
+            natsToCordaPipeline.processEvent(event)
+        }
+    }
+
+    @Test
+    fun `allSignaturesPresent calls mergeConsentBranch`() {
+        val uuid = UUID.randomUUID()
+        val event = event(EventName.EventAllSignaturesPresent, uuid.toString())
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(uuid)
+        `when`(cordaService.mergeConsentBranch(any())).thenReturn(t)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertEquals(EventName.EventInFinalFlight, natsToCordaPipeline.eventStateStore.get(uuid)?.name)
+    }
+
     private fun event(name : EventName) : Event {
+        return event(name, UUID.randomUUID().toString())
+    }
+
+    private fun event(name : EventName, uuid: String) : Event {
         return Event(
-            UUID = "1111-2222-33334444-5555-6666",
+            UUID = uuid,
             name = name,
             retryCount = 0,
             externalId = "uuid",
             initiatorLegalEntity = "custodian",
             payload = "",
             consentId = "consentUuid",
-            error = null
+            error = null,
+            transactionId = uuid
         )
     }
 
