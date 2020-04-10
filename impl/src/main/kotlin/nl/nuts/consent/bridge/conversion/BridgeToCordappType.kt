@@ -22,9 +22,12 @@ import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
 import nl.nuts.consent.bridge.model.Metadata
 import nl.nuts.consent.bridge.model.PartyAttachmentSignature
+import nl.nuts.consent.bridge.model.SignatureWithKey
 import nl.nuts.consent.contract.AttachmentSignature
 import nl.nuts.consent.model.*
+import org.jose4j.base64url.Base64Url
 import org.jose4j.jwk.PublicJsonWebKey
+import org.jose4j.jws.JsonWebSignature
 import java.io.IOException
 import java.util.*
 
@@ -111,10 +114,20 @@ class BridgeToCordappType {
          */
         fun convert(source: PartyAttachmentSignature) : AttachmentSignature{
             try {
-                val jwkMap = source.signature.publicKey
-                val jwk = PublicJsonWebKey.Factory.newPublicJwk(jwkMap)
-
-                return AttachmentSignature(source.legalEntity, SecureHash.parse(source.attachment), DigitalSignature.WithKey(jwk.publicKey, Base64.getDecoder().decode(source.signature.data)))
+                var signature: DigitalSignature.WithKey
+                if (source.signature is String) {
+                    // Parse as JWS
+                    val jws = JsonWebSignature().apply { compactSerialization = source.signature as String }
+                    val sigBytes = jws.encodedSignature.let(Base64Url::decode)
+                    signature = DigitalSignature.WithKey(jws.jwkHeader.publicKey, sigBytes)
+                } else if (source.signature is SignatureWithKey) {
+                    val sigWithKey = source.signature as SignatureWithKey
+                    val jwk = PublicJsonWebKey.Factory.newPublicJwk(sigWithKey.publicKey)
+                    signature = DigitalSignature.WithKey(jwk.publicKey, Base64.getDecoder().decode(sigWithKey.data))
+                } else {
+                    throw IOException("Signature is not a JWS or SignatureWithKey")
+                }
+                return AttachmentSignature(source.legalEntity, SecureHash.parse(source.attachment), signature)
             } catch(e : IOException) {
                 throw IllegalArgumentException("Exception on converting PartyAttachmentSignature: ${e.message}", e)
             }

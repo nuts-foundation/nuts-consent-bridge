@@ -20,17 +20,15 @@ package nl.nuts.consent.bridge.conversion
 
 import net.corda.core.crypto.DigitalSignature
 import net.corda.core.crypto.SecureHash
-import nl.nuts.consent.bridge.model.ASymmetricKey
-import nl.nuts.consent.bridge.model.Domain
-import nl.nuts.consent.bridge.model.Period
-import nl.nuts.consent.bridge.model.SymmetricKey
+import nl.nuts.consent.bridge.model.*
+import org.jose4j.jwk.JsonWebKey
 import org.jose4j.jwk.PublicJsonWebKey
 import org.junit.Test
+import java.security.KeyFactory
+import java.security.spec.X509EncodedKeySpec
 import java.time.OffsetDateTime
 import java.util.*
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class BridgeToCordappTypeTest {
     val testPeriod = Period(validFrom = OffsetDateTime.now(), validTo = OffsetDateTime.now())
@@ -92,6 +90,39 @@ class BridgeToCordappTypeTest {
         assertEquals(testAsymmetricKey.alg, m.organisationSecureKeys.first().alg)
         assertEquals("hash", m.previousAttachmentId)
         assertEquals("hash", m.consentRecordHash)
+    }
+
+    @Test
+    fun `PAS with JWS`() {
+        val pubKeyPem = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0WKtAW6diQypS4WT+kjoATMhEDlc/FWOyTUEPQ/cI1c/pD4MO0I75nW0/rdoY1trz2Tr2TmV+fccGt6uxmryw4iZTrVvpHV8O0T3bEmY3ubzeN9jjdz/seLnOrVyXM11s7ris7ozmw87Z/WzCVv8D/qQkQOsyUGwKUXgAzw3xXsQA7w9q6oS/IRenSFIg9+uGhe3rwenhBBvlo9Pb/dKGyAc2qaEICnN34H2+hl9+d6GQVwHyDS8EPW+FjKov1c+qpkdIU3j3H0E0QOfYvE8ltfNchZdvUnj0Vs2O0gS2KzvI6tgiYVxbP+hGNYA2i37DLfgmyu1624JQQnX4KaH6wIDAQAB"
+        val expectedPublicKey = KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(Base64.getDecoder().decode(pubKeyPem)))
+        val jws = "eyJqd2siOnsiZSI6IkFRQUIiLCJrdHkiOiJSU0EiLCJuIjoiMFdLdEFXNmRpUXlwUzRXVC1ram9BVE1oRURsY19GV095VFVFUFFfY0kxY19wRDRNTzBJNzVuVzBfcmRvWTF0cnoyVHIyVG1WLWZjY0d0NnV4bXJ5dzRpWlRyVnZwSFY4TzBUM2JFbVkzdWJ6ZU45ampkel9zZUxuT3JWeVhNMTFzN3Jpczdvem13ODdaX1d6Q1Z2OERfcVFrUU9zeVVHd0tVWGdBenczeFhzUUE3dzlxNm9TX0lSZW5TRklnOS11R2hlM3J3ZW5oQkJ2bG85UGJfZEtHeUFjMnFhRUlDbk4zNEgyLWhsOS1kNkdRVndIeURTOEVQVy1GaktvdjFjLXFwa2RJVTNqM0gwRTBRT2ZZdkU4bHRmTmNoWmR2VW5qMFZzMk8wZ1MyS3p2STZ0Z2lZVnhiUC1oR05ZQTJpMzdETGZnbXl1MTYyNEpRUW5YNEthSDZ3In0sImFsZyI6IlJTMjU2In0.aGVsbG8.VlOfw2RxcOtFPoPOldOg1Y6iGdRxIXV7yrfKIZ19l7z9WP6Iz9KzGrNuZUnpTxJ2KoJj3Mb8wrAHatfWxpSeaokTLFr74TvxwlrzHMLg-EzF4njahz01IMYKtHefKk9yHa1Tu1acoMeenOR3cwqP95xwHjt9VWElFIqC0VVqc_WuKx6CoYKRZS234P9XDeKnlEmFh--COpd6ppbKGWU4LvpqlcTj4IMQYjpzURPEldmvij0QRHPQOzkkxmfIZjmEr6f_a07X7GUTcN6cjM4qdN1JmXA5iEM0mTc8vzs8T38KjKPKNa4IoVtBgUnThC7yUzlV9vn0vh_kWZ9lsJYkZg"
+        val expected = PartyAttachmentSignature("entity", "CAFEBABE".repeat(8), jws)
+        val (entity, hash, sig) = BridgeToCordappType.convert(expected)
+        assertEquals(expected.legalEntity, entity)
+        assertEquals(expected.attachment, hash.toString())
+        assertEquals(expectedPublicKey, sig.by)
+    }
+
+    @Test
+    fun `PAS with SignatureWithKey`() {
+        val pubKeyPem = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0WKtAW6diQypS4WT+kjoATMhEDlc/FWOyTUEPQ/cI1c/pD4MO0I75nW0/rdoY1trz2Tr2TmV+fccGt6uxmryw4iZTrVvpHV8O0T3bEmY3ubzeN9jjdz/seLnOrVyXM11s7ris7ozmw87Z/WzCVv8D/qQkQOsyUGwKUXgAzw3xXsQA7w9q6oS/IRenSFIg9+uGhe3rwenhBBvlo9Pb/dKGyAc2qaEICnN34H2+hl9+d6GQVwHyDS8EPW+FjKov1c+qpkdIU3j3H0E0QOfYvE8ltfNchZdvUnj0Vs2O0gS2KzvI6tgiYVxbP+hGNYA2i37DLfgmyu1624JQQnX4KaH6wIDAQAB"
+        val expectedPublicKey = KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(Base64.getDecoder().decode(pubKeyPem)))
+        val expectedJWK = PublicJsonWebKey.Factory.newPublicJwk(expectedPublicKey).toParams(JsonWebKey.OutputControlLevel.PUBLIC_ONLY)
+
+        val expected = PartyAttachmentSignature("entity", "CAFEBABE".repeat(8), SignatureWithKey(expectedJWK, "ABCDEF"))
+        val (entity, hash, sig) = BridgeToCordappType.convert(expected)
+        assertEquals(expected.legalEntity, entity)
+        assertEquals(expected.attachment, hash.toString())
+        assertEquals(expectedPublicKey, sig.by)
+    }
+
+    @Test
+    fun `PAS with unsupported signature type`() {
+        val expected = PartyAttachmentSignature("entity", "CAFEBABE".repeat(8), mapOf<String, String>())
+        assertFailsWith<IllegalArgumentException> {
+            BridgeToCordappType.convert(expected)
+        }
     }
 
     @Test

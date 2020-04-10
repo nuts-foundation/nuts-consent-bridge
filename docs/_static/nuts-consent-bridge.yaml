@@ -65,7 +65,9 @@ components:
           type: string
           description: Hexidecimal SecureHash value
         signature:
-          $ref: '#/components/schemas/SignatureWithKey'
+          oneOf:
+            - $ref: "#/components/schemas/SignatureWithKey"
+            - $ref: "#/components/schemas/JWS"
     SignatureWithKey:
       required:
         - publicKey
@@ -79,6 +81,10 @@ components:
     JWK:
       type: object
       description: as described by https://tools.ietf.org/html/rfc7517. Modelled as object so libraries can parse the tokens themselves.
+      additionalProperties: {}
+    JWS:
+      type: string
+      description: as described by https://tools.ietf.org/html/rfc7515. Modelled as string so libraries can parse the signatures themselves.
       additionalProperties: {}
     FullConsentRequestState:
       required:
