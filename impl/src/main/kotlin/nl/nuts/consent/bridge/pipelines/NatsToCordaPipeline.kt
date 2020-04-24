@@ -173,28 +173,27 @@ class NatsToCordaPipeline {
     }
 
     private fun retry(e: Event) {
-        val newEvent = e.copy(retryCount = e.retryCount + 1)
-        val bytes  = Serialization.objectMapper().writeValueAsBytes(newEvent)
+        val newEvent= e.copy(retryCount = e.retryCount + 1)
+        val bytes= Serialization.objectMapper().writeValueAsBytes(newEvent)
         retry(newEvent.retryCount, bytes)
     }
 
     private fun publishError(e: Event, message: String?) {
-        val newEvent = e.copy(name = EventName.EventErrored, error = message)
-        val bytes  = Serialization.objectMapper().writeValueAsBytes(newEvent)
+        val newEvent= e.copy(name = EventName.EventErrored, error = message)
+        val bytes= Serialization.objectMapper().writeValueAsBytes(newEvent)
         publish(NATS_CONSENT_ERROR_SUBJECT, bytes)
     }
 
     private fun publishError(erroredBytes: ByteArray, message: String?) {
-        val newEvent = Event(
+        val e = Event(
             name = EventName.EventErrored,
-            error = "$message, event bytes in payload",
+            error = "",
             payload = String(erroredBytes),
             UUID = UUID.randomUUID().toString(),
             externalId = "",
             retryCount = 0
         )
-        val bytes  = Serialization.objectMapper().writeValueAsBytes(newEvent)
-        publish(NATS_CONSENT_ERROR_SUBJECT, bytes)
+        publishError(e, "$message, event bytes in payload")
     }
 
     /**
