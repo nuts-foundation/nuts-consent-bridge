@@ -132,14 +132,14 @@ class NatsToCordaPipeline {
                     retry(event)
                 } catch (e: Exception) { // broken
                     logger.error(e.message, e)
-                    publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+                    publishError(event, e.message)
                 }
             } catch (e: JsonParseException) { // broken
                 logger.error(e.message, e)
-                publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+                publishError(it.data, e.message)
             } catch (e: JsonMappingException) { // broken
                 logger.error(e.message, e)
-                publish(NATS_CONSENT_ERROR_SUBJECT, it.data)
+                publishError(it.data, e.message)
             } catch (e: Exception) { // broken
                 logger.error(e.message, e)
             }
@@ -173,9 +173,27 @@ class NatsToCordaPipeline {
     }
 
     private fun retry(e: Event) {
-        val newEvent = e.copy(retryCount = e.retryCount + 1)
-        val bytes  = Serialization.objectMapper().writeValueAsBytes(newEvent)
+        val newEvent= e.copy(retryCount = e.retryCount + 1)
+        val bytes= Serialization.objectMapper().writeValueAsBytes(newEvent)
         retry(newEvent.retryCount, bytes)
+    }
+
+    private fun publishError(e: Event, message: String?) {
+        val newEvent= e.copy(name = EventName.EventErrored, error = message)
+        val bytes= Serialization.objectMapper().writeValueAsBytes(newEvent)
+        publish(NATS_CONSENT_ERROR_SUBJECT, bytes)
+    }
+
+    private fun publishError(erroredBytes: ByteArray, message: String?) {
+        val e = Event(
+            name = EventName.EventErrored,
+            error = "",
+            payload = String(erroredBytes),
+            UUID = UUID.randomUUID().toString(),
+            externalId = "",
+            retryCount = 0
+        )
+        publishError(e, "$message, event bytes in payload")
     }
 
     /**

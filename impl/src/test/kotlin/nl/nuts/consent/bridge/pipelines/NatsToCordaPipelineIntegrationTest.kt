@@ -55,6 +55,7 @@ import java.time.OffsetDateTime
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 
 class NatsToCordaPipelineIntegrationTest {
@@ -169,13 +170,17 @@ class NatsToCordaPipelineIntegrationTest {
         Thread.sleep(2000)
         // assert
         assertEquals(1, erroredEvents.size)
+
+        val e: Event = Serialization.objectMapper().readValue(erroredEvents.first().byteInputStream(), Event::class.java)
+        assertEquals(EventName.EventErrored, e.name)
+        assertTrue(e.error!!.contains("Cannot deserialize"))
     }
 
     @Test
     fun `event is published to retry queue on CordaError`() {
         //when
         `when`(cordaService.consentBranchExists(any())).thenThrow(CordaRuntimeException("boom!"))
-        var event = Serialization.objectMapper().writeValueAsString(newConsentRequestStateAsEvent())
+        val event = Serialization.objectMapper().writeValueAsString(newConsentRequestStateAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, event.toByteArray())
 
         Thread.sleep(2000)
@@ -188,13 +193,17 @@ class NatsToCordaPipelineIntegrationTest {
     fun `event is published to error queue on unknown exception`() {
         //when
         `when`(cordaService.consentBranchExists(any())).thenThrow(IllegalArgumentException("boom!"))
-        var event = Serialization.objectMapper().writeValueAsString(newConsentRequestStateAsEvent())
+        val event = Serialization.objectMapper().writeValueAsString(newConsentRequestStateAsEvent())
         connection.publish(NATS_CONSENT_REQUEST_SUBJECT, event.toByteArray())
 
         Thread.sleep(2000)
 
         // then an entry must be available in the retry queue
         assertEquals(1, erroredEvents.size)
+
+        val e: Event = Serialization.objectMapper().readValue(erroredEvents.first().byteInputStream(), Event::class.java)
+        assertEquals(EventName.EventErrored, e.name)
+        assertEquals("boom!", e.error)
     }
 
     private fun newConsentRequestStateAsEvent() : Event {
