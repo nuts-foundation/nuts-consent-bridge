@@ -181,9 +181,29 @@ class CordaConnectionHealthIndicator : HealthIndicator {
     @Autowired
     lateinit var cordaManagedConnectionFactory: CordaManagedConnectionFactory
 
+    lateinit var cordaManagedConnection: CordaManagedConnection
+
+    /**
+     * Init corda managed connection
+     */
+    @PostConstruct
+    fun init() {
+        cordaManagedConnection = cordaManagedConnectionFactory.`object`
+        cordaManagedConnection.name = "health"
+        cordaManagedConnection.connect()
+    }
+
+    /**
+     * Terminate corda connection before destroying bean
+     */
+    @PreDestroy
+    fun destroy() {
+        cordaManagedConnection?.terminate()
+    }
+
     override fun health(): Health {
         try {
-            cordaManagedConnectionFactory.getObject().getConnection()?.close() // throws exc
+            cordaManagedConnection.getConnection() // throws exc
             return Health.up().build()
         } catch (e: IllegalStateException) {
             return Health.down(e).build()

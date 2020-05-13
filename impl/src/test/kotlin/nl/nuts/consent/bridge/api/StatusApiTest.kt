@@ -50,7 +50,7 @@ class StatusApiTest {
         val response: ResponseEntity<String> = statusApi.diagnostics()
 
         assertEquals(HttpStatus.OK, response.statusCode)
-        assertTrue(response.body.contains("nats=DOWN"))
+        assertTrue(response.body.contains("nats="))
         // since no Corda node is running
         assertTrue(response.body.contains("General status=DOWN"))
         assertTrue(response.body.contains("cordaConnection=DOWN"))

@@ -19,6 +19,8 @@
 package nl.nuts.consent.bridge.diagnostics
 
 import com.nhaarman.mockito_kotlin.mock
+import net.corda.client.rpc.CordaRPCConnection
+import net.corda.client.rpc.RPCConnection
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.CordaRPCOps
@@ -32,6 +34,7 @@ import org.junit.Test
 import org.mockito.Mockito.`when`
 import org.springframework.boot.actuate.health.Status
 import org.springframework.test.util.ReflectionTestUtils
+import java.lang.IllegalStateException
 import java.lang.UnsupportedOperationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -42,6 +45,7 @@ import kotlin.test.assertEquals
 class CordaFlowHealthIndicatorsTest {
     lateinit var cordaNotaryPingHealthIndicator: CordaNotaryPingHealthIndicator
     lateinit var cordaRandomPingHealthIndicator: CordaRandomPingHealthIndicator
+    lateinit var cordaHealthIndicator: CordaConnectionHealthIndicator
     lateinit var schedulerProperties: SchedulerProperties
     lateinit var cordaManagedConnection: CordaManagedConnection
 
@@ -49,6 +53,7 @@ class CordaFlowHealthIndicatorsTest {
     fun setup() {
         cordaNotaryPingHealthIndicator = CordaNotaryPingHealthIndicator()
         cordaRandomPingHealthIndicator = CordaRandomPingHealthIndicator()
+        cordaHealthIndicator = CordaConnectionHealthIndicator()
         cordaManagedConnection = mock()
         schedulerProperties = SchedulerProperties()
 
@@ -56,6 +61,28 @@ class CordaFlowHealthIndicatorsTest {
             ReflectionTestUtils.setField(it, "cordaManagedConnection", cordaManagedConnection)
             ReflectionTestUtils.setField(it, "schedulerProperties", schedulerProperties)
         }
+        ReflectionTestUtils.setField(cordaHealthIndicator, "cordaManagedConnection", cordaManagedConnection)
+    }
+
+    @Test
+    fun `live connection gives UP status`() {
+        // given
+        val conn: CordaRPCConnection = mock()
+        `when`(cordaManagedConnection.getConnection()).thenReturn(conn)
+
+        // then
+        val h = cordaHealthIndicator.health()
+        assertEquals(Status.UP, h.status)
+    }
+
+    @Test
+    fun `no connection gives DOWN status`() {
+        // given
+        `when`(cordaManagedConnection.getConnection()).thenThrow(IllegalStateException("reason"))
+
+        // then
+        val h = cordaHealthIndicator.health()
+        assertEquals(Status.DOWN, h.status)
     }
 
     @Test
