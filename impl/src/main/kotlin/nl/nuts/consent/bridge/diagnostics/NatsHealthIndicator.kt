@@ -36,12 +36,18 @@ class NatsHealthIndicator : HealthIndicator {
     @Autowired
     lateinit var natsManagedConnection: NatsManagedConnection
 
+    /**
+     * Init Nats managed connection
+     */
     @PostConstruct
     fun init() {
         natsManagedConnection.name = "health"
         natsManagedConnection.connect()
     }
 
+    /**
+     * Destroy Nats managed connection
+     */
     @PreDestroy
     fun destroy() {
         natsManagedConnection?.terminate()
