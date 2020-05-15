@@ -23,6 +23,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.actuate.health.Health
 import org.springframework.boot.actuate.health.HealthIndicator
 import org.springframework.stereotype.Component
+import javax.annotation.PostConstruct
+import javax.annotation.PreDestroy
 
 
 /**
@@ -33,6 +35,23 @@ class NatsHealthIndicator : HealthIndicator {
 
     @Autowired
     lateinit var natsManagedConnection: NatsManagedConnection
+
+    /**
+     * Init Nats managed connection
+     */
+    @PostConstruct
+    fun init() {
+        natsManagedConnection.name = "health"
+        natsManagedConnection.connect()
+    }
+
+    /**
+     * Destroy Nats managed connection
+     */
+    @PreDestroy
+    fun destroy() {
+        natsManagedConnection?.terminate()
+    }
 
     override fun health(): Health {
         try {

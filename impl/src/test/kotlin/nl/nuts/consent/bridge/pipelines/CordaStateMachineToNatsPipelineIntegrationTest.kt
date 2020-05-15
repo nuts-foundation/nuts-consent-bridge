@@ -122,7 +122,9 @@ class CordaStateMachineToNatsPipelineIntegrationTest : NodeBasedIntegrationTest(
         },  SubscriptionOptions.Builder().startWithLastReceived().build())
 
         // wait a bit
-        Thread.sleep(100L)
+        Thread.sleep(200L)
+
+        eventOut = null
 
         val handle = rpcConnection!!.proxy.startFlow(DummyFlow::ErrorFlow)
         eventStateStore.put(handle.id.uuid, eventIn)
