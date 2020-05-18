@@ -98,9 +98,6 @@ class CordaStateChangeToNatsPipelineIntegrationTest : NodeBasedIntegrationTest()
         cordaManagedConnectionFactory.consentBridgeRPCProperties = validProperties!!
         pipeline?.cordaManagedConnectionFactory = cordaManagedConnectionFactory
 
-        // eventApi
-        pipeline?.eventstoreProperties = EventStoreProperties()
-
         // registry api
         pipeline?.consentRegistryProperties = ConsentRegistryProperties()
 
@@ -175,15 +172,5 @@ class CordaStateChangeToNatsPipelineIntegrationTest : NodeBasedIntegrationTest()
             consumedState.get()
         }
         assertNotNull(consumedState.get())
-    }
-
-    private fun event(name: EventName, uuid: UUID) : Event {
-        return Event(
-                UUID = uuid.toString(),
-                name = name,
-                retryCount = 0,
-                payload = "",
-                externalId = "externalId"
-        )
     }
 }

@@ -107,6 +107,10 @@ components:
           type: string
           format: date-time
           description: the date-time when the request was made
+        latestUpdate:
+          type: string
+          format: date-time
+          description: the date-time of the latest recorded change in state (read-only)
     ConsentRecord:
       properties:
         metadata:
