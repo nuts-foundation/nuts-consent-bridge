@@ -156,7 +156,8 @@ class ConsentBranchChangeToNatsPipelineTest {
                 attachmentHash = "",
                 cipherText = "af==",
                 signatures = emptyList()
-            ))
+            )),
+            initiatingLegalEntity = ""
         )
 
         val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)

@@ -20,6 +20,39 @@ import nl.nuts.consent.bridge.registry.infrastructure.*
 class VendorsApi(basePath: kotlin.String = "http://localhost") : ApiClient(basePath) {
 
     /**
+    * Claim an organization for a vendor (registers an organization under a vendor in the registry).
+    * Deprecated, use /api/organization (POST)
+    * @param id Ignored since deprecation. 
+    * @param organization  
+    * @return Event
+    */
+    @Suppress("UNCHECKED_CAST")
+    fun deprecatedVendorClaim(id: kotlin.String, organization: Organization) : Event {
+        val localVariableBody: kotlin.Any? = organization
+        val localVariableQuery: MultiValueMap = mapOf()
+        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
+        val localVariableConfig = RequestConfig(
+            RequestMethod.POST,
+            "/api/vendor/{id}/claim".replace("{"+"id"+"}", "$id"),
+            query = localVariableQuery,
+            headers = localVariableHeaders
+        )
+        val response = request<Event>(
+            localVariableConfig,
+            localVariableBody
+        )
+
+        return when (response.responseType) {
+            ResponseType.Success -> (response as Success<*>).data as Event
+            ResponseType.Informational -> TODO()
+            ResponseType.Redirection -> TODO()
+            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
+            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
+        }
+    }
+
+    /**
     * Adds a vendor to the registry
     * 
     * @param vendor  
@@ -52,20 +85,19 @@ class VendorsApi(basePath: kotlin.String = "http://localhost") : ApiClient(baseP
     }
 
     /**
-    * Claim an organization for a vendor (registers an organization under a vendor in the registry).
+    * Claim an organization for the current vendor (registers an organization under the vendor in the registry).
     * Keys can follow the following structures (EC or RSA): &#x60;&#x60;&#x60;json \&quot;keys\&quot;: [{   \&quot;kty\&quot;: \&quot;RSA\&quot;,   \&quot;n\&quot;: \&quot;0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw\&quot;,   \&quot;e\&quot;: \&quot;AQAB\&quot;,   \&quot;alg\&quot;: \&quot;RS256\&quot;,   \&quot;kid\&quot;: \&quot;2011-04-29\&quot;, }] &#x60;&#x60;&#x60;  or  &#x60;&#x60;&#x60;json \&quot;keys\&quot;: [{   \&quot;kty\&quot;: \&quot;EC\&quot;,   \&quot;crv\&quot;: \&quot;P-256\&quot;,   \&quot;x\&quot;: \&quot;MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4\&quot;,   \&quot;y\&quot;: \&quot;4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM\&quot;,   \&quot;kid\&quot;: \&quot;1\&quot;, }] &#x60;&#x60;&#x60; 
-    * @param id URL encoded identifier 
     * @param organization  
     * @return Event
     */
     @Suppress("UNCHECKED_CAST")
-    fun vendorClaim(id: kotlin.String, organization: Organization) : Event {
+    fun vendorClaim(organization: Organization) : Event {
         val localVariableBody: kotlin.Any? = organization
         val localVariableQuery: MultiValueMap = mapOf()
         val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
         val localVariableConfig = RequestConfig(
             RequestMethod.POST,
-            "/api/vendor/{id}/claim".replace("{"+"id"+"}", "$id"),
+            "/api/organization",
             query = localVariableQuery,
             headers = localVariableHeaders
         )

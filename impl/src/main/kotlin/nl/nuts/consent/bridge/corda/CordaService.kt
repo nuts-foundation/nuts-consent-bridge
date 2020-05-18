@@ -47,7 +47,7 @@ import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.apis.EndpointsApi
 import nl.nuts.consent.flow.ConsentFlows
-import nl.nuts.consent.flow.DiagnosticFlows
+import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.schema.ConsentSchemaV1
 import nl.nuts.consent.state.ConsentBranch
@@ -58,9 +58,8 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.time.OffsetDateTime
 import java.util.*
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -72,7 +71,7 @@ const val ENDPOINT_TYPE = "urn:oid:1.3.6.1.4.1.54851.2:consent"
  * Collection of all Corda related logic. Primarily uses the CordaRPC functionality.
  *
  */
-class CordaService(val cordaManagedConnection: CordaManagedConnection, val consentRegistryProperties: ConsentRegistryProperties) {
+class CordaService(val cordaManagedConnection: CordaManagedConnection, consentRegistryProperties: ConsentRegistryProperties) {
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
     var endpointsApi: EndpointsApi = EndpointsApi(consentRegistryProperties.url)
@@ -160,9 +159,12 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
         }
 
         val crs = FullConsentRequestState(
-                consentId = CordappToBridgeType.convert(state.linearId),
-                legalEntities = state.legalEntities.toList(),
-                consentRecords = consentRecords
+            consentId = CordappToBridgeType.convert(state.linearId),
+            legalEntities = state.legalEntities.toList(),
+            consentRecords = consentRecords,
+            initiatingLegalEntity = state.initiatingLegalEntity,
+            initiatingNode = state.initiatingNode,
+            requestDateTime = state.branchTime
         )
 
         val crsBytes = Serialization.objectMapper().writeValueAsBytes(crs)
@@ -364,14 +366,23 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, val conse
             name
         }.toSet()
 
+        // find me to override initiating node
+        val me = proxy.nodeInfo().legalIdentities.first().name
+
         // start flow
         return proxy.startFlow(
             ConsentFlows::CreateConsentBranch,
             UUID.fromString(newConsentRequestState.consentId.UUID),
             consentState.linearId,
             hashes,
-            orgIds.toSet(),
-            nodeNames)
+            nodeNames,
+            NutsFunctionalContext(
+                participatingLegalEntities = orgIds.toSet(),
+                initiatingNode = me.toString(),
+                initiatingLegalEntity = newConsentRequestState.initiatingLegalEntity,
+                branchTime = newConsentRequestState.requestDateTime ?: OffsetDateTime.now()
+            )
+        )
     }
 
     private fun findCurrentConsentState(externalId: String) : ConsentState {

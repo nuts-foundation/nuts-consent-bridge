@@ -19,7 +19,10 @@
 package nl.nuts.consent.bridge.corda
 
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.nhaarman.mockito_kotlin.*
+import com.nhaarman.mockito_kotlin.any
+import com.nhaarman.mockito_kotlin.doReturn
+import com.nhaarman.mockito_kotlin.eq
+import com.nhaarman.mockito_kotlin.mock
 import net.corda.core.CordaRuntimeException
 import net.corda.core.concurrent.CordaFuture
 import net.corda.core.contracts.StateAndRef
@@ -28,7 +31,12 @@ import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.messaging.*
+import net.corda.core.identity.Party
+import net.corda.core.messaging.CordaRPCOps
+import net.corda.core.messaging.FlowHandleImpl
+import net.corda.core.messaging.startFlow
+import net.corda.core.messaging.vaultQueryBy
+import net.corda.core.node.NodeInfo
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.transactions.CoreTransaction
@@ -40,11 +48,18 @@ import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
-import nl.nuts.consent.bridge.model.*
+import nl.nuts.consent.bridge.model.ASymmetricKey
+import nl.nuts.consent.bridge.model.ConsentId
+import nl.nuts.consent.bridge.model.ConsentRecord
+import nl.nuts.consent.bridge.model.FullConsentRequestState
+import nl.nuts.consent.bridge.model.Metadata
+import nl.nuts.consent.bridge.model.PartyAttachmentSignature
+import nl.nuts.consent.bridge.model.SignatureWithKey
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.infrastructure.ClientException
 import nl.nuts.consent.bridge.registry.models.Endpoint
 import nl.nuts.consent.flow.ConsentFlows
+import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
@@ -329,7 +344,10 @@ class CordaServiceTest {
     fun `createConsentBranch returns FlowHandle on valid ConsentBranch`() {
         val newConsentBranch = newConsentBranch()
         val id = UniqueIdentifier(externalId = "externalId")
+        val nodeInfo: NodeInfo = mock()
 
+        `when`(cordaRPCOps.nodeInfo()).thenReturn(nodeInfo)
+        `when`(nodeInfo.legalIdentities).thenReturn(listOf(Party(cordaName, mock())))
         `when`(cordaRPCOps.attachmentExists(any())).thenReturn(false)
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
@@ -339,8 +357,13 @@ class CordaServiceTest {
                 UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
-                setOf("legalEntity"),
-                setOf(cordaName)
+                setOf(cordaName),
+                NutsFunctionalContext(
+                    setOf("legalEntity"),
+                    cordaName.toString(),
+                    "legalEntity",
+                    newConsentBranch.requestDateTime!!
+                )
         )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
         `when`(cordaRPCOps.vaultQueryBy(
@@ -358,14 +381,17 @@ class CordaServiceTest {
     fun `createConsentBranch returns FlowHandle on valid ConsentBranch with missing GenesisRecord`() {
         val newConsentBranch = newConsentBranch()
         val id = UniqueIdentifier(externalId = "externalId")
-
+        val nodeInfo : NodeInfo = mock()
         val futureMock : CordaFuture<SignedTransaction> = mock()
         val txMock : SignedTransaction = mock()
         val coreTxMock : CoreTransaction = mock()
+
+        `when`(nodeInfo.legalIdentities).thenReturn(listOf(Party(cordaName, mock())))
         `when`(futureMock.getOrThrow(15.seconds)).thenReturn(txMock)
         `when`(txMock.coreTransaction).thenReturn(coreTxMock)
         `when`(coreTxMock.outputsOfType<ConsentState>()).thenReturn(listOf(ConsentState(uuid = id, version = 1)))
 
+        `when`(cordaRPCOps.nodeInfo()).thenReturn(nodeInfo)
         `when`(cordaRPCOps.attachmentExists(any())).thenReturn(false)
         `when`(cordaRPCOps.uploadAttachment(any())).thenReturn(SecureHash.allOnesHash)
         `when`(cordaService.endpointsApi.endpointsByOrganisationId(any(), any(), eq(false))).thenReturn(arrayOf(endpoint()))
@@ -375,8 +401,13 @@ class CordaServiceTest {
                 UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
-                setOf("legalEntity"),
-                setOf(cordaName)
+                setOf(cordaName),
+                NutsFunctionalContext(
+                    setOf("legalEntity"),
+                    cordaName.toString(),
+                    "legalEntity",
+                    newConsentBranch.requestDateTime!!
+                )
         )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
         `when`(cordaRPCOps.vaultQueryBy(
@@ -408,8 +439,8 @@ class CordaServiceTest {
                 UUID.fromString(newConsentBranch.consentId.UUID),
                 id,
                 setOf(SecureHash.allOnesHash),
-                setOf("legalEntity"),
-                setOf(cordaName)
+                setOf(cordaName),
+                NutsFunctionalContext(setOf("legalEntity"))
         )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
         `when`(cordaRPCOps.vaultQueryBy(
@@ -578,25 +609,27 @@ class CordaServiceTest {
         }
 
         return FullConsentRequestState(
-                consentId = ConsentId(UUID = UUID.randomUUID().toString(), externalId = "externalId"),
-                consentRecords = listOf(ConsentRecord(
-                        cipherText = String(outputStream.toByteArray()),
-                        metadata = Metadata(
-                                domain = listOf(nl.nuts.consent.bridge.model.Domain.medical),
-                                period = nl.nuts.consent.bridge.model.Period(validFrom = OffsetDateTime.now()),
-                                organisationSecureKeys = listOf(
-                                        ASymmetricKey(
-                                                legalEntity = "legalEntity",
-                                                alg = "alg",
-                                                cipherText = "afaf"
-                                        )
-                                ),
-                                secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv"),
-                                consentRecordHash = "hash"
-                        ),
-                        signatures = emptyList()
-                )),
-                legalEntities = legalEntities
+            consentId = ConsentId(UUID = UUID.randomUUID().toString(), externalId = "externalId"),
+            consentRecords = listOf(ConsentRecord(
+                cipherText = String(outputStream.toByteArray()),
+                metadata = Metadata(
+                    domain = listOf(nl.nuts.consent.bridge.model.Domain.medical),
+                    period = nl.nuts.consent.bridge.model.Period(validFrom = OffsetDateTime.now()),
+                    organisationSecureKeys = listOf(
+                        ASymmetricKey(
+                            legalEntity = "legalEntity",
+                            alg = "alg",
+                            cipherText = "afaf"
+                        )
+                    ),
+                    secureKey = nl.nuts.consent.bridge.model.SymmetricKey(alg = "alg", iv = "iv"),
+                    consentRecordHash = "hash"
+                ),
+                signatures = emptyList()
+            )),
+            legalEntities = legalEntities,
+            initiatingLegalEntity = legalEntities.firstOrNull() ?: "",
+            requestDateTime = OffsetDateTime.now()
         )
     }
 

@@ -29,10 +29,10 @@ import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.Serialization
+import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.corda.CordaManagedConnection
 import nl.nuts.consent.bridge.corda.CordaService
-import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.model.ConsentId
 import nl.nuts.consent.bridge.model.ConsentRecord
 import nl.nuts.consent.bridge.model.Domain
@@ -51,7 +51,6 @@ import nl.nuts.consent.state.ConsentBranch
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
-import java.lang.IllegalArgumentException
 import java.time.OffsetDateTime
 import java.util.*
 import kotlin.test.assertEquals
@@ -287,22 +286,23 @@ class NatsToCordaPipelineTest {
         )
     }
 
-    private fun newConsentRequestStateAsEvent() : Event {
+    private fun newConsentRequestStateAsEvent(): Event {
         val newConsentRequestState = FullConsentRequestState(
-                consentId = ConsentId(UUID = UUID.randomUUID().toString(),externalId = "externalId"),
-                legalEntities = emptyList(),
-                consentRecords = listOf(ConsentRecord(
-                        cipherText = "",
-                        metadata = nl.nuts.consent.bridge.model.Metadata(
-                                domain = listOf(Domain.medical),
-                                period = Period(validFrom = OffsetDateTime.now()),
-                                organisationSecureKeys = emptyList(),
-                                secureKey = SymmetricKey(alg = "alg", iv = "iv"),
-                                consentRecordHash = "hash"
-                        ),
-                        attachmentHash = "",
-                        signatures = emptyList()
-                ))
+            consentId = ConsentId(UUID = UUID.randomUUID().toString(), externalId = "externalId"),
+            legalEntities = emptyList(),
+            consentRecords = listOf(ConsentRecord(
+                cipherText = "",
+                metadata = nl.nuts.consent.bridge.model.Metadata(
+                    domain = listOf(Domain.medical),
+                    period = Period(validFrom = OffsetDateTime.now()),
+                    organisationSecureKeys = emptyList(),
+                    secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                    consentRecordHash = "hash"
+                ),
+                attachmentHash = "",
+                signatures = emptyList()
+            )),
+            initiatingLegalEntity = ""
         )
         val emptyJson = Serialization.objectMapper().writeValueAsString(newConsentRequestState)
 

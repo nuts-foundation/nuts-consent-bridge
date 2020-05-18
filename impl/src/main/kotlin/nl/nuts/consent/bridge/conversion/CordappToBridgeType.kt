@@ -168,9 +168,12 @@ class CordappToBridgeType {
             }
 
             return FullConsentRequestState(
-                    consentId = convert(source.linearId),
-                    legalEntities = source.legalEntities.toList(),
-                    consentRecords = consentRecords
+                consentId = convert(source.linearId),
+                legalEntities = source.legalEntities.toList(),
+                consentRecords = consentRecords,
+                initiatingLegalEntity = source.initiatingLegalEntity,
+                initiatingNode = source.initiatingNode,
+                requestDateTime = source.branchTime
             )
         }
     }

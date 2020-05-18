@@ -16,14 +16,11 @@ import nl.nuts.consent.bridge.registry.models.Domain
 /**
  * 
  * @param name the well-known name for the vendor
- * @param identifier Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN 
  * @param domain 
  */
 data class Vendor (
     /* the well-known name for the vendor */
     val name: kotlin.String,
-    /* Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a double colon (:) and then the identifying value of the given URN  */
-    val identifier: kotlin.String,
     val domain: Domain
 ) {
 

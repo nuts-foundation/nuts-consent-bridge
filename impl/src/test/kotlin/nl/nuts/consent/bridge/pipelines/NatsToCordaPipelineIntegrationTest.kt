@@ -206,22 +206,23 @@ class NatsToCordaPipelineIntegrationTest {
         assertEquals("boom!", e.error)
     }
 
-    private fun newConsentRequestStateAsEvent() : Event {
+    private fun newConsentRequestStateAsEvent(): Event {
         val newConsentRequestState = FullConsentRequestState(
-                consentId = ConsentId(UUID = UUID.randomUUID().toString(),externalId = "externalId"),
-                legalEntities = emptyList(),
-                consentRecords = listOf(ConsentRecord(
-                        cipherText = "",
-                        metadata = nl.nuts.consent.bridge.model.Metadata(
-                                domain = listOf(Domain.medical),
-                                period = Period(validFrom = OffsetDateTime.now()),
-                                organisationSecureKeys = emptyList(),
-                                secureKey = SymmetricKey(alg = "alg", iv = "iv"),
-                                consentRecordHash = "hash"
-                        ),
-                        attachmentHash = "",
-                        signatures = emptyList()
-                ))
+            consentId = ConsentId(UUID = UUID.randomUUID().toString(), externalId = "externalId"),
+            legalEntities = emptyList(),
+            consentRecords = listOf(ConsentRecord(
+                cipherText = "",
+                metadata = nl.nuts.consent.bridge.model.Metadata(
+                    domain = listOf(Domain.medical),
+                    period = Period(validFrom = OffsetDateTime.now()),
+                    organisationSecureKeys = emptyList(),
+                    secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                    consentRecordHash = "hash"
+                ),
+                attachmentHash = "",
+                signatures = emptyList()
+            )),
+            initiatingLegalEntity = ""
         )
         val emptyJson = Serialization.objectMapper().writeValueAsString(newConsentRequestState)
 
