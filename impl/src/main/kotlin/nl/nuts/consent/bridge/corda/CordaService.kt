@@ -176,7 +176,7 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, consentRe
         val eId = state.linearId.externalId ?: throw IllegalStateException("externalId is required on event and empty for consentStateUUID")
 
         val eventName = when(state.state) {
-            BranchState.Error -> EventName.EventErrored
+            BranchState.Error -> EventName.EventConsentRequestFlowErrored
             BranchState.Closed -> EventName.EventClosed
             else -> EventName.EventDistributedConsentRequestReceived
         }

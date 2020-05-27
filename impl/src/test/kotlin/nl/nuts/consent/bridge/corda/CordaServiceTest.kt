@@ -271,7 +271,7 @@ class CordaServiceTest {
         val event = cordaService.consentBranchToEvent(consentBranch(BranchState.Error))
 
         assertNotNull(event)
-        assertEquals(EventName.EventErrored, event.name)
+        assertEquals(EventName.EventConsentRequestFlowErrored, event.name)
     }
 
     @Test
