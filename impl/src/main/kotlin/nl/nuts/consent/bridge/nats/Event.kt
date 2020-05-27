@@ -50,7 +50,6 @@ data class Event(
         @JsonProperty("consentId") var consentId: String? = null,
         @JsonProperty("initiatorLegalEntity") var initiatorLegalEntity: String? = null,
         @JsonProperty("error") var error: String? = null,
-        @JsonProperty("comment") var comment: String? = null,
         @JsonProperty("transactionId") var transactionId: String? = null
 ) {
     override fun toString() : String {

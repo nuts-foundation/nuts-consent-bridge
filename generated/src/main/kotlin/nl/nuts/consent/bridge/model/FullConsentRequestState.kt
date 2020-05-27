@@ -15,7 +15,8 @@ import javax.validation.constraints.*
  * @param initiatingLegalEntity Generic identifier used for representing BSN, agbcode, etc. It's always constructed as an URN followed by a colon (:) and then the identifying value of the given URN 
  * @param initiatingNode The X500 name of the node that initiated the transaction (read-only)
  * @param requestDateTime the date-time when the request was made
- * @param latestUpdate the date-time of the latest recorded change in state
+ * @param latestUpdate the date-time of the latest recorded change in state (read-only)
+ * @param comment user generated comment (usually a closing reason)
  */
 data class FullConsentRequestState (
 
@@ -35,7 +36,9 @@ data class FullConsentRequestState (
 
         @JsonProperty("requestDateTime") val requestDateTime: java.time.OffsetDateTime? = null,
 
-        @JsonProperty("latestUpdate") val latestUpdate: java.time.OffsetDateTime? = null
+        @JsonProperty("latestUpdate") val latestUpdate: java.time.OffsetDateTime? = null,
+
+        @JsonProperty("comment") val comment: String? = null
 ) {
 
 }

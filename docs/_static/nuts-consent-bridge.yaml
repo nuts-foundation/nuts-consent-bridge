@@ -111,6 +111,9 @@ components:
           type: string
           format: date-time
           description: the date-time of the latest recorded change in state (read-only)
+        comment:
+          type: string
+          description: user generated comment (usually a closing reason)
     ConsentRecord:
       properties:
         metadata:

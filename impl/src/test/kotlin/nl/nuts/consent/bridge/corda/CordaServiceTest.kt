@@ -260,7 +260,7 @@ class CordaServiceTest {
         assertEquals(event.consentId, fcrs.consentId.UUID)
         assertEquals(event.externalId, fcrs.consentId.externalId)
         assertEquals("error", event.error)
-        assertEquals("comment", event.comment)
+        assertEquals("comment", fcrs.comment)
     }
 
     @Test

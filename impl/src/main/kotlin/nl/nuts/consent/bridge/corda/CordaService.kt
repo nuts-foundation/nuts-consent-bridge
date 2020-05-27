@@ -166,7 +166,8 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, consentRe
             initiatingLegalEntity = state.initiatingLegalEntity,
             initiatingNode = state.initiatingNode,
             requestDateTime = state.branchTime,
-            latestUpdate = state.stateTime
+            latestUpdate = state.stateTime,
+            comment = state.closingComment
         )
 
         val crsBytes = Serialization.objectMapper().writeValueAsBytes(crs)
@@ -189,8 +190,7 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, consentRe
             consentId = state.linearId.id.toString(),
             payload = crsBase64,
             initiatorLegalEntity = state.initiatingLegalEntity,
-            error = state.closingReason,
-            comment = state.closingComment
+            error = state.closingReason
         )
     }
 

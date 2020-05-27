@@ -46,11 +46,10 @@ class ConsentBranchChangeToNatsPipeline : CordaStateChangeToNatsPipeline<Consent
         logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
-
         val event = cordaService.consentBranchToEvent(state)
-        event.name = EventName.EventDistributedConsentRequestReceived
-
         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
+
+        // publishing to the error topic will trigger a retry. This is not needed for errored states
         publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
     }
 
