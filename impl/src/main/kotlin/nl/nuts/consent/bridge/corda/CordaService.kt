@@ -50,6 +50,7 @@ import nl.nuts.consent.flow.ConsentFlows
 import nl.nuts.consent.flow.model.NutsFunctionalContext
 import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.schema.ConsentSchemaV1
+import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.slf4j.Logger
@@ -384,6 +385,33 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, consentRe
                 initiatingLegalEntity = newConsentRequestState.initiatingLegalEntity,
                 branchTime = newConsentRequestState.requestDateTime ?: OffsetDateTime.now()
             )
+        )
+    }
+
+    /**
+     *
+     * @param uuid the uuid of the consentBranch, corresponds with the event uuids
+     * @param reason an computer generated string indicated the reason (error or manual).
+     * @param comment a human readable message why the branch was closed. This can come from a UI from another node.  When given, the branch state will be set to closed and not error
+     */
+    fun closeConsentBranch(UUID: String, reason: String, comment: String? = null): FlowHandle<SignedTransaction> {
+        val proxy = proxy()
+
+        // find current branch
+        val branch = consentBranchByUUID(UUID)
+
+        // determine state to set
+        var branchState = BranchState.Error
+        if (comment != null) {
+            branchState = BranchState.Closed
+        }
+
+        return proxy.startFlow(
+            ConsentFlows::CloseConsentBranch,
+            branch.linearId,
+            branchState,
+            reason,
+            comment
         )
     }
 

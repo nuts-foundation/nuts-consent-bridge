@@ -64,6 +64,7 @@ import nl.nuts.consent.model.ConsentMetadata
 import nl.nuts.consent.model.Domain
 import nl.nuts.consent.model.Period
 import nl.nuts.consent.model.SymmetricKey
+import nl.nuts.consent.state.BranchState
 import nl.nuts.consent.state.ConsentBranch
 import nl.nuts.consent.state.ConsentState
 import org.junit.Assert.*
@@ -80,6 +81,9 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.test.assertFailsWith
 
+const val TEST_UUID = "1111-2222-33334444-5555-6666"
+const val VALID_HEX = "afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"
+
 class CordaServiceTest {
 
     val cordaRPCOps: CordaRPCOps = mock()
@@ -87,7 +91,8 @@ class CordaServiceTest {
         on(it.proxy()) doReturn cordaRPCOps
     }
 
-    val VALID_HEX = "afafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafaf"
+
+
 
     val cordaName = CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local")
 
@@ -107,7 +112,7 @@ class CordaServiceTest {
             sorting = any(),
             contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(0))
 
-        assertFalse(cordaService.consentBranchExists("1111-2222-33334444-5555-6666"))
+        assertFalse(cordaService.consentBranchExists(TEST_UUID))
     }
 
     @Test
@@ -118,7 +123,7 @@ class CordaServiceTest {
             sorting = any(),
             contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(1))
 
-        assertTrue(cordaService.consentBranchExists("1111-2222-33334444-5555-6666"))
+        assertTrue(cordaService.consentBranchExists(TEST_UUID))
     }
 
     @Test
@@ -130,7 +135,7 @@ class CordaServiceTest {
             contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(2))
 
         assertFailsWith<IllegalStateException> {
-            cordaService.consentBranchExists("1111-2222-33334444-5555-6666")
+            cordaService.consentBranchExists(TEST_UUID)
         }
     }
 
@@ -150,7 +155,7 @@ class CordaServiceTest {
                 contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(0))
 
         assertFailsWith<NotFoundException> {
-            cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
+            cordaService.consentBranchByUUID(TEST_UUID)
         }
     }
 
@@ -163,7 +168,7 @@ class CordaServiceTest {
                 contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(2))
 
         assertFailsWith<IllegalStateException> {
-            cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
+            cordaService.consentBranchByUUID(TEST_UUID)
         }
     }
 
@@ -175,7 +180,7 @@ class CordaServiceTest {
                 sorting = any(),
                 contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(1))
 
-        val state = cordaService.consentBranchByUUID("1111-2222-33334444-5555-6666")
+        val state = cordaService.consentBranchByUUID(TEST_UUID)
         assertNotNull(state)
     }
 
@@ -457,7 +462,6 @@ class CordaServiceTest {
 
     @Test
     fun `acceptConsentBranch returns FlowHandle on valid partyAttachmentSignature`() {
-        val uuid = "1111-2222-33334444-5555-6666"
         val attachment = VALID_HEX
         val partyAttachmentSignature = PartyAttachmentSignature(
                 legalEntity = "legalEntity",
@@ -475,26 +479,80 @@ class CordaServiceTest {
 
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::SignConsentBranch,
-                UniqueIdentifier(id = UUID.fromString(uuid)),
+                UniqueIdentifier(id = UUID.fromString(TEST_UUID)),
                 listOf(BridgeToCordappType.convert(partyAttachmentSignature))
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
 
-        val handle = cordaService.signConsentBranch(uuid, partyAttachmentSignature)
+        val handle = cordaService.signConsentBranch(TEST_UUID, partyAttachmentSignature)
 
         assertNotNull(handle)
     }
+
     @Test
     fun `finalizeConsentBranch returns FlowHandle on valid partyAttachmentSignature`() {
-        val uuid = "1111-2222-33334444-5555-6666"
-
         `when`(cordaRPCOps.startFlow(
                 ConsentFlows::MergeBranch,
-                UniqueIdentifier(id = UUID.fromString(uuid))
+                UniqueIdentifier(id = UUID.fromString(TEST_UUID))
         )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
 
-        val handle = cordaService.mergeConsentBranch(uuid)
+        val handle = cordaService.mergeConsentBranch(TEST_UUID)
 
         assertNotNull(handle)
+    }
+
+    @Test
+    fun `closeConsentBranch with error returns FlowHandle`() {
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(1))
+
+        `when`(cordaRPCOps.startFlow(
+            ConsentFlows::CloseConsentBranch,
+            UniqueIdentifier(id = UUID.fromString(TEST_UUID)),
+            BranchState.Error,
+            "error",
+            null
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+
+        val handle = cordaService.closeConsentBranch(TEST_UUID, "error")
+
+        assertNotNull(handle)
+    }
+
+    @Test
+    fun `closeConsentBranch with comment returns FlowHandle`() {
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(1))
+
+        `when`(cordaRPCOps.startFlow(
+            ConsentFlows::CloseConsentBranch,
+            UniqueIdentifier(id = UUID.fromString(TEST_UUID)),
+            BranchState.Closed,
+            "error",
+            "comment"
+        )).thenReturn(FlowHandleImpl<SignedTransaction>(StateMachineRunId.createRandom(), mock()))
+
+        val handle = cordaService.closeConsentBranch(TEST_UUID, "error", "comment")
+
+        assertNotNull(handle)
+    }
+
+    @Test
+    fun `closeConsentBranch throws for unknown branch`() {
+        `when`(cordaRPCOps.vaultQueryBy(
+            criteria = any(),
+            paging = any(),
+            sorting = any(),
+            contractStateType = eq(ConsentBranch::class.java))).thenReturn(branchPage(0))
+
+        assertFailsWith<NotFoundException> {
+            cordaService.closeConsentBranch(TEST_UUID, "error")
+        }
     }
 
     @Test
@@ -691,7 +749,7 @@ class CordaServiceTest {
                             state = TransactionState(
                                     ConsentBranch(
                                             uuid = UniqueIdentifier(
-                                                    id = UUID.fromString("1111-2222-33334444-5555-6666")
+                                                    id = UUID.fromString(TEST_UUID)
                                             ),
                                             attachments = emptySet(),
                                             parties = emptySet(),
