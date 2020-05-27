@@ -91,9 +91,6 @@ class CordaServiceTest {
         on(it.proxy()) doReturn cordaRPCOps
     }
 
-
-
-
     val cordaName = CordaX500Name.parse("O=Nedap, OU=Healthcare, C=NL, ST=Gelderland, L=Groenlo, CN=nuts_corda_development_local")
 
     lateinit var cordaService : CordaService
@@ -262,6 +259,30 @@ class CordaServiceTest {
         assertNotNull( event.consentId)
         assertEquals(event.consentId, fcrs.consentId.UUID)
         assertEquals(event.externalId, fcrs.consentId.externalId)
+        assertEquals("error", event.error)
+        assertEquals("comment", event.comment)
+    }
+
+    @Test
+    fun `contractToStateEvent returns errored event for error state`() {
+        `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(true)
+        `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob".toByteArray()))
+
+        val event = cordaService.consentBranchToEvent(consentBranch(BranchState.Error))
+
+        assertNotNull(event)
+        assertEquals(EventName.EventErrored, event.name)
+    }
+
+    @Test
+    fun `contractToStateEvent returns closed event for close state`() {
+        `when`(cordaRPCOps.attachmentExists(SecureHash.allOnesHash)).thenReturn(true)
+        `when`(cordaRPCOps.openAttachment(SecureHash.allOnesHash)).thenReturn(zip(consentMetadataAsJson(), "blob".toByteArray()))
+
+        val event = cordaService.consentBranchToEvent(consentBranch(BranchState.Closed))
+
+        assertNotNull(event)
+        assertEquals(EventName.EventClosed, event.name)
     }
 
     @Test
@@ -695,7 +716,7 @@ class CordaServiceTest {
         return newConsentBranch(listOf("legalEntity"))
     }
 
-    private fun consentBranch() : ConsentBranch {
+    private fun consentBranch(state: BranchState = BranchState.Open) : ConsentBranch {
         val att = zip(consentMetadataAsJson(), "blob".toByteArray())
 
         val outputStream = ByteArrayOutputStream()
@@ -708,13 +729,15 @@ class CordaServiceTest {
         }
 
         return ConsentBranch(
-                uuid = UniqueIdentifier(externalId = "externalId"),
-                branchPoint = UniqueIdentifier(),
-                attachments = setOf(SecureHash.allOnesHash),
-                legalEntities = setOf("legalEntity"),
-                signatures = emptyList(),
-                parties = setOf(mock())
-
+            uuid = UniqueIdentifier(externalId = "externalId"),
+            branchPoint = UniqueIdentifier(),
+            attachments = setOf(SecureHash.allOnesHash),
+            legalEntities = setOf("legalEntity"),
+            signatures = emptyList(),
+            parties = setOf(mock()),
+            state = state,
+            closingReason = "error",
+            closingComment = "comment"
         )
     }
 
