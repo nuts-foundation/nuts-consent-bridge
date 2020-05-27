@@ -45,6 +45,9 @@ class ConsentStateChangeToNatsPipeline : CordaStateChangeToNatsPipeline<ConsentS
 
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
 
+    /**
+     * Initialize the event API client
+     */
     @PostConstruct
     fun initApi() {
         eventApi = EventApi(eventstoreProperties.url)
