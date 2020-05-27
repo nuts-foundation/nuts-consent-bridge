@@ -215,10 +215,13 @@ class NatsToCordaPipeline {
                 processEventAllSignaturesPresent(e)
             }
             EventName.EventConsentRequestNacked -> {
-                logger.debug("Request for cancellation received, NOT YET IMPLEMENTED")
+                processEventConsentRequestNacked(e)
             }
             EventName.EventAttachmentSigned -> {
                 processEventAttachmentSigned(e)
+            }
+            EventName.EventErrored -> { // this is an errored event that is published on the request queue!
+                processEventErrored(e)
             }
             else -> {
             }
@@ -281,6 +284,60 @@ class NatsToCordaPipeline {
 
             // todo publish as inFlight
         }
+    }
+
+    private fun processEventConsentRequestNacked(e: Event) {
+        logger.debug("Processing consentRequest nacked event with data ${Serialization.objectMapper().writeValueAsString(e)}")
+
+        val payload = Base64.getDecoder().decode(e.payload)
+        val consentRequestState = Serialization.objectMapper().readValue(payload, FullConsentRequestState::class.java)
+        val uuid = consentRequestState.consentId.UUID
+
+        logger.debug("Checking existing ConsentBranch for UUID: $uuid")
+        if (!cordaService.consentBranchExists(uuid)) {
+            logger.warn("ConsentBranch no longer exists for UUID: $uuid, possible race condition, ignoring")
+            return
+        }
+
+        // take the reason from the event error message
+        val reason = e.error!!
+        val comment = consentRequestState.comment
+
+        // closing an already closed branch causes the contract to fail which should be picked up by the
+        // stateMachineListener and published to the errors channel
+        val handle = cordaService.closeConsentBranch(uuid, reason, comment)
+
+        // publish as inFlight, it will be picked up when closed
+        e.name = EventName.EventInFinalFlight
+        e.transactionId = handle.id.uuid.toString()
+
+        eventStateStore.put(handle.id.uuid, e)
+        publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
+    }
+
+    private fun processEventErrored(e: Event) {
+        logger.debug("Processing errored event with data ${Serialization.objectMapper().writeValueAsString(e)}")
+
+        // the payload can be anything so we trust the event uuid matches the branch...
+
+        val uuid = e.UUID
+
+        logger.debug("Checking existing ConsentBranch for UUID: $uuid")
+        if (!cordaService.consentBranchExists(uuid)) {
+            logger.warn("ConsentBranch doesn't exist for UUID: $uuid, possible race condition, ignoring")
+            return
+        }
+
+        // closing an already closed branch causes the contract to fail which should be picked up by the
+        // stateMachineListener and published to the errors channel
+        val handle = cordaService.closeConsentBranch(uuid, e.error!!)
+
+        // publish as inFlight, it will be picked up when published with consentRequestErrored
+        e.name = EventName.EventInFinalFlight
+        e.transactionId = handle.id.uuid.toString()
+
+        eventStateStore.put(handle.id.uuid, e)
+        publish(NATS_CONSENT_REQUEST_SUBJECT, Serialization.objectMapper().writeValueAsBytes(e))
     }
 
     /*

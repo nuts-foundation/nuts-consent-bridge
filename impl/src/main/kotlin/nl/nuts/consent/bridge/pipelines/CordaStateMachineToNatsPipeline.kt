@@ -26,6 +26,7 @@ import nl.nuts.consent.bridge.nats.NatsManagedConnection
 import nl.nuts.consent.bridge.corda.CordaManagedConnection
 import nl.nuts.consent.bridge.corda.CordaManagedConnectionFactory
 import nl.nuts.consent.bridge.corda.CordaService
+import nl.nuts.consent.bridge.nats.NATS_CONSENT_ERROR_SUBJECT
 import nl.nuts.consent.bridge.nats.NatsManagedConnectionFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -108,7 +109,7 @@ class CordaStateMachineToNatsPipeline {
 
                             // publish with new state
                             val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
-                            publish("consentRequestErrored", jsonBytes)
+                            publish(NATS_CONSENT_ERROR_SUBJECT, jsonBytes)
                         })
                         update.result.doOnSuccess(Consumer {
                             // update event to suc6 status
