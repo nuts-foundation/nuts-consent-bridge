@@ -103,11 +103,11 @@ components:
           type: string
           description: The X500 name of the node that initiated the transaction (read-only)
           example: "CN=test,C=NL,L=IJBergen,O=Nuts"
-        requestDateTime:
+        createdAt:
           type: string
           format: date-time
           description: the date-time when the request was made
-        latestUpdate:
+        updatedAt:
           type: string
           format: date-time
           description: the date-time of the latest recorded change in state (read-only)

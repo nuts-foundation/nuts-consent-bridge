@@ -11,6 +11,7 @@
 */
 package nl.nuts.consent.bridge.registry.apis
 
+import nl.nuts.consent.bridge.registry.models.Event
 import nl.nuts.consent.bridge.registry.models.Organization
 
 import nl.nuts.consent.bridge.registry.infrastructure.*
@@ -41,6 +42,38 @@ class OrganizationsApi(basePath: kotlin.String = "http://localhost") : ApiClient
 
         return when (response.responseType) {
             ResponseType.Success -> (response as Success<*>).data as Organization
+            ResponseType.Informational -> TODO()
+            ResponseType.Redirection -> TODO()
+            ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")
+            ResponseType.ServerError -> throw ServerException((response as ServerError<*>).message ?: "Server error")
+            else -> throw kotlin.IllegalStateException("Undefined ResponseType.")
+        }
+    }
+
+    /**
+    * Refreshes the organization&#39;s certificate.
+    * New organization certificate is issued using existing keys. If there are no keys, they&#39;re generated.
+    * @param id URL encoded identifier 
+    * @return Event
+    */
+    @Suppress("UNCHECKED_CAST")
+    fun refreshOrganizationCertificate(id: kotlin.String) : Event {
+        val localVariableBody: kotlin.Any? = null
+        val localVariableQuery: MultiValueMap = mapOf()
+        val localVariableHeaders: kotlin.collections.Map<kotlin.String,kotlin.String> = mapOf()
+        val localVariableConfig = RequestConfig(
+            RequestMethod.POST,
+            "/api/organization/{id}/refresh-cert".replace("{"+"id"+"}", "$id"),
+            query = localVariableQuery,
+            headers = localVariableHeaders
+        )
+        val response = request<Event>(
+            localVariableConfig,
+            localVariableBody
+        )
+
+        return when (response.responseType) {
+            ResponseType.Success -> (response as Success<*>).data as Event
             ResponseType.Informational -> TODO()
             ResponseType.Redirection -> TODO()
             ResponseType.ClientError -> throw ClientException((response as ClientError<*>).body as? String ?: "Client error")

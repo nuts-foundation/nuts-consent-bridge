@@ -173,8 +173,8 @@ class CordappToBridgeType {
                 consentRecords = consentRecords,
                 initiatingLegalEntity = source.initiatingLegalEntity,
                 initiatingNode = source.initiatingNode,
-                requestDateTime = source.branchTime,
-                latestUpdate = source.stateTime
+                createdAt = source.branchTime,
+                updatedAt = source.stateTime
             )
         }
     }

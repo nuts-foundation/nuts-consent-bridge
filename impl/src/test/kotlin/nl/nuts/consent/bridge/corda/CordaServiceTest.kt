@@ -388,7 +388,7 @@ class CordaServiceTest {
                     setOf("legalEntity"),
                     cordaName.toString(),
                     "legalEntity",
-                    newConsentBranch.requestDateTime!!
+                    newConsentBranch.createdAt!!
                 )
         )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
@@ -432,7 +432,7 @@ class CordaServiceTest {
                     setOf("legalEntity"),
                     cordaName.toString(),
                     "legalEntity",
-                    newConsentBranch.requestDateTime!!
+                    newConsentBranch.createdAt!!
                 )
         )).thenReturn(FlowHandleImpl(StateMachineRunId.createRandom(), mock()))
         // simulate Genesis block
@@ -708,7 +708,7 @@ class CordaServiceTest {
             )),
             legalEntities = legalEntities,
             initiatingLegalEntity = legalEntities.firstOrNull() ?: "",
-            requestDateTime = OffsetDateTime.now()
+            createdAt = OffsetDateTime.now()
         )
     }
 

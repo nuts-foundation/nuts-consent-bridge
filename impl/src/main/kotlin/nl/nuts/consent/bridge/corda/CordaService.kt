@@ -165,8 +165,8 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, consentRe
             consentRecords = consentRecords,
             initiatingLegalEntity = state.initiatingLegalEntity,
             initiatingNode = state.initiatingNode,
-            requestDateTime = state.branchTime,
-            latestUpdate = state.stateTime,
+            createdAt = state.branchTime,
+            updatedAt = state.stateTime,
             comment = state.closingComment
         )
 
@@ -391,7 +391,7 @@ class CordaService(val cordaManagedConnection: CordaManagedConnection, consentRe
                 participatingLegalEntities = orgIds.toSet(),
                 initiatingNode = me.toString(),
                 initiatingLegalEntity = newConsentRequestState.initiatingLegalEntity,
-                branchTime = newConsentRequestState.requestDateTime ?: OffsetDateTime.now()
+                branchTime = newConsentRequestState.createdAt ?: OffsetDateTime.now()
             )
         )
     }
