@@ -78,10 +78,6 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
     lateinit var stateFileStorageControl: StateFileStorageControl
 
     @Autowired
-    lateinit var eventstoreProperties: EventStoreProperties
-    lateinit var eventApi: EventApi
-
-    @Autowired
     lateinit var consentRegistryProperties: ConsentRegistryProperties
 
     var subscription: Subscription? = null
@@ -111,8 +107,6 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
      */
     @PostConstruct
     fun init() {
-        eventApi = EventApi(eventstoreProperties.url)
-
         natsManagedConnection = natsManagedConnectionFactory.`object`
         cordaManagedConnection = cordaManagedConnectionFactory.`object`
 
@@ -259,23 +253,6 @@ abstract class CordaStateChangeToNatsPipeline<S : ContractState> {
             QueryCriteria.TimeInstantType.RECORDED,
             ColumnPredicate.BinaryComparison(BinaryComparisonOperator.GREATER_THAN_OR_EQUAL, asOfDateTime))
         return QueryCriteria.VaultQueryCriteria(status = Vault.StateStatus.ALL, timeCondition = recordedAfterExpression)
-    }
-
-    protected fun remoteEvent(stateUUID: UUID): Event {
-        return eventToEvent(eventApi.getEvent(stateUUID))
-    }
-
-    private fun eventToEvent(source: nl.nuts.consent.bridge.events.models.Event): Event {
-        return Event(
-            UUID = source.uuid,
-            payload = source.payload,
-            initiatorLegalEntity = source.initiatorLegalEntity,
-            externalId = source.externalId,
-            consentId = source.consentId.toString(),
-            retryCount = source.retryCount,
-            error = source.error,
-            name = EventName.fromString(source.name.value)
-        )
     }
 
     /**

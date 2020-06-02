@@ -75,6 +75,7 @@ enum class EventName(val value: String) {
     EventAttachmentSigned("attachment signed"),
     EventConsentDistributed("consent distributed"),
     EventCompleted("completed"),
+    EventClosed("closed"),
     EventErrored("error");
 
     companion object {

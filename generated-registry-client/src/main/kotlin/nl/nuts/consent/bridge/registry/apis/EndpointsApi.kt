@@ -53,7 +53,7 @@ class EndpointsApi(basePath: kotlin.String = "http://localhost") : ApiClient(bas
     }
 
     /**
-    * Adds an endpoint for this organisation to the registry
+    * Adds/updates an endpoint for this organisation to the registry. If the endpoint already exists (matched by endpoint ID) it is updated.
     * 
     * @param id URL encoded identifier 
     * @param endpoint  

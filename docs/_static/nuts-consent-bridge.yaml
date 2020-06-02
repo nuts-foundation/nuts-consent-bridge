@@ -85,6 +85,7 @@ components:
         - consentId
         - legalEntities
         - consentRecords
+        - initiatingLegalEntity
       properties:
         consentId:
           $ref: '#/components/schemas/ConsentId'
@@ -96,6 +97,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Identifier'
+        initiatingLegalEntity:
+          $ref: '#/components/schemas/Identifier'
+        initiatingNode:
+          type: string
+          description: The X500 name of the node that initiated the transaction (read-only)
+          example: "CN=test,C=NL,L=IJBergen,O=Nuts"
+        createdAt:
+          type: string
+          format: date-time
+          description: the date-time when the request was made
+        updatedAt:
+          type: string
+          format: date-time
+          description: the date-time of the latest recorded change in state (read-only)
+        comment:
+          type: string
+          description: user generated comment (usually a closing reason)
     ConsentRecord:
       properties:
         metadata:

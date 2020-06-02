@@ -24,15 +24,16 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.verify
 import com.nhaarman.mockito_kotlin.verifyZeroInteractions
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.StateMachineRunId
 import net.corda.core.messaging.FlowHandle
 import net.corda.core.transactions.SignedTransaction
 import nl.nuts.consent.bridge.Serialization
+import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.corda.CordaManagedConnection
 import nl.nuts.consent.bridge.corda.CordaService
-import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.model.ConsentId
 import nl.nuts.consent.bridge.model.ConsentRecord
 import nl.nuts.consent.bridge.model.Domain
@@ -51,7 +52,6 @@ import nl.nuts.consent.state.ConsentBranch
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.`when`
-import java.lang.IllegalArgumentException
 import java.time.OffsetDateTime
 import java.util.*
 import kotlin.test.assertEquals
@@ -269,6 +269,66 @@ class NatsToCordaPipelineTest {
         assertEquals(EventName.EventInFinalFlight, natsToCordaPipeline.eventStateStore.get(uuid)?.name)
     }
 
+    @Test
+    fun `consentRequestNacked calls closeBranch`() {
+        val event = newConsentRequestStateAsEvent(EventName.EventConsentRequestNacked)
+        val uuid = event.UUID
+
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.fromString(uuid))
+        `when`(cordaService.consentBranchExists(uuid)).thenReturn(true)
+        `when`(cordaService.closeConsentBranch(uuid, "error", "comment")).thenReturn(t)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertEquals(EventName.EventInFinalFlight, natsToCordaPipeline.eventStateStore.get(UUID.fromString(uuid))?.name)
+    }
+
+    @Test
+    fun `consentRequestNacked does nothing for unknown branch`() {
+        val event = newConsentRequestStateAsEvent(EventName.EventConsentRequestNacked)
+        val uuid = event.UUID
+
+        `when`(cordaService.consentBranchExists(uuid)).thenReturn(false)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertNull(natsToCordaPipeline.eventStateStore.get(UUID.fromString(uuid)))
+    }
+
+    @Test
+    fun `eventErrored calls closeBranch`() {
+        val event = newConsentRequestStateAsEvent(EventName.EventErrored)
+        val uuid = event.UUID
+
+        val t: FlowHandle<SignedTransaction> = mock()
+        val st: StateMachineRunId = mock()
+        `when`(t.id).thenReturn(st)
+        `when`(st.uuid).thenReturn(UUID.fromString(uuid))
+        `when`(cordaService.consentBranchExists(uuid)).thenReturn(true)
+        `when`(cordaService.closeConsentBranch(uuid, "error")).thenReturn(t)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertEquals(EventName.EventInFinalFlight, natsToCordaPipeline.eventStateStore.get(UUID.fromString(uuid))?.name)
+    }
+
+    @Test
+    fun `eventErrored does nothing for unknown branch`() {
+        val event = newConsentRequestStateAsEvent(EventName.EventErrored)
+        val uuid = event.UUID
+
+        `when`(cordaService.consentBranchExists(uuid)).thenReturn(false)
+
+        natsToCordaPipeline.processEvent(event)
+
+        assertNull(natsToCordaPipeline.eventStateStore.get(UUID.fromString(uuid)))
+    }
+
+    // todo error event
+
     private fun event(name : EventName) : Event {
         return event(name, UUID.randomUUID().toString())
     }
@@ -287,34 +347,36 @@ class NatsToCordaPipelineTest {
         )
     }
 
-    private fun newConsentRequestStateAsEvent() : Event {
+    private fun newConsentRequestStateAsEvent(name: EventName = EventName.EventConsentRequestConstructed): Event {
         val newConsentRequestState = FullConsentRequestState(
-                consentId = ConsentId(UUID = UUID.randomUUID().toString(),externalId = "externalId"),
-                legalEntities = emptyList(),
-                consentRecords = listOf(ConsentRecord(
-                        cipherText = "",
-                        metadata = nl.nuts.consent.bridge.model.Metadata(
-                                domain = listOf(Domain.medical),
-                                period = Period(validFrom = OffsetDateTime.now()),
-                                organisationSecureKeys = emptyList(),
-                                secureKey = SymmetricKey(alg = "alg", iv = "iv"),
-                                consentRecordHash = "hash"
-                        ),
-                        attachmentHash = "",
-                        signatures = emptyList()
-                ))
+            consentId = ConsentId(UUID = UUID.randomUUID().toString(), externalId = "externalId"),
+            legalEntities = emptyList(),
+            consentRecords = listOf(ConsentRecord(
+                cipherText = "",
+                metadata = nl.nuts.consent.bridge.model.Metadata(
+                    domain = listOf(Domain.medical),
+                    period = Period(validFrom = OffsetDateTime.now()),
+                    organisationSecureKeys = emptyList(),
+                    secureKey = SymmetricKey(alg = "alg", iv = "iv"),
+                    consentRecordHash = "hash"
+                ),
+                attachmentHash = "",
+                signatures = emptyList()
+            )),
+            initiatingLegalEntity = "",
+            comment = "comment"
         )
         val emptyJson = Serialization.objectMapper().writeValueAsString(newConsentRequestState)
 
         return Event(
             UUID = newConsentRequestState.consentId.UUID,
-            name = EventName.EventConsentRequestConstructed,
+            name = name,
             retryCount = 0,
             externalId = "uuid",
             initiatorLegalEntity = "custodian",
             payload = Base64.getEncoder().encodeToString(emptyJson.toByteArray()),
             consentId = "consentUuid",
-            error = null
+            error = "error"
         )
     }
 

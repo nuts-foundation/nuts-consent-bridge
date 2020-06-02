@@ -20,16 +20,12 @@ package nl.nuts.consent.bridge.pipelines
 
 import net.corda.core.contracts.StateAndRef
 import nl.nuts.consent.bridge.Serialization
-import nl.nuts.consent.bridge.events.infrastructure.ClientException
-import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.NATS_CONSENT_REQUEST_SUBJECT
 import nl.nuts.consent.state.ConsentBranch
-import nl.nuts.consent.state.ConsentState
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.*
 
 /**
  * Pipeline to act on produced Nuts ConsentStates
@@ -50,27 +46,10 @@ class ConsentBranchChangeToNatsPipeline : CordaStateChangeToNatsPipeline<Consent
         logger.debug("Received produced state event from Corda: ${stateAndRef.state.data}")
 
         val state = stateAndRef.state.data
-
         val event = cordaService.consentBranchToEvent(state)
-
-        // find corresponding event in Nuts event store, if not found create a new state with state == 'to be accepted'
-        // the contents of the new event will be a NewConsentRequestState object as json/base64
-        var knownEvent: Event? = null
-        try {
-            logger.debug("Fetching current event state for: ${state.linearId.id}")
-            knownEvent = remoteEvent(state.linearId.id)
-            logger.debug("Found existing event for: ${state.linearId.id}")
-        } catch (e: ClientException) {
-            logger.debug("Got new consentRequestState, generating new event")
-        }
-
-        if (knownEvent != null) {
-            event.initiatorLegalEntity = knownEvent.initiatorLegalEntity
-            event.retryCount = knownEvent.retryCount
-        }
-        event.name = EventName.EventDistributedConsentRequestReceived
-
         val jsonBytes = Serialization.objectMapper().writeValueAsBytes(event)
+
+        // publishing to the error topic will trigger a retry. This is not needed for errored states
         publish(NATS_CONSENT_REQUEST_SUBJECT, jsonBytes)
     }
 

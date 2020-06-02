@@ -53,7 +53,6 @@ class ConsentBranchChangeToNatsPipelineTest {
     lateinit var consentBranchChangeToCordaPipeline: ConsentBranchChangeToNatsPipeline
 
     val cordaService: CordaService = mock()
-    val eventApi: EventApi = mock()
     val streamingConnection: StreamingConnection = mock()
     val natsManagedConnection: NatsManagedConnection = mock()
 
@@ -65,7 +64,6 @@ class ConsentBranchChangeToNatsPipelineTest {
 
         consentBranchChangeToCordaPipeline.cordaService = cordaService
         consentBranchChangeToCordaPipeline.natsManagedConnection = natsManagedConnection
-        consentBranchChangeToCordaPipeline.eventApi = eventApi
     }
 
     @Test
@@ -76,7 +74,6 @@ class ConsentBranchChangeToNatsPipelineTest {
         val state: TransactionState<ConsentBranch> = mock()
         `when`(state.data).thenReturn(s)
         `when`(cordaService.consentBranchToEvent(any())).thenReturn(e)
-        `when`(eventApi.getEvent(s.linearId.id)).thenThrow(ClientException())
 
         // when
         consentBranchChangeToCordaPipeline.stateProduced(StateAndRef(state, ref = mock()))
@@ -85,48 +82,8 @@ class ConsentBranchChangeToNatsPipelineTest {
         verifyPublishedEvent(e)
     }
 
-    @Test
-    fun `Observed produced ConsentBranch reuses existing event when found`() {
-        // given
-        val s = consentRequestState()
-        val eCheck = consentRequestStateToEvent(s)
-        val eMock = consentRequestStateToEvent(s)
-        eMock.payload = ""
-        val state: TransactionState<ConsentBranch> = mock()
-        val n = storeEvent(nl.nuts.consent.bridge.events.models.Event.Name.distributedConsentRequestReceived, s.linearId.id.toString())
-        `when`(state.data).thenReturn(s)
-        `when`(cordaService.consentBranchToEvent(any())).thenReturn(eMock)
-        `when`(eventApi.getEvent(s.linearId.id)).thenReturn(n)
-
-        // when
-        consentBranchChangeToCordaPipeline.stateProduced(StateAndRef(state, ref = mock()))
-
-        // fields to copy
-        eCheck.UUID = n.uuid
-        eCheck.initiatorLegalEntity = n.initiatorLegalEntity
-        eCheck.retryCount = n.retryCount
-
-        // ignore for this test
-        eCheck.payload = ""
-
-        // then publish is called
-        verifyPublishedEvent(eCheck)
-    }
-
     private fun verifyPublishedEvent(event: Event) {
         verify(streamingConnection).publish(eq(NATS_CONSENT_REQUEST_SUBJECT), eq(Serialization.objectMapper().writeValueAsBytes(event)), any())
-    }
-
-    private fun storeEvent(name: nl.nuts.consent.bridge.events.models.Event.Name = nl.nuts.consent.bridge.events.models.Event.Name.consentRequestConstructed,
-                           uuid: String = UUID.randomUUID().toString()): nl.nuts.consent.bridge.events.models.Event {
-        return nl.nuts.consent.bridge.events.models.Event(
-            uuid = uuid,
-            externalId = "externalId",
-            name = name,
-            payload = "",
-            retryCount = 0,
-            initiatorLegalEntity = "legalEntity"
-        )
     }
 
     private fun consentRequestState(): ConsentBranch {
@@ -156,7 +113,8 @@ class ConsentBranchChangeToNatsPipelineTest {
                 attachmentHash = "",
                 cipherText = "af==",
                 signatures = emptyList()
-            ))
+            )),
+            initiatingLegalEntity = ""
         )
 
         val ncrsBytes = Serialization.objectMapper().writeValueAsBytes(ncrs)
