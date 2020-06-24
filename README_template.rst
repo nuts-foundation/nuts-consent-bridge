@@ -14,8 +14,9 @@ App to bridge gap between the Corda kotlin world and Nuts polyglot service space
 .. image:: https://codecov.io/gh/nuts-foundation/nuts-consent-bridge/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/nuts-foundation/nuts-consent-bridge
 
-.. image:: https://api.codacy.com/project/badge/Grade/9118a6e2254e4db0a6c1fc3725a6ed02
-    :target: https://www.codacy.com/app/woutslakhorst/nuts-consent-bridge
+.. image:: https://api.codeclimate.com/v1/badges/8da218ab0dd5528c5c3b/maintainability
+   :target: https://codeclimate.com/github/nuts-foundation/nuts-consent-bridge/maintainability
+   :alt: Maintainability
 
 .. include:: docs/pages/development/consent-bridge.rst
     :start-after: .. marker-for-readme
