@@ -117,7 +117,7 @@ class CordappToBridgeType {
             val jwk = PublicJsonWebKey.Factory.newPublicJwk(source.by)
 
             return SignatureWithKey(
-                    publicKey = jwk.toParams(JsonWebKey.OutputControlLevel.PUBLIC_ONLY),
+                    publicKey = JWK(jwk.toParams(JsonWebKey.OutputControlLevel.PUBLIC_ONLY)),
                     data = Base64.getEncoder().encodeToString(source.bytes)
             )
         }

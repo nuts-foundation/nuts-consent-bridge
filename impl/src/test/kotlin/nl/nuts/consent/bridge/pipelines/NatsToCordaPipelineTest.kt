@@ -34,14 +34,7 @@ import nl.nuts.consent.bridge.StateFileStorageControl
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.corda.CordaManagedConnection
 import nl.nuts.consent.bridge.corda.CordaService
-import nl.nuts.consent.bridge.model.ConsentId
-import nl.nuts.consent.bridge.model.ConsentRecord
-import nl.nuts.consent.bridge.model.Domain
-import nl.nuts.consent.bridge.model.FullConsentRequestState
-import nl.nuts.consent.bridge.model.PartyAttachmentSignature
-import nl.nuts.consent.bridge.model.Period
-import nl.nuts.consent.bridge.model.SignatureWithKey
-import nl.nuts.consent.bridge.model.SymmetricKey
+import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.Event
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.nats.EventStateStore
@@ -387,7 +380,7 @@ class NatsToCordaPipelineTest {
                 attachment = "",
                 signature = SignatureWithKey(
                         data = "",
-                        publicKey = emptyMap()
+                        publicKey = JWK()
                 )
         )
         val emptyJson = Serialization.objectMapper().writeValueAsString(partyAttachmentSignature)

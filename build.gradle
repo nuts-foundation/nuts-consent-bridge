@@ -157,7 +157,7 @@ apply plugin: 'org.openapi.generator'
 
 check.dependsOn jacocoTestReport
 
-task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
     generatorName = "kotlin-spring"
     outputDir = "${project.rootDir}/generated"
     inputSpec = "docs/_static/nuts-consent-bridge.yaml"
@@ -171,16 +171,16 @@ task generateServerApiStub(type: org.openapitools.generator.gradle.plugin.tasks.
     generateApiTests = false
     withXml = false
     configOptions = [
-            dateLibrary: "java8",
+            dateLibrary     : "java8",
             serviceInterface: true,
             exceptionHandler: true,
-            gradleBuildFile: false,
-            supportingFiles: []
+            gradleBuildFile : false,
+            supportingFiles : []
     ]
     skipOverwrite = false
 }
 
-task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
     generatorName = "kotlin"
     groupId = "${project.group}"
     id = "registry-client"
@@ -193,17 +193,17 @@ task generateRegistryClientApiCode(type: org.openapitools.generator.gradle.plugi
     generateApiTests = false
     withXml = false
     configOptions = [
-            packageName: "nl.nuts.consent.bridge.registry",
-            dateLibrary: "java8",
+            packageName     : "nl.nuts.consent.bridge.registry",
+            dateLibrary     : "java8",
             exceptionHandler: true,
-            gradleBuildFile: false,
-            supportingFiles: []
+            gradleBuildFile : false,
+            supportingFiles : []
     ]
     skipOverwrite = false
 }
 
 
-task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask){
+task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
     generatorName = "kotlin"
     groupId = "${project.group}"
     id = "event-store-client"
@@ -216,11 +216,11 @@ task generateEventStoreClientApiCode(type: org.openapitools.generator.gradle.plu
     generateApiTests = false
     withXml = false
     configOptions = [
-            packageName: "nl.nuts.consent.bridge.events",
-            dateLibrary: "java8",
+            packageName     : "nl.nuts.consent.bridge.events",
+            dateLibrary     : "java8",
             exceptionHandler: true,
-            gradleBuildFile: false,
-            supportingFiles: []
+            gradleBuildFile : false,
+            supportingFiles : []
     ]
     skipOverwrite = false
 }

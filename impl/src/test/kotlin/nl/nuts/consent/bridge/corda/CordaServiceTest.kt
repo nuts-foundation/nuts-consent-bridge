@@ -48,13 +48,7 @@ import nl.nuts.consent.bridge.ConsentRegistryProperties
 import nl.nuts.consent.bridge.Serialization
 import nl.nuts.consent.bridge.api.NotFoundException
 import nl.nuts.consent.bridge.conversion.BridgeToCordappType
-import nl.nuts.consent.bridge.model.ASymmetricKey
-import nl.nuts.consent.bridge.model.ConsentId
-import nl.nuts.consent.bridge.model.ConsentRecord
-import nl.nuts.consent.bridge.model.FullConsentRequestState
-import nl.nuts.consent.bridge.model.Metadata
-import nl.nuts.consent.bridge.model.PartyAttachmentSignature
-import nl.nuts.consent.bridge.model.SignatureWithKey
+import nl.nuts.consent.bridge.model.*
 import nl.nuts.consent.bridge.nats.EventName
 import nl.nuts.consent.bridge.registry.infrastructure.ClientException
 import nl.nuts.consent.bridge.registry.models.Endpoint
@@ -488,12 +482,12 @@ class CordaServiceTest {
                 legalEntity = "legalEntity",
                 attachment = attachment,
                 signature = SignatureWithKey(
-                        publicKey = mapOf(
+                        publicKey = JWK(mapOf(
                                 "kty" to "RSA",
                                 "e" to "AQAB",
                                 "kid" to "17bf8a6f-0a0a-4bce-878c-4ac9b7447c64",
                                 "n" to "wm7FBfggHaAfapO7TdFv0OwS-Ip9Wi7gyhddjmdZBZDzfYMUPr4-0utGM3Ry8JtCfxmsHL3ZmvG04GV1doeCLjLywm6OFfoEQCpliRiCyarpd2MrxKWjkSwOl9MJdVm3xpb7BWJdXkKEwoU4lBk8cZPay32juPzAV5eb6UCnq53PZ5O0H80J02oPLpBs2D6ASjUQpRf2xP0bvaP2W92PZYzJwrSA3zdxPmrMVApOoIZL7OHBE-y0I9ZUt-zmxD8TzRdN9Etf9wjLD7psu9aL_XHIHR0xMkYV8cr_nCbJ6H0PbDd3yIQvYPjLEVS5LeieN-DzIlYO6Y7kpws6k0rxew"
-                        ),
+                        )),
                         data = "afaf"
                 )
         )
