@@ -28,3 +28,6 @@ src/main/resources/application.yaml
 # not needed
 pom.xml
 README.md
+
+# OpenAPITools CodeGen for object types without additionalProperties is properly bugged, so we provide our own:
+src/main/kotlin/nl/nuts/consent/bridge/model/JWK.kt
